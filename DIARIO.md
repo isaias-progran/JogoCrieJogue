@@ -8,10 +8,30 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-14
-- **Fase 1 (documento/prefabs/compilador) COMPILADA — v0.2.0 (versionCode
-  2)** em `/sdcard/TermIa/apks/construa-jogue.apk`. O setor 1 da campanha
-  agora carrega `maps/arena.json` (validado + compilado); o setor 2 segue
-  no formato legado `levels/labirinto.txt`.
+- **Fase 2 (construir o espaço) COMPILADA — v0.3.0 (versionCode 3)** em
+  `/sdcard/TermIa/apks/construa-jogue.apk`. O app abre na BIBLIOTECA:
+  novo mapa, construir (planta 2D), jogar mapa, campanha original,
+  duplicar/excluir. Ciclo Construir → Testar → Construir funciona.
+- Editor (Fase 2 mínima, sem editor3d 3D ainda): `PlanEditorView` =
+  planta vista de topo editando o MapDocument direto — ferramentas PISO/
+  PAREDE/BLOCO/INÍCIO/SAÍDA/MOVER + EXCLUIR, snap 0.25m, área ±32m,
+  pan/zoom com 2 dedos. Tudo vira `block` AABB (paredes retas alinhadas
+  aos eixos, 3m; piso 0.3m com topo em y=0) — diagonais/curvas ficam p/
+  quando importar Extrude/segmentos do editor3d.
+- `EditorHost`: undo/redo global por snapshot JSON (50), salvamento
+  automático (sair/testar), validação (erros = diálogo, avisos = toast),
+  Testar passa snapshot profundo — documento intocado pela partida.
+- `MapStore`: filesDir/maps/<id>.json com .tmp/.bak atômicos (padrão
+  editor3d). `MainActivity` reescrito: modos LIBRARY/EDIT/PLAY, partida
+  monta e descarta GameView/HUD/controles a cada entrada; Voltar
+  contextual (jogo→pausa→editor/biblioteca; editor salva e volta).
+- `GameRenderer` não conhece mais caminhos: recebe `LevelProvider`
+  (`AssetLevelProvider` = campanha arena.json+labirinto.txt;
+  `SingleLevelProvider` = mapa do usuário compilado).
+- `GameState`: mapa sem porta nasce com saída liberada; objetivo sem
+  terminal = "CHEGUE À SAÍDA"; vitória genérica p/ 1 setor.
+
+## Fase 1 (v0.2.0) — resumo
 - Novo núcleo puro-Java (testável no JVM): `util/Json` (JSON próprio com
   token de número preservado — bit-exato), `map/*` (MapDocument,
   StructureObject `block`, PrefabInstance, LogicMarker, Transform),
@@ -40,11 +60,13 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 - `scripts/test-levels.py` passa (arena 25 caixas, labirinto 36 caixas +
   7 mutantes, rotas OK).
 
-## Portão no aparelho (pendente — usuário)
-Validar a campanha completa na v0.2.0: setor 1 (arena, agora vinda do
-JSON) idêntico ao jogo-fps, setor 2 (labirinto) igual, ~120 FPS, pausa,
-os dois finais. Se a arena estiver diferente do jogo-fps, o compilador
-tem bug (mas o teste bit a bit torna isso improvável).
+## Portões no aparelho (pendentes — usuário, v0.3.0)
+1. **Fases 0+1**: CAMPANHA na biblioteca → arena (JSON) idêntica ao
+   jogo-fps, labirinto igual, ~120 FPS, pausa, os dois finais.
+2. **Fase 2**: criar mapa novo → desenhar piso, 4 paredes, início e
+   saída → TESTAR → andar na sala em primeira pessoa → voltar (botão
+   Voltar) → mover uma parede → testar de novo. Undo/redo, salvar
+   (sair e reabrir mantém o mapa), excluir/duplicar na biblioteca.
 
 ## Decisões e armadilhas
 - **Testes JVM**: sem Gradle/JUnit aqui, e `org.json` do android.jar é stub
@@ -67,7 +89,10 @@ tem bug (mas o teste bit a bit torna isso improvável).
   atende os dois modos (ver ARQUITETURA §7).
 
 ## Próximos passos
-1. Usuário valida a campanha v0.2.0 no aparelho (portões Fase 0 + 1).
-2. Fase 2: construir o espaço — planta 2D, snap, paredes/pisos/tetos do
-   editor3d, seleção 3D, undo/redo, início/saída, salvamento (MapStore)
-   e os modos Biblioteca/Construir/Jogar na Activity.
+1. Usuário valida os dois portões da v0.3.0 no aparelho (acima).
+2. Fase 3: catálogo no editor — navegador por categorias, peça
+   fantasma, encaixe, inimigos/itens/terminal/porta posicionáveis na
+   planta (o compilador já entende todos), escadas/móveis/obstáculos
+   (exigem PrefabMeshFactory + instâncias no renderer).
+3. Fase 2.5 (quando quiser diagonais/curvas): importar Extrude/
+   triangulação do editor3d + WallSegmentCollider (ARQUITETURA §6).
