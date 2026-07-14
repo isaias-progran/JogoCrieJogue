@@ -8,7 +8,23 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-14
-- **Fase 2 (construir o espaço) COMPILADA — v0.3.0 (versionCode 3)** em
+- **v0.3.1 (versionCode 4)** — feedback do usuário na v0.3.0 ("construir
+  parede ficou difícil no dedo"):
+  - PAREDE agora GRUDA nas pontas: tocar perto da extremidade de uma
+    parede existente (círculos amarelos na tela) continua dela ou fecha
+    canto exato; vale para o início E o fim do arrasto (`nearWallEnd`,
+    raio de captura 36px/escala, mínimo 0.4m);
+  - botão ALTURA: digitar a medida real da estrutura selecionada —
+    parede/bloco = altura (base fixa), piso = espessura (topo fixo),
+    teto = elevação da base. Decisão: diálogo só sob demanda na seleção,
+    NÃO após cada criação (criar 4 paredes abriria 4 telas);
+  - ferramenta TETO: placa de 0.3m com base na altura da parede (3m),
+    desenhada translúcida por cima da planta; na seleção o teto é o
+    ÚLTIMO candidato (não rouba o toque de quem está embaixo);
+  - `StructureObject.role` (floor/wall/block/ceiling) persistido no JSON
+    (campo opcional — mapas convertidos caem em heurística por
+    dimensões em `StructureRoles`).
+- **Fase 2 (construir o espaço) — v0.3.0 (versionCode 3)** em
   `/sdcard/TermIa/apks/construa-jogue.apk`. O app abre na BIBLIOTECA:
   novo mapa, construir (planta 2D), jogar mapa, campanha original,
   duplicar/excluir. Ciclo Construir → Testar → Construir funciona.

@@ -3,8 +3,10 @@ package br.com.termia.construajogue.editor;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.graphics.Color;
+import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
@@ -14,6 +16,7 @@ import android.widget.Toast;
 import br.com.termia.construajogue.compiler.MapValidator;
 import br.com.termia.construajogue.compiler.ValidationIssue;
 import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.persistence.MapJson;
 import br.com.termia.construajogue.persistence.MapStore;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
@@ -21,6 +24,7 @@ import br.com.termia.construajogue.prefab.PrefabCatalog;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Modo Construir: planta + barra superior (voltar, desfazer/refazer,
@@ -48,6 +52,7 @@ public final class EditorHost extends FrameLayout
     private Button undoButton;
     private Button redoButton;
     private Button deleteButton;
+    private Button heightButton;
     private MapDocument doc;
 
     public EditorHost(Activity activity, MapStore store,
@@ -114,10 +119,14 @@ public final class EditorHost extends FrameLayout
         row.setPadding(8, 4, 8, 10);
         addTool(row, "PISO", PlanEditorView.TOOL_FLOOR);
         addTool(row, "PAREDE", PlanEditorView.TOOL_WALL);
+        addTool(row, "TETO", PlanEditorView.TOOL_CEILING);
         addTool(row, "BLOCO", PlanEditorView.TOOL_BLOCK);
         addTool(row, "INÍCIO", PlanEditorView.TOOL_SPAWN);
         addTool(row, "SAÍDA", PlanEditorView.TOOL_EXIT);
         addTool(row, "MOVER", PlanEditorView.TOOL_SELECT);
+        heightButton = action("ALTURA", this::editHeight);
+        heightButton.setTextColor(0xFF9CC9E4);
+        row.addView(heightButton);
         deleteButton = action("EXCLUIR", () -> plan.deleteSelected());
         deleteButton.setTextColor(0xFFE49C9C);
         row.addView(deleteButton);
@@ -158,9 +167,18 @@ public final class EditorHost extends FrameLayout
             boolean active = (int) button.getTag() == tool;
             button.setBackgroundColor(active ? 0xFF2E5A8A : 0x33222E3A);
         }
-        status.setText(tool == PlanEditorView.TOOL_SELECT
-                ? "toque para selecionar; arraste para mover"
-                : "arraste com um dedo; dois dedos movem a vista");
+        if (tool == PlanEditorView.TOOL_SELECT) {
+            status.setText("toque para selecionar; arraste para mover; "
+                    + "ALTURA edita a medida real");
+        } else if (tool == PlanEditorView.TOOL_WALL) {
+            status.setText("arraste para desenhar; começar perto da ponta "
+                    + "de outra parede continua dela (círculos amarelos)");
+        } else if (tool == PlanEditorView.TOOL_CEILING) {
+            status.setText("arraste o retângulo do teto; use ALTURA para "
+                    + "definir a elevação");
+        } else {
+            status.setText("arraste com um dedo; dois dedos movem a vista");
+        }
     }
 
     // ---- PlanEditorView.Host ----
@@ -196,6 +214,37 @@ public final class EditorHost extends FrameLayout
         redoButton.setAlpha(history.canRedo() ? 1f : 0.4f);
         deleteButton.setEnabled(plan.hasSelection());
         deleteButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
+        heightButton.setEnabled(plan.hasSelection());
+        heightButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
+    }
+
+    /** Diálogo para digitar a medida real da estrutura selecionada. */
+    private void editHeight() {
+        StructureObject s = plan.selectedStructure();
+        if (s == null) {
+            return;
+        }
+        EditText input = new EditText(activity);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setText(String.format(Locale.US, "%.2f",
+                StructureRoles.heightValue(s)));
+        input.selectAll();
+        new AlertDialog.Builder(activity)
+                .setTitle(StructureRoles.heightLabel(s))
+                .setView(input)
+                .setPositiveButton("Aplicar", (dialog, which) -> {
+                    try {
+                        plan.applySelectedHeight(Float.parseFloat(
+                                input.getText().toString()
+                                        .replace(',', '.')));
+                    } catch (NumberFormatException bad) {
+                        Toast.makeText(activity, "Número inválido",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void undo() {

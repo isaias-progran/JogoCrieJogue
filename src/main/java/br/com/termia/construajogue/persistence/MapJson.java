@@ -36,6 +36,9 @@ public final class MapJson {
             Map<String, Object> item = new TreeMap<>();
             item.put("id", s.id);
             item.put("kind", s.kind);
+            if (s.role != null) {
+                item.put("role", s.role);
+            }
             item.put("transform", transform(s.transform));
             if (s.half != null) {
                 item.put("half", floats(s.half));
@@ -132,6 +135,7 @@ public final class MapJson {
             Map<?, ?> s = asMap(item, "structure");
             StructureObject structure = new StructureObject(
                     stringOf(s, "id", null), stringOf(s, "kind", ""));
+            structure.role = stringOf(s, "role", null);
             structure.transform = transformOf(s.get("transform"));
             structure.half = floatsOf(s.get("half"), 3);
             structure.color = floatsOf(s.get("color"), 3);

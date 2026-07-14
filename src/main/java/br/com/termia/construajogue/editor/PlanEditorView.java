@@ -25,6 +25,7 @@ public final class PlanEditorView extends View {
     public static final int TOOL_BLOCK = 3;
     public static final int TOOL_SPAWN = 4;
     public static final int TOOL_EXIT = 5;
+    public static final int TOOL_CEILING = 6;
 
     /** O host guarda snapshots p/ undo e reage a mudanças/seleção. */
     public interface Host {
@@ -103,6 +104,22 @@ public final class PlanEditorView extends View {
         return selectedStructure != null;
     }
 
+    public StructureObject selectedStructure() {
+        return selectedStructure;
+    }
+
+    /** Aplica o valor do diálogo ALTURA (sentido depende do papel). */
+    public void applySelectedHeight(float value) {
+        if (selectedStructure == null) {
+            return;
+        }
+        host.beforeChange();
+        StructureRoles.applyHeight(selectedStructure, value);
+        host.afterChange();
+        host.selectionChanged(StructureRoles.describe(selectedStructure));
+        invalidate();
+    }
+
     public void deleteSelected() {
         if (selectedStructure == null) {
             return;
@@ -143,6 +160,47 @@ public final class PlanEditorView extends View {
                 Math.round(v / SNAP) * SNAP));
     }
 
+    /**
+     * Snap do ponto tocado: com a ferramenta PAREDE, a ponta de uma
+     * parede existente tem preferência sobre a grade — encostar o dedo
+     * perto dela continua a parede ou fecha o canto exatamente.
+     */
+    private float snapPoint(float wx, float wz, boolean xAxis) {
+        if (tool == TOOL_WALL) {
+            float[] end = nearWallEnd(wx, wz);
+            if (end != null) {
+                return xAxis ? end[0] : end[1];
+            }
+        }
+        return snap(xAxis ? wx : wz);
+    }
+
+    /** Ponta de parede mais próxima dentro do raio de captura, ou null. */
+    private float[] nearWallEnd(float wx, float wz) {
+        float best = Math.max(0.4f, 36f / scale);
+        float[] hit = null;
+        for (StructureObject s : doc.structures) {
+            if (!StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            boolean horizontal = s.half[0] >= s.half[2];
+            float len = (horizontal ? s.half[0] : s.half[2]) - WALL_HALF_T;
+            for (int side = -1; side <= 1; side += 2) {
+                float ex = horizontal
+                        ? s.transform.x + side * len : s.transform.x;
+                float ez = horizontal
+                        ? s.transform.z : s.transform.z + side * len;
+                float dist = (float) Math.hypot(wx - ex, wz - ez);
+                if (dist < best) {
+                    best = dist;
+                    hit = new float[]{ex, ez};
+                }
+            }
+        }
+        return hit;
+    }
+
     // ---- toque ----
 
     @Override
@@ -151,8 +209,10 @@ public final class PlanEditorView extends View {
             case MotionEvent.ACTION_DOWN:
                 dragging = true;
                 panning = false;
-                startX = curX = snap(toWorldX(e.getX()));
-                startZ = curZ = snap(toWorldZ(e.getY()));
+                startX = curX = snapPoint(toWorldX(e.getX()),
+                        toWorldZ(e.getY()), true);
+                startZ = curZ = snapPoint(toWorldX(e.getX()),
+                        toWorldZ(e.getY()), false);
                 if (tool == TOOL_SELECT) {
                     pick(toWorldX(e.getX()), toWorldZ(e.getY()));
                 }
@@ -181,8 +241,10 @@ public final class PlanEditorView extends View {
                     lastSpan = sp;
                     invalidate();
                 } else if (dragging) {
-                    curX = snap(toWorldX(e.getX()));
-                    curZ = snap(toWorldZ(e.getY()));
+                    curX = snapPoint(toWorldX(e.getX()),
+                            toWorldZ(e.getY()), true);
+                    curZ = snapPoint(toWorldX(e.getX()),
+                            toWorldZ(e.getY()), false);
                     if (tool == TOOL_SELECT) {
                         dragSelection();
                     }
@@ -225,10 +287,18 @@ public final class PlanEditorView extends View {
     private void finishGesture() {
         switch (tool) {
             case TOOL_FLOOR:
-                addRect(-0.15f, 0.15f, new float[]{0.30f, 0.33f, 0.38f});
+                addRect(StructureObject.ROLE_FLOOR, -0.15f, 0.15f,
+                        new float[]{0.30f, 0.33f, 0.38f});
                 break;
             case TOOL_BLOCK:
-                addRect(0.5f, 0.5f, new float[]{0.62f, 0.45f, 0.30f});
+                addRect(StructureObject.ROLE_BLOCK, 0.5f, 0.5f,
+                        new float[]{0.62f, 0.45f, 0.30f});
+                break;
+            case TOOL_CEILING:
+                // placa de 0.3m com a base na altura padrão da parede
+                addRect(StructureObject.ROLE_CEILING,
+                        WALL_HEIGHT + 0.15f, 0.15f,
+                        new float[]{0.38f, 0.41f, 0.48f});
                 break;
             case TOOL_WALL:
                 addWall();
@@ -250,8 +320,9 @@ public final class PlanEditorView extends View {
         }
     }
 
-    /** Piso e bloco: retângulo arrastado no plano, altura fixa do papel. */
-    private void addRect(float centerY, float halfY, float[] color) {
+    /** Piso/bloco/teto: retângulo arrastado, altura padrão do papel. */
+    private void addRect(String role, float centerY, float halfY,
+                         float[] color) {
         float hx = Math.abs(curX - startX) / 2f;
         float hz = Math.abs(curZ - startZ) / 2f;
         if (hx < 0.25f || hz < 0.25f) {
@@ -260,6 +331,7 @@ public final class PlanEditorView extends View {
         host.beforeChange();
         StructureObject s = new StructureObject(Ids.create(),
                 StructureObject.KIND_BLOCK);
+        s.role = role;
         s.transform.x = (startX + curX) / 2f;
         s.transform.y = centerY;
         s.transform.z = (startZ + curZ) / 2f;
@@ -279,6 +351,7 @@ public final class PlanEditorView extends View {
         host.beforeChange();
         StructureObject s = new StructureObject(Ids.create(),
                 StructureObject.KIND_BLOCK);
+        s.role = StructureObject.ROLE_WALL;
         boolean horizontal = dx >= dz;
         // meia espessura extra nas pontas fecha os cantos entre paredes
         float half = (horizontal ? dx : dz) / 2f + WALL_HALF_T;
@@ -322,16 +395,22 @@ public final class PlanEditorView extends View {
                 return;
             }
         }
-        for (int i = doc.structures.size() - 1; i >= 0; i--) {
-            StructureObject s = doc.structures.get(i);
-            if (Math.abs(wx - s.transform.x) <= s.half[0]
-                    && Math.abs(wz - s.transform.z) <= s.half[2]) {
-                selectedStructure = s;
-                grabDx = s.transform.x - wx;
-                grabDz = s.transform.z - wz;
-                host.selectionChanged(String.format("%s  %.2f × %.2f m",
-                        roleName(s), s.half[0] * 2f, s.half[2] * 2f));
-                return;
+        // teto por último: translúcido, não pode roubar todo toque
+        for (int pass = 0; pass < 2; pass++) {
+            boolean wantCeiling = pass == 1;
+            for (int i = doc.structures.size() - 1; i >= 0; i--) {
+                StructureObject s = doc.structures.get(i);
+                if (StructureRoles.isCeiling(s) != wantCeiling) {
+                    continue;
+                }
+                if (Math.abs(wx - s.transform.x) <= s.half[0]
+                        && Math.abs(wz - s.transform.z) <= s.half[2]) {
+                    selectedStructure = s;
+                    grabDx = s.transform.x - wx;
+                    grabDz = s.transform.z - wz;
+                    host.selectionChanged(StructureRoles.describe(s));
+                    return;
+                }
             }
         }
         host.selectionChanged(null);
@@ -356,14 +435,6 @@ public final class PlanEditorView extends View {
         }
     }
 
-    private static String roleName(StructureObject s) {
-        if (s.half[1] <= 0.2f) {
-            return "piso";
-        }
-        return s.transform.y - s.half[1] <= 0.01f
-                && s.half[1] >= 1f ? "parede" : "bloco";
-    }
-
     // ---- desenho ----
 
     @Override
@@ -374,13 +445,45 @@ public final class PlanEditorView extends View {
         }
         drawGrid(canvas);
         for (StructureObject s : doc.structures) {
-            drawStructure(canvas, s, s == selectedStructure);
+            if (!StructureRoles.isCeiling(s)) {
+                drawStructure(canvas, s, s == selectedStructure, false);
+            }
+        }
+        // tetos por cima de tudo, translúcidos
+        for (StructureObject s : doc.structures) {
+            if (StructureRoles.isCeiling(s)) {
+                drawStructure(canvas, s, s == selectedStructure, true);
+            }
+        }
+        if (tool == TOOL_WALL) {
+            drawWallAnchors(canvas);
         }
         if (dragging && tool != TOOL_SELECT) {
             drawPreview(canvas);
         }
         for (LogicMarker m : doc.markers) {
             drawMarker(canvas, m, m == selectedMarker);
+        }
+    }
+
+    /** Pontas de parede onde o toque gruda com a ferramenta PAREDE. */
+    private void drawWallAnchors(Canvas canvas) {
+        stroke.setColor(0xFFE0C060);
+        stroke.setStrokeWidth(2.5f);
+        for (StructureObject s : doc.structures) {
+            if (!StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            boolean horizontal = s.half[0] >= s.half[2];
+            float len = (horizontal ? s.half[0] : s.half[2]) - WALL_HALF_T;
+            for (int side = -1; side <= 1; side += 2) {
+                float ex = horizontal
+                        ? s.transform.x + side * len : s.transform.x;
+                float ez = horizontal
+                        ? s.transform.z : s.transform.z + side * len;
+                canvas.drawCircle(toPxX(ex), toPxY(ez), 9f, stroke);
+            }
         }
     }
 
@@ -412,15 +515,17 @@ public final class PlanEditorView extends View {
     }
 
     private void drawStructure(Canvas canvas, StructureObject s,
-                               boolean selected) {
+                               boolean selected, boolean translucent) {
         float l = toPxX(s.transform.x - s.half[0]);
         float t = toPxY(s.transform.z - s.half[2]);
         float r = toPxX(s.transform.x + s.half[0]);
         float b = toPxY(s.transform.z + s.half[2]);
-        fill.setColor(Color.rgb((int) (s.color[0] * 255f),
-                (int) (s.color[1] * 255f), (int) (s.color[2] * 255f)));
+        fill.setColor(Color.argb(translucent ? 70 : 255,
+                (int) (s.color[0] * 255f), (int) (s.color[1] * 255f),
+                (int) (s.color[2] * 255f)));
         canvas.drawRect(l, t, r, b, fill);
-        stroke.setColor(selected ? 0xFFFFFFFF : 0x66000000);
+        stroke.setColor(selected ? 0xFFFFFFFF
+                : translucent ? 0x998FA9C9 : 0x66000000);
         stroke.setStrokeWidth(selected ? 4f : 1.5f);
         canvas.drawRect(l, t, r, b, stroke);
     }
