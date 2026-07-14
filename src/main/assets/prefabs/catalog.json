@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "prefabs": [
+    {
+      "id": "enemy.drone",
+      "name": "Drone ativo",
+      "category": "jogo",
+      "behavior": "drone",
+      "properties": ["patrolX", "patrolZ"]
+    },
+    {
+      "id": "enemy.drone.wave",
+      "name": "Drone dormente",
+      "category": "jogo",
+      "behavior": "drone_dormant",
+      "properties": ["patrolX", "patrolZ"]
+    },
+    {
+      "id": "enemy.mutant",
+      "name": "Mutante",
+      "category": "jogo",
+      "behavior": "mutant",
+      "properties": ["patrolX", "patrolZ"]
+    },
+    {
+      "id": "pickup.health",
+      "name": "Kit médico",
+      "category": "jogo",
+      "behavior": "pickup_health",
+      "properties": []
+    },
+    {
+      "id": "pickup.ammo",
+      "name": "Munição",
+      "category": "jogo",
+      "behavior": "pickup_ammo",
+      "properties": []
+    },
+    {
+      "id": "terminal.wall",
+      "name": "Terminal",
+      "category": "jogo",
+      "behavior": "terminal",
+      "properties": []
+    },
+    {
+      "id": "door.gate",
+      "name": "Portão",
+      "category": "jogo",
+      "behavior": "door",
+      "properties": ["halfX", "halfY", "halfZ", "controllerId"]
+    }
+  ]
+}

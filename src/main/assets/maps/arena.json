@@ -1,0 +1,444 @@
+{
+  "environment": {
+    "ambient": 0.35,
+    "fog": [0.04, 0.05, 0.07],
+    "fogFar": 30
+  },
+  "id": "map-arena",
+  "markers": [
+    {
+      "id": "spawn",
+      "type": "player_spawn",
+      "x": 0,
+      "y": 0,
+      "z": 8
+    },
+    {
+      "id": "exit",
+      "radius": 1.2,
+      "type": "exit",
+      "x": 0,
+      "y": 0,
+      "z": -17
+    }
+  ],
+  "name": "arena",
+  "prefabs": [
+    {
+      "id": "door",
+      "prefabId": "door.gate",
+      "properties": {
+        "controllerId": "terminal",
+        "halfX": 1.5,
+        "halfY": 1.25,
+        "halfZ": 0.4
+      },
+      "transform": {
+        "x": 0,
+        "y": 1.25,
+        "z": -13
+      }
+    },
+    {
+      "id": "terminal",
+      "prefabId": "terminal.wall",
+      "transform": {
+        "x": 12,
+        "y": 1.35,
+        "z": 0
+      }
+    },
+    {
+      "id": "drone-1",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": 0,
+        "patrolZ": -8
+      },
+      "transform": {
+        "x": 0,
+        "y": 1.7,
+        "z": -8
+      }
+    },
+    {
+      "id": "drone-2",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": -4,
+        "patrolZ": 0
+      },
+      "transform": {
+        "x": 5,
+        "y": 1.7,
+        "z": 0
+      }
+    },
+    {
+      "id": "drone-3",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": -8,
+        "patrolZ": 6
+      },
+      "transform": {
+        "x": -8,
+        "y": 2.8,
+        "z": 6
+      }
+    },
+    {
+      "id": "wave-1",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": 1.5,
+        "patrolZ": -11
+      },
+      "transform": {
+        "x": 1.5,
+        "y": 1.7,
+        "z": -11
+      }
+    },
+    {
+      "id": "wave-2",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": -1.5,
+        "patrolZ": -11
+      },
+      "transform": {
+        "x": -1.5,
+        "y": 1.7,
+        "z": -11
+      }
+    },
+    {
+      "id": "wave-3",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": 0,
+        "patrolZ": -10
+      },
+      "transform": {
+        "x": 0,
+        "y": 1.7,
+        "z": -5
+      }
+    },
+    {
+      "id": "item-1",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": -8,
+        "y": 0.35,
+        "z": -8
+      }
+    },
+    {
+      "id": "item-2",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": -8,
+        "y": 1.55,
+        "z": 6
+      }
+    },
+    {
+      "id": "item-3",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": 3.6,
+        "y": 2.35,
+        "z": -2.3
+      }
+    },
+    {
+      "id": "item-4",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": 10,
+        "y": 0.35,
+        "z": 9
+      }
+    }
+  ],
+  "schema": 1,
+  "structures": [
+    {
+      "color": [0.36, 0.39, 0.44],
+      "half": [13, 0.5, 13],
+      "id": "block-001",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": -0.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.22, 0.24, 0.28],
+      "half": [13, 0.5, 13],
+      "id": "block-002",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.3, 0.34, 0.42],
+      "half": [0.5, 2.25, 13.5],
+      "id": "block-003",
+      "kind": "block",
+      "transform": {
+        "x": 13,
+        "y": 2.25,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.3, 0.34, 0.42],
+      "half": [0.5, 2.25, 13.5],
+      "id": "block-004",
+      "kind": "block",
+      "transform": {
+        "x": -13,
+        "y": 2.25,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.3, 0.34, 0.42],
+      "half": [13.5, 2.25, 0.5],
+      "id": "block-005",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": 2.25,
+        "z": 13
+      }
+    },
+    {
+      "color": [0.3, 0.34, 0.42],
+      "half": [6, 2.25, 0.5],
+      "id": "block-006",
+      "kind": "block",
+      "transform": {
+        "x": -7.5,
+        "y": 2.25,
+        "z": -13
+      }
+    },
+    {
+      "color": [0.3, 0.34, 0.42],
+      "half": [6, 2.25, 0.5],
+      "id": "block-007",
+      "kind": "block",
+      "transform": {
+        "x": 7.5,
+        "y": 2.25,
+        "z": -13
+      }
+    },
+    {
+      "color": [0.3, 0.34, 0.42],
+      "half": [1.5, 1, 0.5],
+      "id": "block-008",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": 3.5,
+        "z": -13
+      }
+    },
+    {
+      "color": [0.32, 0.35, 0.4],
+      "half": [2.5, 0.5, 3],
+      "id": "block-009",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": -0.5,
+        "z": -15.5
+      }
+    },
+    {
+      "color": [0.2, 0.22, 0.26],
+      "half": [2.5, 0.5, 3],
+      "id": "block-010",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": 5,
+        "z": -15.5
+      }
+    },
+    {
+      "color": [0.26, 0.3, 0.38],
+      "half": [0.5, 2.25, 2.75],
+      "id": "block-011",
+      "kind": "block",
+      "transform": {
+        "x": 2.5,
+        "y": 2.25,
+        "z": -15.75
+      }
+    },
+    {
+      "color": [0.26, 0.3, 0.38],
+      "half": [0.5, 2.25, 2.75],
+      "id": "block-012",
+      "kind": "block",
+      "transform": {
+        "x": -2.5,
+        "y": 2.25,
+        "z": -15.75
+      }
+    },
+    {
+      "color": [0.26, 0.3, 0.38],
+      "half": [2.5, 2.25, 0.5],
+      "id": "block-013",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": 2.25,
+        "z": -18.5
+      }
+    },
+    {
+      "color": [0.2, 0.85, 0.42],
+      "half": [1.2, 1.6, 0.12],
+      "id": "block-014",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": 2,
+        "z": -18.1
+      }
+    },
+    {
+      "color": [0.28, 0.32, 0.4],
+      "half": [4, 1.25, 0.4],
+      "id": "block-015",
+      "kind": "block",
+      "transform": {
+        "x": 0,
+        "y": 1.25,
+        "z": 3
+      }
+    },
+    {
+      "color": [0.52, 0.4, 0.26],
+      "half": [0.5, 0.5, 0.5],
+      "id": "block-016",
+      "kind": "block",
+      "transform": {
+        "x": 3,
+        "y": 0.5,
+        "z": -2
+      }
+    },
+    {
+      "color": [0.52, 0.4, 0.26],
+      "half": [0.5, 0.5, 0.5],
+      "id": "block-017",
+      "kind": "block",
+      "transform": {
+        "x": 4.2,
+        "y": 0.5,
+        "z": -2.6
+      }
+    },
+    {
+      "color": [0.55, 0.43, 0.28],
+      "half": [0.5, 0.5, 0.5],
+      "id": "block-018",
+      "kind": "block",
+      "transform": {
+        "x": 3.6,
+        "y": 1.5,
+        "z": -2.3
+      }
+    },
+    {
+      "color": [0.4, 0.44, 0.52],
+      "half": [0.5, 0.15, 1.5],
+      "id": "block-019",
+      "kind": "block",
+      "transform": {
+        "x": -4,
+        "y": 0.15,
+        "z": 6
+      }
+    },
+    {
+      "color": [0.4, 0.44, 0.52],
+      "half": [0.5, 0.3, 1.5],
+      "id": "block-020",
+      "kind": "block",
+      "transform": {
+        "x": -5,
+        "y": 0.3,
+        "z": 6
+      }
+    },
+    {
+      "color": [0.4, 0.44, 0.52],
+      "half": [0.5, 0.45, 1.5],
+      "id": "block-021",
+      "kind": "block",
+      "transform": {
+        "x": -5.9,
+        "y": 0.45,
+        "z": 6
+      }
+    },
+    {
+      "color": [0.42, 0.46, 0.55],
+      "half": [2, 0.6, 2],
+      "id": "block-022",
+      "kind": "block",
+      "transform": {
+        "x": -8,
+        "y": 0.6,
+        "z": 6
+      }
+    },
+    {
+      "color": [0.34, 0.44, 0.58],
+      "half": [0.5, 2.25, 0.5],
+      "id": "block-023",
+      "kind": "block",
+      "transform": {
+        "x": 6,
+        "y": 2.25,
+        "z": 6
+      }
+    },
+    {
+      "color": [0.34, 0.44, 0.58],
+      "half": [0.5, 2.25, 0.5],
+      "id": "block-024",
+      "kind": "block",
+      "transform": {
+        "x": -6,
+        "y": 2.25,
+        "z": -6
+      }
+    },
+    {
+      "color": [0.95, 0.45, 0.1],
+      "half": [0.3, 0.75, 0.5],
+      "id": "block-025",
+      "kind": "block",
+      "transform": {
+        "x": 12.4,
+        "y": 0.75,
+        "z": 0
+      }
+    }
+  ]
+}

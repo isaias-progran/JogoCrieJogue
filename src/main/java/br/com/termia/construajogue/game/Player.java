@@ -1,5 +1,6 @@
 package br.com.termia.construajogue.game;
 
+import br.com.termia.construajogue.runtime.RuntimeLevel;
 import br.com.termia.construajogue.engine.Collision;
 import br.com.termia.construajogue.engine.FpsCamera;
 import br.com.termia.construajogue.input.TouchControls;
@@ -40,7 +41,7 @@ public final class Player {
         camera.setEye(pos[0], pos[1] + EYE_HEIGHT, pos[2]);
     }
 
-    public void update(float dt, TouchControls controls, Level level,
+    public void update(float dt, TouchControls controls, RuntimeLevel level,
                        FpsCamera camera) {
         camera.rotate(controls.takeLookYaw(), controls.takeLookPitch());
 

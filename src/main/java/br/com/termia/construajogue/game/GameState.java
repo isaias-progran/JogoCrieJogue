@@ -1,5 +1,6 @@
 package br.com.termia.construajogue.game;
 
+import br.com.termia.construajogue.runtime.RuntimeLevel;
 import br.com.termia.construajogue.engine.FpsCamera;
 import br.com.termia.construajogue.engine.Raycast;
 import br.com.termia.construajogue.input.TouchControls;
@@ -28,7 +29,7 @@ public final class GameState {
     private static final float INTERACT_RANGE = 2.4f;
     private static final float HINT_TIME = 7f;
 
-    private final Level level;
+    private final RuntimeLevel level;
     private final FpsCamera camera;
     private final TouchControls controls;
     private final Sounds sounds;
@@ -58,7 +59,7 @@ public final class GameState {
     private boolean advancePending;
     private boolean campaignRestartPending;
 
-    public GameState(Level level, FpsCamera camera, TouchControls controls,
+    public GameState(RuntimeLevel level, FpsCamera camera, TouchControls controls,
                      Sounds sounds, Hud hud, int stageNumber,
                      int totalStages, float priorTime) {
         this.level = level;
@@ -309,7 +310,7 @@ public final class GameState {
                     > PICKUP_RANGE * PICKUP_RANGE) {
                 continue;
             }
-            if (item[0] == Level.ITEM_HEALTH) {
+            if (item[0] == RuntimeLevel.ITEM_HEALTH) {
                 if (player.health() == Player.MAX_HEALTH) {
                     continue; // vida cheia: deixa o kit para depois
                 }

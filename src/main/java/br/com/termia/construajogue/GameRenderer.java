@@ -9,10 +9,17 @@ import android.os.SystemClock;
 import br.com.termia.construajogue.engine.FpsCamera;
 import br.com.termia.construajogue.engine.Mesh;
 import br.com.termia.construajogue.engine.Shader;
+import br.com.termia.construajogue.compiler.LevelCompiler;
+import br.com.termia.construajogue.compiler.MapValidator;
+import br.com.termia.construajogue.compiler.ValidationIssue;
 import br.com.termia.construajogue.game.Enemy;
 import br.com.termia.construajogue.game.GameState;
-import br.com.termia.construajogue.game.Level;
 import br.com.termia.construajogue.game.Sounds;
+import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.persistence.MapJson;
+import br.com.termia.construajogue.prefab.PrefabCatalog;
+import br.com.termia.construajogue.runtime.LegacyLevelLoader;
+import br.com.termia.construajogue.runtime.RuntimeLevel;
 import br.com.termia.construajogue.input.TouchControls;
 import br.com.termia.construajogue.ui.Hud;
 
@@ -31,7 +38,7 @@ import javax.microedition.khronos.opengles.GL10;
 public final class GameRenderer implements GLSurfaceView.Renderer {
 
     private static final String[] LEVEL_PATHS = {
-            "levels/arena.txt", "levels/labirinto.txt"
+            "maps/arena.json", "levels/labirinto.txt"
     };
 
     /** Avisos vindos da thread GL; a Activity leva para a thread de UI. */
@@ -100,8 +107,9 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private final float[] viewProj = new float[16];
     private final float[] eye = new float[3];
 
-    private Level level;
+    private RuntimeLevel level;
     private GameState game;
+    private PrefabCatalog catalog;
     private Mesh levelMesh;
     private Mesh doorMesh;
     private GameMeshes meshes;
@@ -133,7 +141,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
 
     /** Carrega somente dados/estado; os VBOs dependem do contexto atual. */
     private void loadLevelState(int index, float priorTime) throws IOException {
-        Level loaded = Level.load(assets, LEVEL_PATHS[index]);
+        RuntimeLevel loaded = loadLevel(LEVEL_PATHS[index]);
         GameState next = new GameState(loaded, camera, controls, sounds, hud,
                 index + 1, LEVEL_PATHS.length, priorTime);
         level = loaded;
@@ -141,6 +149,41 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         levelIndex = index;
         doorHeight = level.doorOriginal() == null ? 0f
                 : level.doorOriginal()[4] - level.doorOriginal()[1];
+    }
+
+    /** .json = documento validado e compilado; .txt = formato legado. */
+    private RuntimeLevel loadLevel(String path) throws IOException {
+        if (!path.endsWith(".json")) {
+            return LegacyLevelLoader.load(assets.open(path), path);
+        }
+        if (catalog == null) {
+            catalog = PrefabCatalog.load(assets.open("prefabs/catalog.json"));
+        }
+        MapDocument doc = MapJson.read(readAsset(path));
+        java.util.List<ValidationIssue> issues =
+                MapValidator.validate(doc, catalog);
+        if (MapValidator.hasError(issues)) {
+            for (ValidationIssue issue : issues) {
+                if (issue.isError()) {
+                    throw new IOException(path + ": " + issue);
+                }
+            }
+        }
+        return LevelCompiler.compile(doc, catalog);
+    }
+
+    private String readAsset(String path) throws IOException {
+        java.io.ByteArrayOutputStream buffer =
+                new java.io.ByteArrayOutputStream();
+        try (java.io.InputStream input = assets.open(path)) {
+            byte[] chunk = new byte[4096];
+            int read;
+            while ((read = input.read(chunk)) > 0) {
+                buffer.write(chunk, 0, read);
+            }
+        }
+        return new String(buffer.toByteArray(),
+                java.nio.charset.StandardCharsets.UTF_8);
     }
 
     private void uploadLevelMeshes(boolean replacing) {
@@ -309,7 +352,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             float bob = 0.06f * (float) Math.sin(gameTime * 2.5 + item[1]);
             GLES30.glUniform3f(offsetLoc, item[1], item[2] + bob, item[3]);
             GLES30.glUniform3f(tintLoc, 1.2f, 1.2f, 1.2f);
-            if (item[0] == Level.ITEM_HEALTH) {
+            if (item[0] == RuntimeLevel.ITEM_HEALTH) {
                 meshes.health.draw();
             } else {
                 meshes.ammo.draw();

@@ -1,0 +1,138 @@
+package br.com.termia.construajogue.compiler;
+
+import br.com.termia.construajogue.engine.Boxes;
+import br.com.termia.construajogue.map.LogicMarker;
+import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.PrefabInstance;
+import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.prefab.PrefabCatalog;
+import br.com.termia.construajogue.prefab.PrefabDefinition;
+import br.com.termia.construajogue.runtime.LegacyLevelLoader;
+import br.com.termia.construajogue.runtime.RuntimeLevel;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Compila um MapDocument VALIDADO em RuntimeLevel, uma única vez, antes
+ * do loop do jogo (nunca no quadro). A ordem das listas do documento é
+ * preservada — é isso que permite reproduzir bit a bit a arena legada.
+ */
+public final class LevelCompiler {
+
+    private LevelCompiler() {
+    }
+
+    public static RuntimeLevel compile(MapDocument doc,
+                                       PrefabCatalog catalog) {
+        List<float[]> blocks = new ArrayList<>();
+        List<float[]> colors = new ArrayList<>();
+        for (StructureObject s : doc.structures) {
+            if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
+                throw new IllegalArgumentException(
+                        "estrutura não suportada: " + s.kind);
+            }
+            float[] bounds = new float[6];
+            LegacyLevelLoader.toBounds(s.transform.x, s.transform.y,
+                    s.transform.z, s.half[0], s.half[1], s.half[2], bounds);
+            blocks.add(bounds);
+            colors.add(s.color);
+        }
+
+        List<float[]> drones = new ArrayList<>();
+        List<float[]> waves = new ArrayList<>();
+        List<float[]> mutants = new ArrayList<>();
+        List<float[]> items = new ArrayList<>();
+        float[] terminal = null;
+        PrefabInstance door = null;
+        for (PrefabInstance p : doc.prefabs) {
+            PrefabDefinition def = catalog.find(p.prefabId);
+            if (def == null) {
+                throw new IllegalArgumentException(
+                        "prefab desconhecido: " + p.prefabId);
+            }
+            float x = p.transform.x;
+            float y = p.transform.y;
+            float z = p.transform.z;
+            switch (def.behavior) {
+                case PrefabDefinition.BEHAVIOR_DRONE:
+                    drones.add(patrol(p));
+                    break;
+                case PrefabDefinition.BEHAVIOR_DRONE_DORMANT:
+                    waves.add(patrol(p));
+                    break;
+                case PrefabDefinition.BEHAVIOR_MUTANT:
+                    mutants.add(patrol(p));
+                    break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_HEALTH:
+                    items.add(new float[]{RuntimeLevel.ITEM_HEALTH, x, y, z});
+                    break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_AMMO:
+                    items.add(new float[]{RuntimeLevel.ITEM_AMMO, x, y, z});
+                    break;
+                case PrefabDefinition.BEHAVIOR_TERMINAL:
+                    terminal = new float[]{x, y, z};
+                    break;
+                case PrefabDefinition.BEHAVIOR_DOOR:
+                    door = p;
+                    break;
+                default:
+                    throw new IllegalArgumentException("comportamento '"
+                            + def.behavior + "' sem suporte no compilador");
+            }
+        }
+
+        float[] spawn = {0f, 0f, 0f, 0f};
+        float[] exit = null;
+        for (LogicMarker m : doc.markers) {
+            if (LogicMarker.PLAYER_SPAWN.equals(m.type)) {
+                spawn = new float[]{m.x, m.y, m.z, m.yaw};
+            } else if (LogicMarker.EXIT.equals(m.type)) {
+                exit = new float[]{m.x, m.z, m.radius};
+            }
+        }
+
+        int colliderCount = blocks.size() + (door == null ? 0 : 1);
+        float[][] colliders = new float[colliderCount][6];
+        float[] vertexData = new float[blocks.size() * Boxes.FLOATS_PER_BOX];
+        int cursor = 0;
+        for (int i = 0; i < blocks.size(); i++) {
+            colliders[i] = blocks.get(i);
+            float[] color = colors.get(i);
+            cursor = Boxes.emitBounds(vertexData, cursor, colliders[i],
+                    color[0], color[1], color[2]);
+        }
+
+        int doorIndex = -1;
+        float[] doorVertexData = null;
+        float[] doorOriginal = null;
+        if (door != null) {
+            doorIndex = blocks.size();
+            LegacyLevelLoader.toBounds(door.transform.x, door.transform.y,
+                    door.transform.z, door.floatProperty("halfX", 0f),
+                    door.floatProperty("halfY", 0f),
+                    door.floatProperty("halfZ", 0f), colliders[doorIndex]);
+            doorOriginal = colliders[doorIndex].clone();
+            doorVertexData = new float[Boxes.FLOATS_PER_BOX];
+            Boxes.emitBounds(doorVertexData, 0, doorOriginal,
+                    LegacyLevelLoader.DOOR_COLOR[0],
+                    LegacyLevelLoader.DOOR_COLOR[1],
+                    LegacyLevelLoader.DOOR_COLOR[2]);
+        }
+
+        return new RuntimeLevel(colliders, vertexData, doorVertexData,
+                doorIndex, doorOriginal, terminal, exit,
+                items.toArray(new float[0][]), spawn,
+                drones.toArray(new float[0][]),
+                waves.toArray(new float[0][]),
+                mutants.toArray(new float[0][]),
+                doc.ambient, doc.fogColor.clone(), doc.fogFar);
+    }
+
+    /** {x, y, z, x2, z2}: segundo ponto de patrulha (padrão: parado). */
+    private static float[] patrol(PrefabInstance p) {
+        return new float[]{p.transform.x, p.transform.y, p.transform.z,
+                p.floatProperty("patrolX", p.transform.x),
+                p.floatProperty("patrolZ", p.transform.z)};
+    }
+}

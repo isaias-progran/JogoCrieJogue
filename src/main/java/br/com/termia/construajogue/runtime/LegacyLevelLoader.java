@@ -1,72 +1,33 @@
-package br.com.termia.construajogue.game;
-
-import android.content.res.AssetManager;
+package br.com.termia.construajogue.runtime;
 
 import br.com.termia.construajogue.engine.Boxes;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Nível carregado de texto em assets/levels (formato do PLANO.md seção 9).
- * Comandos: `# comentário`, `ambient a`, `fog r g b dist`,
- * `spawn x y z yawGraus`, `box cx cy cz hx hy hz r g b`,
- * `drone x y z x2 z2` (ativo), `wave x y z x2 z2` (dormente até o alarme),
- * `mutant x y z x2 z2` (inimigo terrestre de ataque próximo),
- * `terminal x y z` (ponto de interação/luz), `door cx cy cz hx hy hz`
- * (portão que desce ao ativar o terminal; colide e bloqueia visão),
- * `exit x z raio` (zona de vitória), `item health|ammo x y z`.
- * O parse acontece uma vez; após perda de contexto só as malhas re-sobem.
+ * Carrega os níveis legados em texto (assets/levels/*.txt) enquanto a
+ * campanha original não é toda convertida para JSON. Comandos:
+ * `# comentário`, `ambient a`, `fog r g b dist`, `spawn x y z yawGraus`,
+ * `box cx cy cz hx hy hz r g b`, `drone x y z x2 z2` (ativo),
+ * `wave x y z x2 z2` (dormente até o alarme), `mutant x y z x2 z2`,
+ * `terminal x y z`, `door cx cy cz hx hy hz`, `exit x z raio`,
+ * `item health|ammo x y z`.
  */
-public final class Level {
+public final class LegacyLevelLoader {
 
-    public static final int ITEM_HEALTH = 0;
-    public static final int ITEM_AMMO = 1;
+    /** Cor fixa da malha do portão (mesma desde o jogo-fps). */
+    public static final float[] DOOR_COLOR = {0.46f, 0.50f, 0.60f};
 
-    private final float[][] colliders;
-    private final float[] vertexData;
-    private final float[] doorVertexData;
-    private final int doorIndex;
-    private final float[] doorOriginal;
-    private final float[] terminal;
-    private final float[] exit;
-    private final float[][] items;
-    private final float[] spawn;
-    private final float[][] droneSpawns;
-    private final float[][] waveSpawns;
-    private final float[][] mutantSpawns;
-    private final float ambient;
-    private final float[] fogColor;
-    private final float fogFar;
-
-    private Level(float[][] colliders, float[] vertexData,
-                  float[] doorVertexData, int doorIndex, float[] doorOriginal,
-                  float[] terminal, float[] exit, float[][] items,
-                  float[] spawn, float[][] droneSpawns, float[][] waveSpawns,
-                  float[][] mutantSpawns, float ambient,
-                  float[] fogColor, float fogFar) {
-        this.colliders = colliders;
-        this.vertexData = vertexData;
-        this.doorVertexData = doorVertexData;
-        this.doorIndex = doorIndex;
-        this.doorOriginal = doorOriginal;
-        this.terminal = terminal;
-        this.exit = exit;
-        this.items = items;
-        this.spawn = spawn;
-        this.droneSpawns = droneSpawns;
-        this.waveSpawns = waveSpawns;
-        this.mutantSpawns = mutantSpawns;
-        this.ambient = ambient;
-        this.fogColor = fogColor;
-        this.fogFar = fogFar;
+    private LegacyLevelLoader() {
     }
 
-    public static Level load(AssetManager assets, String path)
+    public static RuntimeLevel load(InputStream input, String path)
             throws IOException {
         List<float[]> boxes = new ArrayList<>();
         List<float[]> drones = new ArrayList<>();
@@ -81,7 +42,7 @@ public final class Level {
         float[] fogColor = {0.04f, 0.05f, 0.07f};
         float fogFar = 30f;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                assets.open(path), StandardCharsets.UTF_8))) {
+                input, StandardCharsets.UTF_8))) {
             String line;
             int number = 0;
             while ((line = reader.readLine()) != null) {
@@ -126,7 +87,8 @@ public final class Level {
                             break;
                         case "item":
                             int type = "health".equals(parts[1])
-                                    ? ITEM_HEALTH : ITEM_AMMO;
+                                    ? RuntimeLevel.ITEM_HEALTH
+                                    : RuntimeLevel.ITEM_AMMO;
                             items.add(new float[]{type, f(parts[2]),
                                     f(parts[3]), f(parts[4])});
                             break;
@@ -177,19 +139,19 @@ public final class Level {
             doorOriginal = colliders[doorIndex].clone();
             doorVertexData = new float[Boxes.FLOATS_PER_BOX];
             Boxes.emitBounds(doorVertexData, 0, doorOriginal,
-                    0.46f, 0.50f, 0.60f);
+                    DOOR_COLOR[0], DOOR_COLOR[1], DOOR_COLOR[2]);
         }
 
-        return new Level(colliders, vertexData, doorVertexData, doorIndex,
-                doorOriginal, terminal, exit,
+        return new RuntimeLevel(colliders, vertexData, doorVertexData,
+                doorIndex, doorOriginal, terminal, exit,
                 items.toArray(new float[0][]), spawn,
                 drones.toArray(new float[0][]),
                 waves.toArray(new float[0][]),
                 mutants.toArray(new float[0][]), ambient, fogColor, fogFar);
     }
 
-    private static void toBounds(float cx, float cy, float cz,
-                                 float hx, float hy, float hz, float[] out6) {
+    public static void toBounds(float cx, float cy, float cz,
+                                float hx, float hy, float hz, float[] out6) {
         out6[0] = cx - hx;
         out6[1] = cy - hy;
         out6[2] = cz - hz;
@@ -200,78 +162,5 @@ public final class Level {
 
     private static float f(String token) {
         return Float.parseFloat(token);
-    }
-
-    /** Inclui a porta (mutável pelo GameState durante a abertura). */
-    public float[][] colliders() {
-        return colliders;
-    }
-
-    public float[] vertexData() {
-        return vertexData;
-    }
-
-    public float[] doorVertexData() {
-        return doorVertexData;
-    }
-
-    public int doorIndex() {
-        return doorIndex;
-    }
-
-    /** Bounds originais da porta fechada (para animar/reiniciar). */
-    public float[] doorOriginal() {
-        return doorOriginal;
-    }
-
-    /** Ponto de interação/luz do terminal, ou null. */
-    public float[] terminal() {
-        return terminal;
-    }
-
-    /** {x, z, raio} da zona de vitória, ou null. */
-    public float[] exit() {
-        return exit;
-    }
-
-    /** Cada linha: {tipo, x, y, z}. */
-    public float[][] items() {
-        return items;
-    }
-
-    /** {x, y, z, yaw em graus}. */
-    public float[] spawn() {
-        return spawn;
-    }
-
-    /** Drones ativos desde o início: {x, y, z, x2, z2}. */
-    public float[][] droneSpawns() {
-        return droneSpawns;
-    }
-
-    /** Drones dormentes que acordam no alarme do terminal. */
-    public float[][] waveSpawns() {
-        return waveSpawns;
-    }
-
-    /** Mutantes ativos: {x, y, z, x2, z2}. */
-    public float[][] mutantSpawns() {
-        return mutantSpawns;
-    }
-
-    public float ambient() {
-        return ambient;
-    }
-
-    public float[] fogColor() {
-        return fogColor;
-    }
-
-    public float fogFar() {
-        return fogFar;
-    }
-
-    public int boxCount() {
-        return colliders.length;
     }
 }

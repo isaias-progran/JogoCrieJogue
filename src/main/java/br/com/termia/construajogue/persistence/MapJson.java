@@ -1,0 +1,228 @@
+package br.com.termia.construajogue.persistence;
+
+import br.com.termia.construajogue.map.LogicMarker;
+import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.PrefabInstance;
+import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.Transform;
+import br.com.termia.construajogue.util.Json;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+/** Converte MapDocument ↔ JSON schema 1 (docs/FORMATO-MAPA.md). */
+public final class MapJson {
+
+    private MapJson() {
+    }
+
+    // ---- escrita ----
+
+    public static String write(MapDocument doc) {
+        Map<String, Object> root = new TreeMap<>();
+        root.put("schema", MapDocument.SCHEMA);
+        root.put("id", doc.id);
+        root.put("name", doc.name);
+        Map<String, Object> env = new TreeMap<>();
+        env.put("ambient", doc.ambient);
+        env.put("fog", floats(doc.fogColor));
+        env.put("fogFar", doc.fogFar);
+        root.put("environment", env);
+
+        List<Object> structures = new ArrayList<>();
+        for (StructureObject s : doc.structures) {
+            Map<String, Object> item = new TreeMap<>();
+            item.put("id", s.id);
+            item.put("kind", s.kind);
+            item.put("transform", transform(s.transform));
+            if (s.half != null) {
+                item.put("half", floats(s.half));
+            }
+            if (s.color != null) {
+                item.put("color", floats(s.color));
+            }
+            structures.add(item);
+        }
+        root.put("structures", structures);
+
+        List<Object> prefabs = new ArrayList<>();
+        for (PrefabInstance p : doc.prefabs) {
+            Map<String, Object> item = new TreeMap<>();
+            item.put("id", p.id);
+            item.put("prefabId", p.prefabId);
+            item.put("transform", transform(p.transform));
+            if (p.scale != 1f) {
+                item.put("scale", p.scale);
+            }
+            if (!p.properties.isEmpty()) {
+                item.put("properties", new TreeMap<>(p.properties));
+            }
+            prefabs.add(item);
+        }
+        root.put("prefabs", prefabs);
+
+        List<Object> markers = new ArrayList<>();
+        for (LogicMarker m : doc.markers) {
+            Map<String, Object> item = new TreeMap<>();
+            item.put("id", m.id);
+            item.put("type", m.type);
+            item.put("x", m.x);
+            item.put("y", m.y);
+            item.put("z", m.z);
+            if (m.yaw != 0f) {
+                item.put("yaw", m.yaw);
+            }
+            if (m.radius != 0f) {
+                item.put("radius", m.radius);
+            }
+            markers.add(item);
+        }
+        root.put("markers", markers);
+        return Json.write(root);
+    }
+
+    private static Map<String, Object> transform(Transform t) {
+        Map<String, Object> map = new TreeMap<>();
+        map.put("x", t.x);
+        map.put("y", t.y);
+        map.put("z", t.z);
+        if (t.yaw != 0f) {
+            map.put("yaw", t.yaw);
+        }
+        return map;
+    }
+
+    private static List<Object> floats(float[] values) {
+        List<Object> list = new ArrayList<>();
+        for (float value : values) {
+            list.add(value);
+        }
+        return list;
+    }
+
+    // ---- leitura ----
+
+    public static MapDocument read(String text) {
+        Object parsed = Json.parse(text);
+        if (!(parsed instanceof Map)) {
+            throw new IllegalArgumentException("mapa: objeto JSON esperado");
+        }
+        Map<?, ?> root = (Map<?, ?>) parsed;
+        int schema = intOf(root, "schema", -1);
+        if (schema != MapDocument.SCHEMA) {
+            throw new IllegalArgumentException(
+                    "schema " + schema + " não suportado");
+        }
+        MapDocument doc = new MapDocument();
+        doc.id = stringOf(root, "id", null);
+        doc.name = stringOf(root, "name", "");
+        Object env = root.get("environment");
+        if (env instanceof Map) {
+            Map<?, ?> e = (Map<?, ?>) env;
+            doc.ambient = floatOf(e, "ambient", doc.ambient);
+            doc.fogFar = floatOf(e, "fogFar", doc.fogFar);
+            float[] fog = floatsOf(e.get("fog"), 3);
+            if (fog != null) {
+                doc.fogColor = fog;
+            }
+        }
+        for (Object item : listOf(root.get("structures"))) {
+            Map<?, ?> s = asMap(item, "structure");
+            StructureObject structure = new StructureObject(
+                    stringOf(s, "id", null), stringOf(s, "kind", ""));
+            structure.transform = transformOf(s.get("transform"));
+            structure.half = floatsOf(s.get("half"), 3);
+            structure.color = floatsOf(s.get("color"), 3);
+            doc.structures.add(structure);
+        }
+        for (Object item : listOf(root.get("prefabs"))) {
+            Map<?, ?> p = asMap(item, "prefab");
+            PrefabInstance instance = new PrefabInstance(
+                    stringOf(p, "id", null), stringOf(p, "prefabId", ""));
+            instance.transform = transformOf(p.get("transform"));
+            instance.scale = floatOf(p, "scale", 1f);
+            Object props = p.get("properties");
+            if (props instanceof Map) {
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>) props).entrySet()) {
+                    Object value = entry.getValue();
+                    if (value instanceof Json.Num) {
+                        value = ((Json.Num) value).floatValue();
+                    }
+                    instance.properties.put(entry.getKey().toString(), value);
+                }
+            }
+            doc.prefabs.add(instance);
+        }
+        for (Object item : listOf(root.get("markers"))) {
+            Map<?, ?> m = asMap(item, "marker");
+            LogicMarker marker = new LogicMarker(
+                    stringOf(m, "id", null), stringOf(m, "type", ""));
+            marker.x = floatOf(m, "x", 0f);
+            marker.y = floatOf(m, "y", 0f);
+            marker.z = floatOf(m, "z", 0f);
+            marker.yaw = floatOf(m, "yaw", 0f);
+            marker.radius = floatOf(m, "radius", 0f);
+            doc.markers.add(marker);
+        }
+        return doc;
+    }
+
+    private static Transform transformOf(Object value) {
+        Transform t = new Transform();
+        if (value instanceof Map) {
+            Map<?, ?> m = (Map<?, ?>) value;
+            t.x = floatOf(m, "x", 0f);
+            t.y = floatOf(m, "y", 0f);
+            t.z = floatOf(m, "z", 0f);
+            t.yaw = floatOf(m, "yaw", 0f);
+        }
+        return t;
+    }
+
+    private static List<?> listOf(Object value) {
+        return value instanceof List ? (List<?>) value : new ArrayList<>();
+    }
+
+    private static Map<?, ?> asMap(Object value, String what) {
+        if (!(value instanceof Map)) {
+            throw new IllegalArgumentException(what + ": objeto esperado");
+        }
+        return (Map<?, ?>) value;
+    }
+
+    private static float[] floatsOf(Object value, int count) {
+        if (!(value instanceof List)) {
+            return null;
+        }
+        List<?> list = (List<?>) value;
+        if (list.size() != count) {
+            throw new IllegalArgumentException(
+                    "lista de " + count + " números esperada");
+        }
+        float[] out = new float[count];
+        for (int i = 0; i < count; i++) {
+            out[i] = ((Json.Num) list.get(i)).floatValue();
+        }
+        return out;
+    }
+
+    private static float floatOf(Map<?, ?> map, String key, float fallback) {
+        Object value = map.get(key);
+        return value instanceof Json.Num
+                ? ((Json.Num) value).floatValue() : fallback;
+    }
+
+    private static int intOf(Map<?, ?> map, String key, int fallback) {
+        Object value = map.get(key);
+        return value instanceof Json.Num
+                ? ((Json.Num) value).intValue() : fallback;
+    }
+
+    private static String stringOf(Map<?, ?> map, String key,
+                                   String fallback) {
+        Object value = map.get(key);
+        return value instanceof String ? (String) value : fallback;
+    }
+}

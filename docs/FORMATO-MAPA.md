@@ -67,7 +67,26 @@
 }
 ```
 
-Estruturas desenháveis: `floor`, `wall`, `ceiling`, `opening`.
+Estruturas desenháveis: `floor`, `wall`, `ceiling`, `opening` (fases 2+)
+e `block` (fase 1, já implementado).
+
+## Implementado na Fase 1 (schema 1 atual)
+
+- Estrutura `block`: paralelepípedo alinhado aos eixos. `transform` é o
+  CENTRO, `"half": [hx, hy, hz]` são meias dimensões e `"color": [r, g, b]`
+  a cor 0..1. Meias dimensões (e não dimensões totais) para reproduzir
+  bit a bit os níveis legados sem arredondamento de float.
+- Inimigos (`enemy.drone`, `enemy.drone.wave`, `enemy.mutant`):
+  propriedades `patrolX`/`patrolZ` = segundo ponto da patrulha
+  (padrão: parado na posição inicial).
+- `door.gate`: `transform` no centro, propriedades `halfX/halfY/halfZ`
+  (meias dimensões) e `controllerId` = id da instância do terminal.
+- Restrições da fase: exatamente 1 `player_spawn` e 1 `exit`; no máximo
+  1 terminal e 1 porta (limite atual do RuntimeLevel).
+- Números no JSON preservam o token (classe `Json.Num`) — a leitura usa
+  `Float.parseFloat` direto, sem passar por double.
+- `assets/maps/arena.json` é gerado por `LegacyTxtConverter` a partir de
+  `assets/levels/arena.txt`; `scripts/test-core.sh` falha se divergirem.
 
 Famílias de prefab: `stairs.*`, `ramp.*`, `platform.*`, `obstacle.*`,
 `furniture.*`, `door.*`, `terminal.*`, `enemy.*`, `pickup.*`.
