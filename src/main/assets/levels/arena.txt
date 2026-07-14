@@ -1,0 +1,74 @@
+# Arena da Fase 3 — sala industrial com objetivo completo
+# (unidades em metros, y p/ cima)
+# box = centro x y z + meia-extensão hx hy hz + cor r g b
+
+ambient 0.35
+fog 0.04 0.05 0.07 30
+spawn 0 0 8 0
+
+# piso (topo em y=0) e teto (base em y=4.5)
+box 0 -0.5 0   13 0.5 13   0.36 0.39 0.44
+box 0 5.0 0    13 0.5 13   0.22 0.24 0.28
+
+# paredes leste/oeste/sul (interior de 25x25, altura 4.5)
+box 13 2.25 0    0.5 2.25 13.5   0.30 0.34 0.42
+box -13 2.25 0   0.5 2.25 13.5   0.30 0.34 0.42
+box 0 2.25 13    13.5 2.25 0.5   0.30 0.34 0.42
+
+# parede norte em dois trechos com vão central de 3m + verga superior
+box -7.5 2.25 -13   6 2.25 0.5   0.30 0.34 0.42
+box 7.5 2.25 -13    6 2.25 0.5   0.30 0.34 0.42
+box 0 3.5 -13       1.5 1.0 0.5  0.30 0.34 0.42
+
+# portão de aço no vão (desce no chão quando o terminal é ativado)
+door 0 1.25 -13   1.5 1.25 0.4
+
+# corredor de fuga atrás do portão, terminando no elevador
+box 0 -0.5 -15.5   2.5 0.5 3.0   0.32 0.35 0.40
+box 0 5.0 -15.5    2.5 0.5 3.0   0.20 0.22 0.26
+box 2.5 2.25 -15.75   0.5 2.25 2.75   0.26 0.30 0.38
+box -2.5 2.25 -15.75  0.5 2.25 2.75   0.26 0.30 0.38
+box 0 2.25 -18.5      2.5 2.25 0.5    0.26 0.30 0.38
+# painel luminoso verde do elevador
+box 0 2.0 -18.1   1.2 1.6 0.12   0.20 0.85 0.42
+
+# zona de vitória dentro do corredor
+exit 0 -17 1.2
+
+# muro baixo divisório (dá canto p/ testar colisão deslizante)
+box 0 1.25 3   4 1.25 0.4   0.28 0.32 0.40
+
+# caixotes (teste de canto e de obstáculo alto)
+box 3 0.5 -2      0.5 0.5 0.5   0.52 0.40 0.26
+box 4.2 0.5 -2.6  0.5 0.5 0.5   0.52 0.40 0.26
+box 3.6 1.5 -2.3  0.5 0.5 0.5   0.55 0.43 0.28
+
+# escada de degraus 0.3 subindo p/ a plataforma
+box -4.0 0.15 6   0.5 0.15 1.5   0.40 0.44 0.52
+box -5.0 0.30 6   0.5 0.30 1.5   0.40 0.44 0.52
+box -5.9 0.45 6   0.5 0.45 1.5   0.40 0.44 0.52
+box -8.0 0.60 6   2.0 0.60 2.0   0.42 0.46 0.55
+
+# pilares
+box 6 2.25 6     0.5 2.25 0.5   0.34 0.44 0.58
+box -6 2.25 -6   0.5 2.25 0.5   0.34 0.44 0.58
+
+# terminal na parede leste: corpo laranja + ponto de interação/luz
+box 12.4 0.75 0   0.3 0.75 0.5   0.95 0.45 0.10
+terminal 12.0 1.35 0
+
+# drones ativos desde o início: x y z x2 z2 (iguais = parado)
+drone 0 1.7 -8   0 -8
+drone 5 1.7 0   -4 0
+drone -8 2.8 6   -8 6
+
+# onda: dormentes no chão até o alarme do terminal (guardam o portão)
+wave 1.5 1.7 -11   1.5 -11
+wave -1.5 1.7 -11  -1.5 -11
+wave 0 1.7 -5      0 -10
+
+# itens: kits médicos e munição
+item health -8 0.35 -8
+item health -8 1.55 6
+item ammo 3.6 2.35 -2.3
+item ammo 10 0.35 9

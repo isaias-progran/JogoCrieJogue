@@ -1,0 +1,7 @@
+/build/
+/.termia/
+*.apk
+*.idsig
+*.class
+local.properties
+

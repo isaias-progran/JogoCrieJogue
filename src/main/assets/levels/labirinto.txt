@@ -1,0 +1,81 @@
+# SETOR 2 — Labirinto Espelhado
+# Corredores alternam a abertura direita/esquerda como um reflexo quebrado.
+# Paleta roxa/ciano, neblina mais curta e mais inimigos que a arena.
+
+ambient 0.28
+fog 0.07 0.025 0.11 24
+spawn 0 0 13 0
+
+# piso, teto e paredes externas (interior 32x32, altura 4.5m)
+box 0 -0.5 0       16 0.5 16     0.24 0.18 0.34
+box 0 5.0 0        16 0.5 16     0.12 0.10 0.20
+box 16.5 2.25 0    0.5 2.25 16.5  0.27 0.20 0.40
+box -16.5 2.25 0   0.5 2.25 16.5  0.27 0.20 0.40
+box 0 2.25 16.5    16.5 2.25 0.5  0.27 0.20 0.40
+
+# parede norte, vão do elevador e corredor final
+box -8.75 2.25 -16.5  7.25 2.25 0.5  0.25 0.22 0.42
+box 8.75 2.25 -16.5   7.25 2.25 0.5  0.25 0.22 0.42
+box 0 3.75 -16.5      1.5 0.75 0.5   0.25 0.22 0.42
+door 0 1.4 -16.4      1.5 1.4 0.38
+box 0 -0.5 -19        2.6 0.5 3.0    0.18 0.30 0.36
+box 0 5.0 -19         2.6 0.5 3.0    0.10 0.17 0.22
+box 2.6 2.25 -19      0.5 2.25 3.0   0.18 0.35 0.42
+box -2.6 2.25 -19     0.5 2.25 3.0   0.18 0.35 0.42
+box 0 2.25 -22        2.6 2.25 0.5   0.18 0.45 0.48
+exit 0 -20.5 1.2
+
+# cinco paredes de percurso: abertura alterna direita/esquerda
+box -2.25 2.25 9    13.75 2.25 0.35  0.34 0.23 0.48
+box 2.25 2.25 5     13.75 2.25 0.35  0.22 0.34 0.48
+box -3 2.25 1       13 2.25 0.35     0.34 0.23 0.48
+box 3 2.25 -3       13 2.25 0.35     0.22 0.34 0.48
+box -4 2.25 -7      12 2.25 0.35     0.34 0.23 0.48
+box 4 2.25 -11      12 2.25 0.35     0.22 0.34 0.48
+
+# pilares espelhados: referências visuais e cobertura contra drones
+box -7 2.25 12    0.55 2.25 0.55   0.14 0.55 0.62
+box 7 2.25 12     0.55 2.25 0.55   0.14 0.55 0.62
+box -7 2.25 7     0.55 2.25 0.55   0.50 0.18 0.56
+box 7 2.25 7      0.55 2.25 0.55   0.50 0.18 0.56
+box -7 2.25 3     0.55 2.25 0.55   0.14 0.55 0.62
+box 7 2.25 3      0.55 2.25 0.55   0.14 0.55 0.62
+box -7 2.25 -1    0.55 2.25 0.55   0.50 0.18 0.56
+box 7 2.25 -1     0.55 2.25 0.55   0.50 0.18 0.56
+box -7 2.25 -5    0.55 2.25 0.55   0.14 0.55 0.62
+box 7 2.25 -5     0.55 2.25 0.55   0.14 0.55 0.62
+
+# câmaras laterais espelhadas e caixas de cobertura
+box -13 0.6 11    1.3 0.6 0.6   0.38 0.26 0.52
+box 13 0.6 7      1.3 0.6 0.6   0.22 0.48 0.54
+box -13 0.6 3     1.3 0.6 0.6   0.38 0.26 0.52
+box 13 0.6 -1     1.3 0.6 0.6   0.22 0.48 0.54
+box -13 0.6 -5    1.3 0.6 0.6   0.38 0.26 0.52
+box 12 0.6 -9     1.3 0.6 0.6   0.22 0.48 0.54
+
+# terminal oculto no penúltimo corredor, na parede leste
+box 15.5 0.8 -9    0.35 0.8 0.65   0.20 0.85 0.82
+terminal 15.0 1.4 -9
+
+# mutantes terrestres (centro y=0.85) patrulham cada faixa do labirinto
+mutant -11 0.85 12   -5 12
+mutant 10 0.85 7     3 7
+mutant -10 0.85 3    -3 3
+mutant 10 0.85 -1    3 -1
+mutant -10 0.85 -5   -3 -5
+mutant 9 0.85 -9     3 -9
+mutant -6 0.85 -13   0 -13
+
+# um drone vigia o centro; três outros acordam quando o portão abre
+drone 0 2.0 3       0 3
+wave -6 1.8 -13     -2 -13
+wave 6 1.8 -13      2 -13
+wave 0 1.8 -15      0 -13
+
+# recursos — o labirinto exige mais munição e oferece cura em desvios
+item ammo -14 0.35 13
+item health 14 1.55 7
+item ammo -14 1.55 3
+item health 14 1.55 -1
+item ammo -14 1.55 -5
+item ammo 13 1.55 -9

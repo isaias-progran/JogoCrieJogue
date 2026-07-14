@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Construa &amp; Jogue</string>
+    <string name="gl_starting">Iniciando GL…</string>
+    <string name="gl_ready">GL pronto — %1$s</string>
+    <string name="gl_error">Erro GL: %1$s</string>
+    <string name="fps_format">%1$d FPS</string>
+</resources>
