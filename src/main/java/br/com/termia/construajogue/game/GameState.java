@@ -127,7 +127,7 @@ public final class GameState {
         hud.setBig(null);
         hud.setObjective("SETOR " + stageNumber + " — "
                 + (level.terminal() == null
-                ? "ELIMINE OS INIMIGOS" : "ATIVE O TERMINAL LARANJA"));
+                ? "CHEGUE À SAÍDA" : "ATIVE O TERMINAL LARANJA"));
         hud.setHint("esquerda: andar   •   arraste TIRO: mirar   •   PULO: saltar");
     }
 
@@ -327,7 +327,9 @@ public final class GameState {
 
     private void checkExit() {
         float[] exit = level.exit();
-        if (exit == null || doorProgress < 0.9f || state != PLAYING) {
+        // mapa sem porta: a saída já nasce liberada
+        boolean doorOpen = level.doorIndex() < 0 || doorProgress >= 0.9f;
+        if (exit == null || !doorOpen || state != PLAYING) {
             return;
         }
         float dist = (float) Math.hypot(exit[0] - player.x(),
@@ -342,8 +344,10 @@ public final class GameState {
                         + " CONCLUÍDO\ndescendo ao labirinto…");
             } else {
                 int totalTime = (int) (priorTime + runTime);
-                hud.setBig("VOCÊ ESCAPOU DOS 2 SETORES!\ntempo total: "
-                        + totalTime + "s — toque para jogar de novo");
+                hud.setBig((totalStages > 1
+                        ? "VOCÊ ESCAPOU DOS " + totalStages + " SETORES!"
+                        : "MAPA CONCLUÍDO!") + "\ntempo: " + totalTime
+                        + "s — toque para jogar de novo");
             }
             hud.setObjective(null);
         }

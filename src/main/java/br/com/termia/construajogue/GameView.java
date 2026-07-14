@@ -1,11 +1,11 @@
 package br.com.termia.construajogue;
 
 import android.content.Context;
-import android.content.res.AssetManager;
 import android.opengl.GLSurfaceView;
 
 import br.com.termia.construajogue.game.Sounds;
 import br.com.termia.construajogue.input.TouchControls;
+import br.com.termia.construajogue.runtime.LevelProvider;
 import br.com.termia.construajogue.ui.Hud;
 
 /**
@@ -20,12 +20,12 @@ public final class GameView extends GLSurfaceView {
     private final GameRenderer renderer;
 
     public GameView(Context context, GameRenderer.Listener listener,
-                    TouchControls controls, AssetManager assets,
+                    TouchControls controls, LevelProvider levels,
                     Sounds sounds, Hud hud) {
         super(context);
         setEGLContextClientVersion(3);
         setPreserveEGLContextOnPause(true);
-        renderer = new GameRenderer(listener, controls, assets, sounds, hud);
+        renderer = new GameRenderer(listener, controls, levels, sounds, hud);
         setRenderer(renderer);
         setRenderMode(RENDERMODE_CONTINUOUSLY);
     }

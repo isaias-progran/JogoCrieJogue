@@ -1,6 +1,5 @@
 package br.com.termia.construajogue;
 
-import android.content.res.AssetManager;
 import android.opengl.GLES30;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -9,16 +8,10 @@ import android.os.SystemClock;
 import br.com.termia.construajogue.engine.FpsCamera;
 import br.com.termia.construajogue.engine.Mesh;
 import br.com.termia.construajogue.engine.Shader;
-import br.com.termia.construajogue.compiler.LevelCompiler;
-import br.com.termia.construajogue.compiler.MapValidator;
-import br.com.termia.construajogue.compiler.ValidationIssue;
 import br.com.termia.construajogue.game.Enemy;
 import br.com.termia.construajogue.game.GameState;
 import br.com.termia.construajogue.game.Sounds;
-import br.com.termia.construajogue.map.MapDocument;
-import br.com.termia.construajogue.persistence.MapJson;
-import br.com.termia.construajogue.prefab.PrefabCatalog;
-import br.com.termia.construajogue.runtime.LegacyLevelLoader;
+import br.com.termia.construajogue.runtime.LevelProvider;
 import br.com.termia.construajogue.runtime.RuntimeLevel;
 import br.com.termia.construajogue.input.TouchControls;
 import br.com.termia.construajogue.ui.Hud;
@@ -36,10 +29,6 @@ import javax.microedition.khronos.opengles.GL10;
  * limpo. Nenhum `new` em onDrawFrame.
  */
 public final class GameRenderer implements GLSurfaceView.Renderer {
-
-    private static final String[] LEVEL_PATHS = {
-            "maps/arena.json", "levels/labirinto.txt"
-    };
 
     /** Avisos vindos da thread GL; a Activity leva para a thread de UI. */
     public interface Listener {
@@ -98,7 +87,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
 
     private final Listener listener;
     private final TouchControls controls;
-    private final AssetManager assets;
+    private final LevelProvider levels;
     private final Sounds sounds;
     private final Hud hud;
     private final FpsCamera camera = new FpsCamera();
@@ -109,7 +98,6 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
 
     private RuntimeLevel level;
     private GameState game;
-    private PrefabCatalog catalog;
     private Mesh levelMesh;
     private Mesh doorMesh;
     private GameMeshes meshes;
@@ -131,59 +119,24 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private int levelIndex;
 
     public GameRenderer(Listener listener, TouchControls controls,
-                        AssetManager assets, Sounds sounds, Hud hud) {
+                        LevelProvider levels, Sounds sounds, Hud hud) {
         this.listener = listener;
         this.controls = controls;
-        this.assets = assets;
+        this.levels = levels;
         this.sounds = sounds;
         this.hud = hud;
     }
 
     /** Carrega somente dados/estado; os VBOs dependem do contexto atual. */
     private void loadLevelState(int index, float priorTime) throws IOException {
-        RuntimeLevel loaded = loadLevel(LEVEL_PATHS[index]);
+        RuntimeLevel loaded = levels.load(index);
         GameState next = new GameState(loaded, camera, controls, sounds, hud,
-                index + 1, LEVEL_PATHS.length, priorTime);
+                index + 1, levels.count(), priorTime);
         level = loaded;
         game = next;
         levelIndex = index;
         doorHeight = level.doorOriginal() == null ? 0f
                 : level.doorOriginal()[4] - level.doorOriginal()[1];
-    }
-
-    /** .json = documento validado e compilado; .txt = formato legado. */
-    private RuntimeLevel loadLevel(String path) throws IOException {
-        if (!path.endsWith(".json")) {
-            return LegacyLevelLoader.load(assets.open(path), path);
-        }
-        if (catalog == null) {
-            catalog = PrefabCatalog.load(assets.open("prefabs/catalog.json"));
-        }
-        MapDocument doc = MapJson.read(readAsset(path));
-        java.util.List<ValidationIssue> issues =
-                MapValidator.validate(doc, catalog);
-        if (MapValidator.hasError(issues)) {
-            for (ValidationIssue issue : issues) {
-                if (issue.isError()) {
-                    throw new IOException(path + ": " + issue);
-                }
-            }
-        }
-        return LevelCompiler.compile(doc, catalog);
-    }
-
-    private String readAsset(String path) throws IOException {
-        java.io.ByteArrayOutputStream buffer =
-                new java.io.ByteArrayOutputStream();
-        try (java.io.InputStream input = assets.open(path)) {
-            byte[] chunk = new byte[4096];
-            int read;
-            while ((read = input.read(chunk)) > 0) {
-                buffer.write(chunk, 0, read);
-            }
-        }
-        return new String(buffer.toByteArray(),
-                java.nio.charset.StandardCharsets.UTF_8);
     }
 
     private void uploadLevelMeshes(boolean replacing) {
