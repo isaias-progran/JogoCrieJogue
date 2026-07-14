@@ -9,7 +9,9 @@ import android.view.View;
 
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.util.Ids;
 
 /**
@@ -26,6 +28,7 @@ public final class PlanEditorView extends View {
     public static final int TOOL_SPAWN = 4;
     public static final int TOOL_EXIT = 5;
     public static final int TOOL_CEILING = 6;
+    public static final int TOOL_PREFAB = 7;
 
     /** O host guarda snapshots p/ undo e reage a mudanças/seleção. */
     public interface Host {
@@ -68,9 +71,12 @@ public final class PlanEditorView extends View {
     // seleção
     private StructureObject selectedStructure;
     private LogicMarker selectedMarker;
+    private PrefabInstance selectedPrefab;
     private boolean movedSelection;
     private float grabDx;
     private float grabDz;
+    // peça armada para o próximo toque (ferramenta PEÇA)
+    private PrefabDefinition activePrefab;
 
     public PlanEditorView(Context context, Host host) {
         super(context);
@@ -101,31 +107,62 @@ public final class PlanEditorView extends View {
     }
 
     public boolean hasSelection() {
-        return selectedStructure != null;
+        return selectedStructure != null || selectedPrefab != null;
     }
 
     public StructureObject selectedStructure() {
         return selectedStructure;
     }
 
+    public PrefabInstance selectedPrefab() {
+        return selectedPrefab;
+    }
+
+    /** Arma a ferramenta PEÇA: o próximo toque solta esta peça. */
+    public void setActivePrefab(PrefabDefinition def) {
+        activePrefab = def;
+        setTool(TOOL_PREFAB);
+    }
+
+    public PrefabDefinition activePrefab() {
+        return activePrefab;
+    }
+
     /** Aplica o valor do diálogo ALTURA (sentido depende do papel). */
     public void applySelectedHeight(float value) {
-        if (selectedStructure == null) {
+        if (selectedStructure == null && selectedPrefab == null) {
             return;
         }
         host.beforeChange();
-        StructureRoles.applyHeight(selectedStructure, value);
+        if (selectedStructure != null) {
+            StructureRoles.applyHeight(selectedStructure, value);
+            host.selectionChanged(
+                    StructureRoles.describe(selectedStructure));
+        } else {
+            // peça: ALTURA = distância do chão (voo do drone, item…)
+            selectedPrefab.transform.y =
+                    Math.max(0f, Math.min(10f, value));
+            host.selectionChanged(describePrefab(selectedPrefab));
+        }
         host.afterChange();
-        host.selectionChanged(StructureRoles.describe(selectedStructure));
         invalidate();
     }
 
+    private String describePrefab(PrefabInstance p) {
+        return p.prefabId + String.format("  ·  %.2f m do chão",
+                p.transform.y);
+    }
+
     public void deleteSelected() {
-        if (selectedStructure == null) {
+        if (selectedStructure == null && selectedPrefab == null) {
             return;
         }
         host.beforeChange();
-        doc.structures.remove(selectedStructure);
+        if (selectedStructure != null) {
+            doc.structures.remove(selectedStructure);
+        } else {
+            doc.prefabs.remove(selectedPrefab);
+        }
         clearSelection();
         host.afterChange();
         invalidate();
@@ -134,6 +171,7 @@ public final class PlanEditorView extends View {
     private void clearSelection() {
         selectedStructure = null;
         selectedMarker = null;
+        selectedPrefab = null;
         host.selectionChanged(null);
     }
 
@@ -161,18 +199,60 @@ public final class PlanEditorView extends View {
     }
 
     /**
-     * Snap do ponto tocado: com a ferramenta PAREDE, a ponta de uma
-     * parede existente tem preferência sobre a grade — encostar o dedo
-     * perto dela continua a parede ou fecha o canto exatamente.
+     * Snap do ponto tocado com a ferramenta PAREDE: a ponta de uma
+     * parede existente tem prioridade; depois o CORPO de uma parede
+     * (junção em T — o ponto cai exatamente na linha central dela);
+     * por fim a grade.
      */
     private float snapPoint(float wx, float wz, boolean xAxis) {
         if (tool == TOOL_WALL) {
             float[] end = nearWallEnd(wx, wz);
+            if (end == null) {
+                end = nearWallBody(wx, wz);
+            }
             if (end != null) {
                 return xAxis ? end[0] : end[1];
             }
         }
         return snap(xAxis ? wx : wz);
+    }
+
+    /**
+     * Ponto sobre a linha central da parede mais próxima (junção em T):
+     * a coordenada perpendicular vem da parede, a longitudinal segue a
+     * grade, limitada ao trecho entre as pontas.
+     */
+    private float[] nearWallBody(float wx, float wz) {
+        float best = Math.max(0.4f, 36f / scale);
+        float[] hit = null;
+        for (StructureObject s : doc.structures) {
+            if (!StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            boolean horizontal = s.half[0] >= s.half[2];
+            float len = (horizontal ? s.half[0] : s.half[2]) - WALL_HALF_T;
+            if (horizontal) {
+                float along = Math.max(s.transform.x - len,
+                        Math.min(s.transform.x + len, snap(wx)));
+                float dist = (float) Math.hypot(wx - along,
+                        wz - s.transform.z);
+                if (dist < best) {
+                    best = dist;
+                    hit = new float[]{along, s.transform.z};
+                }
+            } else {
+                float along = Math.max(s.transform.z - len,
+                        Math.min(s.transform.z + len, snap(wz)));
+                float dist = (float) Math.hypot(wx - s.transform.x,
+                        wz - along);
+                if (dist < best) {
+                    best = dist;
+                    hit = new float[]{s.transform.x, along};
+                }
+            }
+        }
+        return hit;
     }
 
     /** Ponta de parede mais próxima dentro do raio de captura, ou null. */
@@ -309,6 +389,9 @@ public final class PlanEditorView extends View {
             case TOOL_EXIT:
                 placeMarker(LogicMarker.EXIT, 1.2f);
                 break;
+            case TOOL_PREFAB:
+                placePrefab();
+                break;
             case TOOL_SELECT:
                 if (movedSelection) {
                     host.afterChange();
@@ -366,6 +449,59 @@ public final class PlanEditorView extends View {
         host.afterChange();
     }
 
+    /** Solta a peça armada onde o dedo terminou, com altura típica. */
+    private void placePrefab() {
+        if (activePrefab == null) {
+            return;
+        }
+        host.beforeChange();
+        PrefabInstance p = new PrefabInstance(Ids.create(),
+                activePrefab.id);
+        p.transform.x = curX;
+        p.transform.z = curZ;
+        p.transform.y = defaultY(activePrefab);
+        if (PrefabDefinition.BEHAVIOR_DOOR.equals(activePrefab.behavior)) {
+            p.properties.put("halfX", 1.5f);
+            p.properties.put("halfY", 1.4f);
+            p.properties.put("halfZ", 0.4f);
+        }
+        doc.prefabs.add(p);
+        autoLinkDoor();
+        host.afterChange();
+    }
+
+    /** Alturas típicas da campanha original (base do chão em y=0). */
+    private static float defaultY(PrefabDefinition def) {
+        switch (def.behavior) {
+            case PrefabDefinition.BEHAVIOR_DRONE:
+            case PrefabDefinition.BEHAVIOR_DRONE_DORMANT:
+                return 1.8f;
+            case PrefabDefinition.BEHAVIOR_MUTANT:
+                return 0.85f;
+            case PrefabDefinition.BEHAVIOR_TERMINAL:
+            case PrefabDefinition.BEHAVIOR_DOOR:
+                return 1.4f;
+            default:
+                return 0.5f; // itens balançando perto do chão
+        }
+    }
+
+    /** Uma porta e um terminal no mapa: liga automaticamente. */
+    private void autoLinkDoor() {
+        PrefabInstance door = null;
+        PrefabInstance terminal = null;
+        for (PrefabInstance p : doc.prefabs) {
+            if (p.prefabId.startsWith("door.")) {
+                door = p;
+            } else if (p.prefabId.startsWith("terminal.")) {
+                terminal = p;
+            }
+        }
+        if (door != null && terminal != null) {
+            door.properties.put("controllerId", terminal.id);
+        }
+    }
+
     /** Início e saída são únicos: reposiciona se já existir. */
     private void placeMarker(String type, float radius) {
         host.beforeChange();
@@ -385,6 +521,19 @@ public final class PlanEditorView extends View {
         movedSelection = false;
         selectedMarker = null;
         selectedStructure = null;
+        selectedPrefab = null;
+        // peças primeiro: ícones pequenos por cima das estruturas
+        for (int i = doc.prefabs.size() - 1; i >= 0; i--) {
+            PrefabInstance p = doc.prefabs.get(i);
+            if (Math.hypot(wx - p.transform.x, wz - p.transform.z)
+                    < 24f / scale) {
+                selectedPrefab = p;
+                grabDx = p.transform.x - wx;
+                grabDz = p.transform.z - wz;
+                host.selectionChanged(describePrefab(p));
+                return;
+            }
+        }
         for (LogicMarker m : doc.markers) {
             if (Math.hypot(wx - m.x, wz - m.z) < 24f / scale) {
                 selectedMarker = m;
@@ -417,7 +566,8 @@ public final class PlanEditorView extends View {
     }
 
     private void dragSelection() {
-        if (selectedStructure == null && selectedMarker == null) {
+        if (selectedStructure == null && selectedMarker == null
+                && selectedPrefab == null) {
             return;
         }
         if (!movedSelection) {
@@ -429,6 +579,9 @@ public final class PlanEditorView extends View {
         if (selectedStructure != null) {
             selectedStructure.transform.x = nx;
             selectedStructure.transform.z = nz;
+        } else if (selectedPrefab != null) {
+            selectedPrefab.transform.x = nx;
+            selectedPrefab.transform.z = nz;
         } else {
             selectedMarker.x = nx;
             selectedMarker.z = nz;
@@ -461,8 +614,64 @@ public final class PlanEditorView extends View {
         if (dragging && tool != TOOL_SELECT) {
             drawPreview(canvas);
         }
+        for (PrefabInstance p : doc.prefabs) {
+            drawPrefab(canvas, p, p == selectedPrefab);
+        }
         for (LogicMarker m : doc.markers) {
             drawMarker(canvas, m, m == selectedMarker);
+        }
+    }
+
+    /** Ícone da peça: bolinha colorida com letra (porta vira barra). */
+    private void drawPrefab(Canvas canvas, PrefabInstance p,
+                            boolean selected) {
+        float px = toPxX(p.transform.x);
+        float py = toPxY(p.transform.z);
+        String letter;
+        int color;
+        if (p.prefabId.startsWith("enemy.mutant")) {
+            letter = "M";
+            color = 0xFFB05CC9;
+        } else if (p.prefabId.startsWith("enemy.drone.wave")) {
+            letter = "Z";
+            color = 0xFF8A8F9C;
+        } else if (p.prefabId.startsWith("enemy.")) {
+            letter = "D";
+            color = 0xFFE05555;
+        } else if (p.prefabId.startsWith("pickup.health")) {
+            letter = "+";
+            color = 0xFF39B54A;
+        } else if (p.prefabId.startsWith("pickup.")) {
+            letter = "A";
+            color = 0xFFD9B23C;
+        } else if (p.prefabId.startsWith("terminal.")) {
+            letter = "T";
+            color = 0xFFE08030;
+        } else if (p.prefabId.startsWith("door.")) {
+            letter = "";
+            color = 0xFF7580A0;
+            float hx = Math.max(0.5f, p.floatProperty("halfX", 1.5f));
+            float hz = Math.max(0.2f, p.floatProperty("halfZ", 0.4f));
+            fill.setColor(color);
+            canvas.drawRect(toPxX(p.transform.x - hx),
+                    toPxY(p.transform.z - hz),
+                    toPxX(p.transform.x + hx),
+                    toPxY(p.transform.z + hz), fill);
+        } else {
+            letter = "?";
+            color = 0xFF888888;
+        }
+        if (!letter.isEmpty()) {
+            fill.setColor(color);
+            canvas.drawCircle(px, py, 13f, fill);
+            textPaint.setColor(0xFF10151B);
+            canvas.drawText(letter, px - 8f, py + 9f, textPaint);
+            textPaint.setColor(0xFFAFC3D0);
+        }
+        if (selected) {
+            stroke.setColor(0xFFFFFFFF);
+            stroke.setStrokeWidth(3f);
+            canvas.drawCircle(px, py, 18f, stroke);
         }
     }
 
@@ -553,7 +762,8 @@ public final class PlanEditorView extends View {
     private void drawPreview(Canvas canvas) {
         stroke.setColor(0xFFE0C060);
         stroke.setStrokeWidth(3f);
-        if (tool == TOOL_SPAWN || tool == TOOL_EXIT) {
+        if (tool == TOOL_SPAWN || tool == TOOL_EXIT
+                || tool == TOOL_PREFAB) {
             canvas.drawCircle(toPxX(curX), toPxY(curZ), 14f, stroke);
             return;
         }

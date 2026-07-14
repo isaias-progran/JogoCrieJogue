@@ -84,6 +84,11 @@ public final class PrefabCatalog {
         return byId.get(id);
     }
 
+    /** Todas as peças, na ordem do arquivo (para o navegador). */
+    public List<PrefabDefinition> all() {
+        return new java.util.ArrayList<>(byId.values());
+    }
+
     public int size() {
         return byId.size();
     }

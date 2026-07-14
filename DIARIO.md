@@ -8,6 +8,21 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-14
+- **v0.4.0 (versionCode 5) — Fase 3 inicial: PEÇAS DE JOGO NA PLANTA.**
+  - Botão PEÇA… abre o catálogo (7 peças: drone ativo/dormente, mutante,
+    kit, munição, terminal, portão); tocar na planta solta a peça com
+    altura típica da campanha (drone 1.8m, mutante 0.85m, terminal/porta
+    1.4m, itens 0.5m). MOVER seleciona/arrasta peças (prioridade sobre
+    estruturas), EXCLUIR remove, ALTURA vira "distância do chão".
+  - Ícones na planta: D vermelho (drone), Z cinza (dormente), M roxo
+    (mutante), + verde (kit), A amarelo (munição), T laranja (terminal);
+    portão = retângulo com halfX/halfZ reais.
+  - Porta↔terminal se LIGAM SOZINHOS ao colocar (um de cada no mapa →
+    `controllerId` preenchido). Patrulha ainda não editável (inimigo
+    fica parado: patrolX/Z default = posição) — próximo passo natural.
+  - Parede agora também gruda no MEIO de outra (junção em T):
+    `nearWallBody` projeta o toque na linha central; prioridade
+    ponta > corpo > grade.
 - **v0.3.1 (versionCode 4)** — feedback do usuário na v0.3.0 ("construir
   parede ficou difícil no dedo"):
   - PAREDE agora GRUDA nas pontas: tocar perto da extremidade de uma

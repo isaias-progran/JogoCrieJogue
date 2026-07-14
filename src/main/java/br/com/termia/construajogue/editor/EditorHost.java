@@ -20,6 +20,7 @@ import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.persistence.MapJson;
 import br.com.termia.construajogue.persistence.MapStore;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
+import br.com.termia.construajogue.prefab.PrefabDefinition;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -124,6 +125,11 @@ public final class EditorHost extends FrameLayout
         addTool(row, "INÍCIO", PlanEditorView.TOOL_SPAWN);
         addTool(row, "SAÍDA", PlanEditorView.TOOL_EXIT);
         addTool(row, "MOVER", PlanEditorView.TOOL_SELECT);
+        Button prefabButton = action("PEÇA…", this::choosePrefab);
+        prefabButton.setTag(PlanEditorView.TOOL_PREFAB);
+        prefabButton.setTextColor(0xFFE0C060);
+        toolButtons.add(prefabButton);
+        row.addView(prefabButton);
         heightButton = action("ALTURA", this::editHeight);
         heightButton.setTextColor(0xFF9CC9E4);
         row.addView(heightButton);
@@ -176,6 +182,10 @@ public final class EditorHost extends FrameLayout
         } else if (tool == PlanEditorView.TOOL_CEILING) {
             status.setText("arraste o retângulo do teto; use ALTURA para "
                     + "definir a elevação");
+        } else if (tool == PlanEditorView.TOOL_PREFAB) {
+            PrefabDefinition def = plan.activePrefab();
+            status.setText(def == null ? "escolha uma peça"
+                    : "toque na planta para soltar: " + def.name);
         } else {
             status.setText("arraste com um dedo; dois dedos movem a vista");
         }
@@ -218,20 +228,38 @@ public final class EditorHost extends FrameLayout
         heightButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
     }
 
-    /** Diálogo para digitar a medida real da estrutura selecionada. */
+    /** Navegador do catálogo: escolher arma a ferramenta PEÇA. */
+    private void choosePrefab() {
+        final List<PrefabDefinition> defs = catalog.all();
+        String[] labels = new String[defs.size()];
+        for (int i = 0; i < defs.size(); i++) {
+            labels[i] = defs.get(i).name;
+        }
+        new AlertDialog.Builder(activity)
+                .setTitle("Escolha a peça")
+                .setItems(labels, (dialog, which) -> {
+                    plan.setActivePrefab(defs.get(which));
+                    selectTool(PlanEditorView.TOOL_PREFAB);
+                })
+                .show();
+    }
+
+    /** Diálogo para digitar a medida real da seleção. */
     private void editHeight() {
         StructureObject s = plan.selectedStructure();
-        if (s == null) {
+        if (s == null && plan.selectedPrefab() == null) {
             return;
         }
         EditText input = new EditText(activity);
         input.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setText(String.format(Locale.US, "%.2f",
-                StructureRoles.heightValue(s)));
+        input.setText(String.format(Locale.US, "%.2f", s != null
+                ? StructureRoles.heightValue(s)
+                : plan.selectedPrefab().transform.y));
         input.selectAll();
         new AlertDialog.Builder(activity)
-                .setTitle(StructureRoles.heightLabel(s))
+                .setTitle(s != null ? StructureRoles.heightLabel(s)
+                        : "Distância do chão (m)")
                 .setView(input)
                 .setPositiveButton("Aplicar", (dialog, which) -> {
                     try {
