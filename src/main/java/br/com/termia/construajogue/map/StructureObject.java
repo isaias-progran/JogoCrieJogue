@@ -25,6 +25,9 @@ public final class StructureObject {
     public float[] half;
     /** Cor {r, g, b} 0..1. */
     public float[] color;
+    /** Vãos (só faz sentido em paredes). */
+    public final java.util.List<WallOpening> openings =
+            new java.util.ArrayList<>();
 
     public StructureObject() {
     }

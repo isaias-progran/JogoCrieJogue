@@ -5,6 +5,7 @@ import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
@@ -63,6 +64,9 @@ public final class MapValidator {
                     || s.half[2] <= 0f)) {
                 error(issues, "estrutura.dimensao",
                         label + ": dimensões devem ser positivas");
+            }
+            if (s.half != null && !s.openings.isEmpty()) {
+                checkOpenings(issues, ids, s, label);
             }
         }
 
@@ -220,6 +224,40 @@ public final class MapValidator {
                         "o início está dentro de uma estrutura");
                 return;
             }
+        }
+    }
+
+    /** Vão precisa caber na parede e não sobrepor outro vão. */
+    private static void checkOpenings(List<ValidationIssue> issues,
+                                      Set<String> ids, StructureObject s,
+                                      String label) {
+        float halfLen = Math.max(s.half[0], s.half[2]);
+        float wallHeight = s.half[1] * 2f;
+        List<WallOpening> sorted = new ArrayList<>(s.openings);
+        sorted.sort((a, c) -> Float.compare(a.offset, c.offset));
+        float lastEnd = Float.NEGATIVE_INFINITY;
+        for (WallOpening o : sorted) {
+            checkId(issues, ids, o.id, label + " (vão)");
+            checkFloats(issues, label + " (vão)", new float[]{
+                    o.offset, o.width, o.height, o.sill}, 4);
+            if (o.width <= 0f || o.height <= 0f || o.sill < 0f) {
+                error(issues, "vao.dimensao",
+                        label + ": vão com medidas inválidas");
+                continue;
+            }
+            if (Math.abs(o.offset) + o.width / 2f > halfLen) {
+                error(issues, "vao.fora",
+                        label + ": vão sai do comprimento da parede");
+            }
+            if (o.sill + o.height > wallHeight + 0.001f) {
+                error(issues, "vao.altura",
+                        label + ": vão mais alto que a parede");
+            }
+            if (o.offset - o.width / 2f < lastEnd) {
+                error(issues, "vao.sobreposto",
+                        label + ": vãos sobrepostos");
+            }
+            lastEnd = o.offset + o.width / 2f;
         }
     }
 

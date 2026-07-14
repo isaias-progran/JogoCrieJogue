@@ -37,7 +37,7 @@ if ! diff -q src/main/assets/maps/arena.json build/arena-gerada.json \
 fi
 
 for TESTE in JsonTest MapJsonTest PrefabCatalogTest MapValidatorTest \
-        LevelCompilerTest; do
+        LevelCompilerTest WallOpeningTest; do
     java -cp "$OUT" "br.com.termia.construajogue.$TESTE"
 done
 echo "testes do núcleo OK"

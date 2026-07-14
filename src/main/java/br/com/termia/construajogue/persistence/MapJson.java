@@ -5,6 +5,7 @@ import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.Transform;
+import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.util.Json;
 
 import java.util.ArrayList;
@@ -45,6 +46,22 @@ public final class MapJson {
             }
             if (s.color != null) {
                 item.put("color", floats(s.color));
+            }
+            if (!s.openings.isEmpty()) {
+                List<Object> openings = new ArrayList<>();
+                for (WallOpening o : s.openings) {
+                    Map<String, Object> cut = new TreeMap<>();
+                    cut.put("id", o.id);
+                    cut.put("type", o.type);
+                    cut.put("offset", o.offset);
+                    cut.put("width", o.width);
+                    cut.put("height", o.height);
+                    if (o.sill != 0f) {
+                        cut.put("sill", o.sill);
+                    }
+                    openings.add(cut);
+                }
+                item.put("openings", openings);
             }
             structures.add(item);
         }
@@ -139,6 +156,16 @@ public final class MapJson {
             structure.transform = transformOf(s.get("transform"));
             structure.half = floatsOf(s.get("half"), 3);
             structure.color = floatsOf(s.get("color"), 3);
+            for (Object cut : listOf(s.get("openings"))) {
+                Map<?, ?> c = asMap(cut, "opening");
+                WallOpening opening = new WallOpening(
+                        stringOf(c, "id", null), stringOf(c, "type", ""));
+                opening.offset = floatOf(c, "offset", 0f);
+                opening.width = floatOf(c, "width", 0f);
+                opening.height = floatOf(c, "height", 0f);
+                opening.sill = floatOf(c, "sill", 0f);
+                structure.openings.add(opening);
+            }
             doc.structures.add(structure);
         }
         for (Object item : listOf(root.get("prefabs"))) {

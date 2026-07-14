@@ -8,6 +8,23 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-14
+- **v0.5.0 (versionCode 6) — VÃOS NAS PAREDES + seleção melhorada.**
+  - Botão VÃO… (porta 1,0×2,1 / portal livre 1,6×altura da parede /
+    janela 1,2×1,2 peitoril 0,9): tocar numa parede RECORTA o vão de
+    verdade — `LevelCompiler.cutOpenings` fatia a parede em trechos
+    cheios + verga + peitoril; passagem/visão realmente livres (a porta
+    hoje é um vão com marco visual na planta; folha que abre/fecha fica
+    para depois — o portão+terminal continua sendo a porta animada).
+  - `WallOpening` no modelo (offset relativo ao centro da parede — anda
+    junto quando a parede move), persistido no JSON, validado
+    (dentro da parede, sem sobrepor, altura <= parede).
+  - SELECIONAR (ex-MOVER): seleciona vão (arrasta ao longo da própria
+    parede), peça, marcador, estrutura; EXCLUIR e ALTURA valem p/ vão
+    (ALTURA = altura do vão).
+  - Correção: com PEÇA armada, tocar numa peça existente agora a
+    SELECIONA em vez de empilhar outra em cima (era a causa do "não
+    consigo selecionar/excluir").
+  - `WallOpeningTest` (13 verificações) no test-core.sh.
 - **v0.4.0 (versionCode 5) — Fase 3 inicial: PEÇAS DE JOGO NA PLANTA.**
   - Botão PEÇA… abre o catálogo (7 peças: drone ativo/dormente, mutante,
     kit, munição, terminal, portão); tocar na planta solta a peça com

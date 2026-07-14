@@ -17,6 +17,7 @@ import br.com.termia.construajogue.compiler.MapValidator;
 import br.com.termia.construajogue.compiler.ValidationIssue;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.persistence.MapJson;
 import br.com.termia.construajogue.persistence.MapStore;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
@@ -124,12 +125,17 @@ public final class EditorHost extends FrameLayout
         addTool(row, "BLOCO", PlanEditorView.TOOL_BLOCK);
         addTool(row, "INÍCIO", PlanEditorView.TOOL_SPAWN);
         addTool(row, "SAÍDA", PlanEditorView.TOOL_EXIT);
-        addTool(row, "MOVER", PlanEditorView.TOOL_SELECT);
+        addTool(row, "SELECIONAR", PlanEditorView.TOOL_SELECT);
         Button prefabButton = action("PEÇA…", this::choosePrefab);
         prefabButton.setTag(PlanEditorView.TOOL_PREFAB);
         prefabButton.setTextColor(0xFFE0C060);
         toolButtons.add(prefabButton);
         row.addView(prefabButton);
+        Button openingButton = action("VÃO…", this::chooseOpening);
+        openingButton.setTag(PlanEditorView.TOOL_OPENING);
+        openingButton.setTextColor(0xFFC9A06C);
+        toolButtons.add(openingButton);
+        row.addView(openingButton);
         heightButton = action("ALTURA", this::editHeight);
         heightButton.setTextColor(0xFF9CC9E4);
         row.addView(heightButton);
@@ -186,6 +192,9 @@ public final class EditorHost extends FrameLayout
             PrefabDefinition def = plan.activePrefab();
             status.setText(def == null ? "escolha uma peça"
                     : "toque na planta para soltar: " + def.name);
+        } else if (tool == PlanEditorView.TOOL_OPENING) {
+            status.setText("toque em cima de uma parede para recortar "
+                    + "o vão; SELECIONAR arrasta o vão pela parede");
         } else {
             status.setText("arraste com um dedo; dois dedos movem a vista");
         }
@@ -228,6 +237,22 @@ public final class EditorHost extends FrameLayout
         heightButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
     }
 
+    /** Tipo de vão para recortar na parede tocada. */
+    private void chooseOpening() {
+        final String[] types = {WallOpening.DOOR, WallOpening.PORTAL,
+                WallOpening.WINDOW};
+        String[] labels = {"Porta (1,0 × 2,1 m)",
+                "Portal livre (até o teto da parede)",
+                "Janela (1,2 × 1,2 m, peitoril 0,9 m)"};
+        new AlertDialog.Builder(activity)
+                .setTitle("Vão na parede")
+                .setItems(labels, (dialog, which) -> {
+                    plan.setActiveOpening(types[which]);
+                    selectTool(PlanEditorView.TOOL_OPENING);
+                })
+                .show();
+    }
+
     /** Navegador do catálogo: escolher arma a ferramenta PEÇA. */
     private void choosePrefab() {
         final List<PrefabDefinition> defs = catalog.all();
@@ -247,19 +272,29 @@ public final class EditorHost extends FrameLayout
     /** Diálogo para digitar a medida real da seleção. */
     private void editHeight() {
         StructureObject s = plan.selectedStructure();
-        if (s == null && plan.selectedPrefab() == null) {
+        if (s == null && plan.selectedPrefab() == null
+                && plan.selectedOpening() == null) {
             return;
+        }
+        float current;
+        String title;
+        if (plan.selectedOpening() != null) {
+            current = plan.selectedOpening().height;
+            title = "Altura do vão (m)";
+        } else if (s != null) {
+            current = StructureRoles.heightValue(s);
+            title = StructureRoles.heightLabel(s);
+        } else {
+            current = plan.selectedPrefab().transform.y;
+            title = "Distância do chão (m)";
         }
         EditText input = new EditText(activity);
         input.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setText(String.format(Locale.US, "%.2f", s != null
-                ? StructureRoles.heightValue(s)
-                : plan.selectedPrefab().transform.y));
+        input.setText(String.format(Locale.US, "%.2f", current));
         input.selectAll();
         new AlertDialog.Builder(activity)
-                .setTitle(s != null ? StructureRoles.heightLabel(s)
-                        : "Distância do chão (m)")
+                .setTitle(title)
                 .setView(input)
                 .setPositiveButton("Aplicar", (dialog, which) -> {
                     try {

@@ -5,6 +5,7 @@ import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
@@ -35,8 +36,15 @@ public final class LevelCompiler {
             float[] bounds = new float[6];
             LegacyLevelLoader.toBounds(s.transform.x, s.transform.y,
                     s.transform.z, s.half[0], s.half[1], s.half[2], bounds);
-            blocks.add(bounds);
-            colors.add(s.color);
+            if (s.openings.isEmpty()) {
+                blocks.add(bounds);
+                colors.add(s.color);
+            } else {
+                for (float[] piece : cutOpenings(s, bounds)) {
+                    blocks.add(piece);
+                    colors.add(s.color);
+                }
+            }
         }
 
         List<float[]> drones = new ArrayList<>();
@@ -127,6 +135,60 @@ public final class LevelCompiler {
                 waves.toArray(new float[0][]),
                 mutants.toArray(new float[0][]),
                 doc.ambient, doc.fogColor.clone(), doc.fogFar);
+    }
+
+    /**
+     * Recorta os vãos de uma parede em caixas: trechos cheios entre os
+     * vãos, verga acima de cada vão e peitoril abaixo (janela). O vão em
+     * si fica sem caixa — passagem e visão ficam livres de verdade.
+     */
+    public static List<float[]> cutOpenings(StructureObject s, float[] b) {
+        boolean alongX = (b[3] - b[0]) >= (b[5] - b[2]);
+        int lo = alongX ? 0 : 2;
+        int hi = alongX ? 3 : 5;
+        float base = b[1];
+        float top = b[4];
+
+        List<WallOpening> sorted = new ArrayList<>(s.openings);
+        sorted.sort((a, c) -> Float.compare(a.offset, c.offset));
+        float center = (b[lo] + b[hi]) / 2f;
+
+        List<float[]> pieces = new ArrayList<>();
+        float cursor = b[lo];
+        for (WallOpening o : sorted) {
+            float cutLo = Math.max(b[lo], center + o.offset - o.width / 2f);
+            float cutHi = Math.min(b[hi], center + o.offset + o.width / 2f);
+            if (cutHi <= cutLo) {
+                continue;
+            }
+            if (cutLo > cursor) {
+                pieces.add(piece(b, lo, hi, cursor, cutLo, base, top));
+            }
+            float sillTop = base + o.sill;
+            float openTop = Math.min(top, sillTop + o.height);
+            if (o.sill > 0f) {
+                pieces.add(piece(b, lo, hi, cutLo, cutHi, base, sillTop));
+            }
+            if (openTop < top) {
+                pieces.add(piece(b, lo, hi, cutLo, cutHi, openTop, top));
+            }
+            cursor = Math.max(cursor, cutHi);
+        }
+        if (cursor < b[hi]) {
+            pieces.add(piece(b, lo, hi, cursor, b[hi], base, top));
+        }
+        return pieces;
+    }
+
+    private static float[] piece(float[] b, int lo, int hi,
+                                 float from, float to,
+                                 float bottom, float topY) {
+        float[] out = b.clone();
+        out[lo] = from;
+        out[hi] = to;
+        out[1] = bottom;
+        out[4] = topY;
+        return out;
     }
 
     /** {x, y, z, x2, z2}: segundo ponto de patrulha (padrão: parado). */

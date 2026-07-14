@@ -1,0 +1,119 @@
+package br.com.termia.construajogue;
+
+import br.com.termia.construajogue.compiler.LevelCompiler;
+import br.com.termia.construajogue.compiler.MapValidator;
+import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.WallOpening;
+import br.com.termia.construajogue.persistence.MapJson;
+import br.com.termia.construajogue.prefab.PrefabCatalog;
+import br.com.termia.construajogue.runtime.LegacyLevelLoader;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.List;
+
+/** Recorte de vãos: passagem realmente livre e laterais/verga sólidas. */
+public final class WallOpeningTest {
+
+    public static void main(String[] args) throws IOException {
+        // parede de 8m (eixo X) × 3m de altura, centro na origem
+        StructureObject wall = new StructureObject("w",
+                StructureObject.KIND_BLOCK);
+        wall.role = StructureObject.ROLE_WALL;
+        wall.transform.y = 1.5f;
+        wall.half = new float[]{4f, 1.5f, 0.15f};
+        wall.color = new float[]{0.5f, 0.5f, 0.5f};
+
+        WallOpening door = new WallOpening("d", WallOpening.DOOR);
+        door.offset = -1f;
+        door.width = 1.0f;
+        door.height = 2.1f;
+        wall.openings.add(door);
+        WallOpening window = new WallOpening("j", WallOpening.WINDOW);
+        window.offset = 2f;
+        window.width = 1.2f;
+        window.height = 1.2f;
+        window.sill = 0.9f;
+        wall.openings.add(window);
+
+        float[] bounds = new float[6];
+        LegacyLevelLoader.toBounds(wall.transform.x, wall.transform.y,
+                wall.transform.z, wall.half[0], wall.half[1], wall.half[2],
+                bounds);
+        List<float[]> pieces = LevelCompiler.cutOpenings(wall, bounds);
+        // 3 trechos cheios + verga da porta + peitoril e verga da janela
+        Check.equal(pieces.size(), 6, "número de pedaços");
+
+        Check.that(free(pieces, -1f, 1.0f), "porta atravessável");
+        Check.that(free(pieces, 2f, 1.2f), "janela vazada no meio");
+        Check.that(!free(pieces, -3f, 1.0f), "trecho esquerdo sólido");
+        Check.that(!free(pieces, 0.5f, 1.0f), "trecho central sólido");
+        Check.that(!free(pieces, 2f, 0.4f), "peitoril sólido embaixo");
+        Check.that(!free(pieces, -1f, 2.5f), "verga sólida em cima");
+        Check.that(!free(pieces, 2f, 2.5f), "verga da janela sólida");
+
+        // documento completo: valida, persiste e compila sem erro
+        MapDocument doc = new MapDocument();
+        doc.id = "map-vaos";
+        doc.name = "vãos";
+        StructureObject floor = new StructureObject("f",
+                StructureObject.KIND_BLOCK);
+        floor.role = StructureObject.ROLE_FLOOR;
+        floor.transform.y = -0.15f;
+        floor.half = new float[]{6f, 0.15f, 6f};
+        floor.color = new float[]{0.3f, 0.3f, 0.3f};
+        doc.structures.add(floor);
+        doc.structures.add(wall);
+        br.com.termia.construajogue.map.LogicMarker spawn =
+                new br.com.termia.construajogue.map.LogicMarker("s",
+                        br.com.termia.construajogue.map.LogicMarker
+                                .PLAYER_SPAWN);
+        spawn.z = 3f;
+        doc.markers.add(spawn);
+        br.com.termia.construajogue.map.LogicMarker exit =
+                new br.com.termia.construajogue.map.LogicMarker("e",
+                        br.com.termia.construajogue.map.LogicMarker.EXIT);
+        exit.z = -3f;
+        exit.radius = 1f;
+        doc.markers.add(exit);
+
+        PrefabCatalog catalog;
+        try (FileInputStream input = new FileInputStream(
+                "src/main/assets/prefabs/catalog.json")) {
+            catalog = PrefabCatalog.load(input);
+        }
+        Check.that(!MapValidator.hasError(
+                MapValidator.validate(doc, catalog)), "documento válido");
+        MapDocument back = MapJson.read(MapJson.write(doc));
+        Check.equal(back.structures.get(1).openings.size(), 2,
+                "vãos persistidos");
+        Check.that(LevelCompiler.compile(back, catalog)
+                .boxCount() == 7, "compila piso + 6 pedaços");
+
+        // vão sobreposto e vão fora da parede são recusados
+        WallOpening bad = new WallOpening("b", WallOpening.DOOR);
+        bad.offset = -1.2f;
+        bad.width = 1.0f;
+        bad.height = 2.0f;
+        wall.openings.add(bad);
+        Check.that(MapValidator.hasError(
+                MapValidator.validate(doc, catalog)), "sobreposto barrado");
+        wall.openings.remove(bad);
+        bad.offset = 4.2f;
+        wall.openings.add(bad);
+        Check.that(MapValidator.hasError(
+                MapValidator.validate(doc, catalog)), "fora barrado");
+        Check.done("WallOpeningTest");
+    }
+
+    /** true se nenhum pedaço cobre o ponto (along, y) da parede. */
+    private static boolean free(List<float[]> pieces, float x, float y) {
+        for (float[] p : pieces) {
+            if (x > p[0] && x < p[3] && y > p[1] && y < p[4]) {
+                return false;
+            }
+        }
+        return true;
+    }
+}

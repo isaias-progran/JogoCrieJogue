@@ -11,6 +11,7 @@ import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.util.Ids;
 
@@ -29,6 +30,7 @@ public final class PlanEditorView extends View {
     public static final int TOOL_EXIT = 5;
     public static final int TOOL_CEILING = 6;
     public static final int TOOL_PREFAB = 7;
+    public static final int TOOL_OPENING = 8;
 
     /** O host guarda snapshots p/ undo e reage a mudanças/seleção. */
     public interface Host {
@@ -77,6 +79,10 @@ public final class PlanEditorView extends View {
     private float grabDz;
     // peça armada para o próximo toque (ferramenta PEÇA)
     private PrefabDefinition activePrefab;
+    // vão armado (ferramenta VÃO) e vão selecionado
+    private String activeOpeningType;
+    private WallOpening selectedOpening;
+    private StructureObject selectedOpeningWall;
 
     public PlanEditorView(Context context, Host host) {
         super(context);
@@ -107,7 +113,8 @@ public final class PlanEditorView extends View {
     }
 
     public boolean hasSelection() {
-        return selectedStructure != null || selectedPrefab != null;
+        return selectedStructure != null || selectedPrefab != null
+                || selectedOpening != null;
     }
 
     public StructureObject selectedStructure() {
@@ -128,13 +135,29 @@ public final class PlanEditorView extends View {
         return activePrefab;
     }
 
+    /** Arma a ferramenta VÃO (porta/portal/janela sobre parede). */
+    public void setActiveOpening(String type) {
+        activeOpeningType = type;
+        setTool(TOOL_OPENING);
+    }
+
+    public WallOpening selectedOpening() {
+        return selectedOpening;
+    }
+
     /** Aplica o valor do diálogo ALTURA (sentido depende do papel). */
     public void applySelectedHeight(float value) {
-        if (selectedStructure == null && selectedPrefab == null) {
+        if (selectedStructure == null && selectedPrefab == null
+                && selectedOpening == null) {
             return;
         }
         host.beforeChange();
-        if (selectedStructure != null) {
+        if (selectedOpening != null) {
+            float wallHeight = selectedOpeningWall.half[1] * 2f;
+            selectedOpening.height = Math.max(0.3f, Math.min(
+                    wallHeight - selectedOpening.sill, value));
+            host.selectionChanged(describeOpening(selectedOpening));
+        } else if (selectedStructure != null) {
             StructureRoles.applyHeight(selectedStructure, value);
             host.selectionChanged(
                     StructureRoles.describe(selectedStructure));
@@ -148,17 +171,28 @@ public final class PlanEditorView extends View {
         invalidate();
     }
 
+    private static String describeOpening(WallOpening o) {
+        String name = WallOpening.WINDOW.equals(o.type) ? "janela"
+                : WallOpening.DOOR.equals(o.type) ? "porta" : "portal";
+        return String.format("%s  %.2f × %.2f m", name, o.width, o.height)
+                + (o.sill > 0f
+                ? String.format("  ·  peitoril %.2f m", o.sill) : "");
+    }
+
     private String describePrefab(PrefabInstance p) {
         return p.prefabId + String.format("  ·  %.2f m do chão",
                 p.transform.y);
     }
 
     public void deleteSelected() {
-        if (selectedStructure == null && selectedPrefab == null) {
+        if (selectedStructure == null && selectedPrefab == null
+                && selectedOpening == null) {
             return;
         }
         host.beforeChange();
-        if (selectedStructure != null) {
+        if (selectedOpening != null) {
+            selectedOpeningWall.openings.remove(selectedOpening);
+        } else if (selectedStructure != null) {
             doc.structures.remove(selectedStructure);
         } else {
             doc.prefabs.remove(selectedPrefab);
@@ -172,6 +206,8 @@ public final class PlanEditorView extends View {
         selectedStructure = null;
         selectedMarker = null;
         selectedPrefab = null;
+        selectedOpening = null;
+        selectedOpeningWall = null;
         host.selectionChanged(null);
     }
 
@@ -392,6 +428,9 @@ public final class PlanEditorView extends View {
             case TOOL_PREFAB:
                 placePrefab();
                 break;
+            case TOOL_OPENING:
+                placeOpening();
+                break;
             case TOOL_SELECT:
                 if (movedSelection) {
                     host.afterChange();
@@ -449,10 +488,74 @@ public final class PlanEditorView extends View {
         host.afterChange();
     }
 
+    /** Recorta o vão armado na parede tocada. */
+    private void placeOpening() {
+        if (activeOpeningType == null) {
+            return;
+        }
+        StructureObject wall = wallAt(curX, curZ);
+        if (wall == null) {
+            host.selectionChanged("toque em cima de uma parede");
+            return;
+        }
+        boolean window = WallOpening.WINDOW.equals(activeOpeningType);
+        boolean portal = WallOpening.PORTAL.equals(activeOpeningType);
+        WallOpening o = new WallOpening(Ids.create(), activeOpeningType);
+        o.width = window ? 1.2f : portal ? 1.6f : 1.0f;
+        o.sill = window ? 0.9f : 0f;
+        float wallHeight = wall.half[1] * 2f;
+        o.height = portal ? wallHeight
+                : Math.min(window ? 1.2f : 2.1f, wallHeight - o.sill);
+        boolean alongX = wall.half[0] >= wall.half[2];
+        float along = alongX ? curX : curZ;
+        float centerAlong = alongX ? wall.transform.x : wall.transform.z;
+        float halfLen = Math.max(wall.half[0], wall.half[2]);
+        o.offset = Math.max(-halfLen + o.width / 2f,
+                Math.min(halfLen - o.width / 2f, along - centerAlong));
+        host.beforeChange();
+        wall.openings.add(o);
+        host.afterChange();
+        host.selectionChanged(describeOpening(o));
+    }
+
+    /** Parede cujo corpo está sob (ou bem perto de) o ponto tocado. */
+    private StructureObject wallAt(float wx, float wz) {
+        float slack = Math.max(0.3f, 24f / scale);
+        StructureObject best = null;
+        float bestDist = Float.MAX_VALUE;
+        for (StructureObject s : doc.structures) {
+            if (!StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            float dx = Math.max(0f,
+                    Math.abs(wx - s.transform.x) - s.half[0]);
+            float dz = Math.max(0f,
+                    Math.abs(wz - s.transform.z) - s.half[2]);
+            float dist = (float) Math.hypot(dx, dz);
+            if (dist <= slack && dist < bestDist) {
+                bestDist = dist;
+                best = s;
+            }
+        }
+        return best;
+    }
+
     /** Solta a peça armada onde o dedo terminou, com altura típica. */
     private void placePrefab() {
         if (activePrefab == null) {
             return;
+        }
+        // tocar numa peça existente seleciona (não empilha outra em cima)
+        for (int i = doc.prefabs.size() - 1; i >= 0; i--) {
+            PrefabInstance existing = doc.prefabs.get(i);
+            if (Math.hypot(curX - existing.transform.x,
+                    curZ - existing.transform.z) < 24f / scale) {
+                selectedPrefab = existing;
+                host.selectionChanged(describePrefab(existing));
+                invalidate();
+                return;
+            }
         }
         host.beforeChange();
         PrefabInstance p = new PrefabInstance(Ids.create(),
@@ -522,6 +625,8 @@ public final class PlanEditorView extends View {
         selectedMarker = null;
         selectedStructure = null;
         selectedPrefab = null;
+        selectedOpening = null;
+        selectedOpeningWall = null;
         // peças primeiro: ícones pequenos por cima das estruturas
         for (int i = doc.prefabs.size() - 1; i >= 0; i--) {
             PrefabInstance p = doc.prefabs.get(i);
@@ -542,6 +647,25 @@ public final class PlanEditorView extends View {
                 host.selectionChanged(LogicMarker.PLAYER_SPAWN
                         .equals(m.type) ? "início" : "saída");
                 return;
+            }
+        }
+        // vãos antes das paredes: são menores e moram em cima delas
+        for (StructureObject s : doc.structures) {
+            if (!StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            boolean alongX = s.half[0] >= s.half[2];
+            for (WallOpening o : s.openings) {
+                float ox = alongX ? s.transform.x + o.offset : s.transform.x;
+                float oz = alongX ? s.transform.z : s.transform.z + o.offset;
+                if (Math.hypot(wx - ox, wz - oz)
+                        < Math.max(o.width / 2f, 20f / scale)) {
+                    selectedOpening = o;
+                    selectedOpeningWall = s;
+                    host.selectionChanged(describeOpening(o));
+                    return;
+                }
             }
         }
         // teto por último: translúcido, não pode roubar todo toque
@@ -567,12 +691,25 @@ public final class PlanEditorView extends View {
 
     private void dragSelection() {
         if (selectedStructure == null && selectedMarker == null
-                && selectedPrefab == null) {
+                && selectedPrefab == null && selectedOpening == null) {
             return;
         }
         if (!movedSelection) {
             host.beforeChange();
             movedSelection = true;
+        }
+        if (selectedOpening != null) {
+            // vão desliza pela própria parede
+            StructureObject wall = selectedOpeningWall;
+            boolean alongX = wall.half[0] >= wall.half[2];
+            float along = snap(alongX ? curX : curZ);
+            float centerAlong = alongX
+                    ? wall.transform.x : wall.transform.z;
+            float halfLen = Math.max(wall.half[0], wall.half[2]);
+            float w2 = selectedOpening.width / 2f;
+            selectedOpening.offset = Math.max(-halfLen + w2,
+                    Math.min(halfLen - w2, along - centerAlong));
+            return;
         }
         float nx = snap(curX + grabDx);
         float nz = snap(curZ + grabDz);
@@ -602,6 +739,9 @@ public final class PlanEditorView extends View {
                 drawStructure(canvas, s, s == selectedStructure, false);
             }
         }
+        for (StructureObject s : doc.structures) {
+            drawOpenings(canvas, s);
+        }
         // tetos por cima de tudo, translúcidos
         for (StructureObject s : doc.structures) {
             if (StructureRoles.isCeiling(s)) {
@@ -619,6 +759,31 @@ public final class PlanEditorView extends View {
         }
         for (LogicMarker m : doc.markers) {
             drawMarker(canvas, m, m == selectedMarker);
+        }
+    }
+
+    /** Vãos sobre a parede: porta marrom, portal escuro, janela azul. */
+    private void drawOpenings(Canvas canvas, StructureObject s) {
+        if (s.openings.isEmpty()) {
+            return;
+        }
+        boolean alongX = s.half[0] >= s.half[2];
+        for (WallOpening o : s.openings) {
+            float cx = alongX ? s.transform.x + o.offset : s.transform.x;
+            float cz = alongX ? s.transform.z : s.transform.z + o.offset;
+            float hx = alongX ? o.width / 2f : s.half[0];
+            float hz = alongX ? s.half[2] : o.width / 2f;
+            fill.setColor(WallOpening.WINDOW.equals(o.type) ? 0xFF4A90C2
+                    : WallOpening.DOOR.equals(o.type) ? 0xFF8A6238
+                    : 0xFF10151B);
+            canvas.drawRect(toPxX(cx - hx), toPxY(cz - hz),
+                    toPxX(cx + hx), toPxY(cz + hz), fill);
+            if (o == selectedOpening) {
+                stroke.setColor(0xFFFFFFFF);
+                stroke.setStrokeWidth(3f);
+                canvas.drawRect(toPxX(cx - hx), toPxY(cz - hz),
+                        toPxX(cx + hx), toPxY(cz + hz), stroke);
+            }
         }
     }
 
@@ -763,7 +928,7 @@ public final class PlanEditorView extends View {
         stroke.setColor(0xFFE0C060);
         stroke.setStrokeWidth(3f);
         if (tool == TOOL_SPAWN || tool == TOOL_EXIT
-                || tool == TOOL_PREFAB) {
+                || tool == TOOL_PREFAB || tool == TOOL_OPENING) {
             canvas.drawCircle(toPxX(curX), toPxY(curZ), 14f, stroke);
             return;
         }
