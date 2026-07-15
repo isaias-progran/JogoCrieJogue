@@ -8,7 +8,20 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
-- **v0.12.1 (versionCode 25) — sofá, TV, espelho, janela de banheiro
+- **v0.13.0 (versionCode 26) — PAREDES POR PONTOS com DIAGONAIS.**
+  - "Desenho por pontos" ganhou 3º modo: "Paredes (linha de pontos)".
+    Toque marca os pontos; tocar no ÚLTIMO termina a linha aberta,
+    tocar no PRIMEIRO fecha o anel. Cada trecho vira parede: reta =
+    bloco normal; DIAGONAL = laje poligonal em pé (KIND_POLY role
+    wall, faixa de 0,3m de espessura ao longo do trecho).
+  - Diagonal: visual liso (polyTriangles); colisão rasterizada em
+    caixinhas de 0,25m (polyColliders com passo fino p/ role wall) —
+    dá para deslizar encostado; serrilhado só na física.
+  - "Piso + paredes" do contorno agora inclui as diagonais (o aviso
+    de trecho pulado morreu).
+  - Limitações da parede diagonal: sem vãos (wallAt ignora), pintura
+    de cor única (sem lados), sem grude de ponta no desenho.
+- **v0.12.1 (versionCode 25) — sofá, TV, espelho, janela de banheiro**
   e pintura de piso/teto.**
   - Peças novas (static): Sofá (assento/encosto/braços, collider 1
     bloco), TV de LED de parede (tela emissiva; fixa a 1,4m, sem

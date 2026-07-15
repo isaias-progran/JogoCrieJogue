@@ -477,7 +477,9 @@ public final class LevelCompiler {
         }
         float y0 = s.transform.y - s.half[1];
         float y1 = s.transform.y + s.half[1];
-        float step = 0.5f;
+        // paredes diagonais precisam de passo fino p/ deslizar bem
+        float step = StructureObject.ROLE_WALL.equals(s.role)
+                ? 0.25f : 0.5f;
         List<Float> hits = new ArrayList<>();
         for (float z = minZ; z < maxZ; z += step) {
             float zHi = Math.min(z + step, maxZ);

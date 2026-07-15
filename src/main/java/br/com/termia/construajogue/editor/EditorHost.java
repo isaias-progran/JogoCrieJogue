@@ -285,8 +285,9 @@ public final class EditorHost extends FrameLayout
                     + "tocado; a BOLINHA pinta o piso/teto/bloco dela; "
                     + "balde pinta paredes ligadas");
         } else if (tool == PlanEditorView.TOOL_POINTS) {
-            status.setText("toque ponto a ponto; toque no PRIMEIRO "
-                    + "ponto (verde) para fechar; ↶ remove o último");
+            status.setText("toque ponto a ponto (diagonal vale); "
+                    + "PRIMEIRO ponto fecha o anel; nas paredes, tocar "
+                    + "o ÚLTIMO termina a linha; ↶ remove");
         } else {
             status.setText("arraste com um dedo; dois dedos movem a vista");
         }
@@ -445,13 +446,15 @@ public final class EditorHost extends FrameLayout
 
     /** Contorno livre: escolhe o papel e arma a ferramenta de pontos. */
     private void chooseContour() {
+        final String[] roles = {StructureObject.ROLE_FLOOR,
+                StructureObject.ROLE_CEILING, StructureObject.ROLE_WALL};
         new AlertDialog.Builder(activity)
                 .setTitle("Desenho por pontos")
                 .setItems(new String[]{"Piso (contorno livre)",
-                        "Teto (contorno livre)"}, (dialog, which) -> {
-                    plan.startContour(which == 0
-                            ? StructureObject.ROLE_FLOOR
-                            : StructureObject.ROLE_CEILING);
+                        "Teto (contorno livre)",
+                        "Paredes (linha de pontos, aceita diagonal)"},
+                        (dialog, which) -> {
+                    plan.startContour(roles[which]);
                     selectTool(PlanEditorView.TOOL_POINTS);
                 })
                 .show();
@@ -467,9 +470,8 @@ public final class EditorHost extends FrameLayout
         }
         new AlertDialog.Builder(activity)
                 .setTitle("Fechar contorno")
-                .setMessage("Criar paredes nos trechos retos do "
-                        + "contorno? (diagonais ficam sem parede "
-                        + "por enquanto)")
+                .setMessage("Criar paredes em volta do contorno? "
+                        + "Trechos diagonais também ganham parede.")
                 .setPositiveButton("Piso + paredes",
                         (dialog, which) -> plan.finishContour(true))
                 .setNegativeButton("Só o piso",

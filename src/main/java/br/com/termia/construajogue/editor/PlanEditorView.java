@@ -198,49 +198,84 @@ public final class PlanEditorView extends View {
                 : new float[]{0.30f, 0.33f, 0.38f};
         s.syncPolyBounds();
         doc.structures.add(s);
-        int skipped = 0;
         if (withWalls) {
             for (int i = 0; i < contour.size(); i++) {
                 float[] a = contour.get(i);
                 float[] b = contour.get((i + 1) % contour.size());
-                if (!addContourWall(a[0], a[1], b[0], b[1])) {
-                    skipped++;
-                }
+                addContourWall(a[0], a[1], b[0], b[1]);
             }
         }
         contour.clear();
         host.afterChange();
-        host.selectionChanged(skipped > 0
-                ? skipped + " trecho(s) diagonais ficaram sem parede"
-                : (ceiling ? "teto" : "piso") + " de contorno criado");
+        host.selectionChanged((ceiling ? "teto" : "piso")
+                + " de contorno criado");
         invalidate();
     }
 
-    /** Parede reta entre dois pontos; false se o trecho for diagonal. */
-    private boolean addContourWall(float ax, float az,
-                                   float bx, float bz) {
+    /**
+     * Fecha a linha de paredes por pontos: uma parede por trecho
+     * (retas e DIAGONAIS); `ring` liga o último ponto ao primeiro.
+     */
+    public void finishWallLine(boolean ring) {
+        if (contour.size() < 2) {
+            cancelContour();
+            return;
+        }
+        host.beforeChange();
+        int segments = contour.size() - (ring ? 0 : 1);
+        for (int i = 0; i < segments; i++) {
+            float[] a = contour.get(i);
+            float[] b = contour.get((i + 1) % contour.size());
+            addContourWall(a[0], a[1], b[0], b[1]);
+        }
+        contour.clear();
+        host.afterChange();
+        host.selectionChanged(segments + " parede(s) criadas");
+        invalidate();
+    }
+
+    /**
+     * Parede entre dois pontos. Reta (alinhada a um eixo) vira o bloco
+     * de sempre; DIAGONAL vira laje poligonal em pé — visual liso;
+     * colisão em caixinhas de 0,25 m (dá para deslizar encostado).
+     */
+    private void addContourWall(float ax, float az,
+                                float bx, float bz) {
         float dx = Math.abs(bx - ax);
         float dz = Math.abs(bz - az);
         if (Math.max(dx, dz) < 0.4f) {
-            return true; // curto demais: ignora em silêncio
+            return; // curto demais
         }
-        if (Math.min(dx, dz) > 0.01f) {
-            return false; // diagonal: sem collider de parede ainda
+        if (Math.min(dx, dz) <= 0.01f) {
+            boolean horizontal = dx >= dz;
+            StructureObject s = new StructureObject(Ids.create(),
+                    StructureObject.KIND_BLOCK);
+            s.role = StructureObject.ROLE_WALL;
+            float half = (horizontal ? dx : dz) / 2f + WALL_HALF_T;
+            s.transform.x = (ax + bx) / 2f;
+            s.transform.y = WALL_HEIGHT / 2f;
+            s.transform.z = (az + bz) / 2f;
+            s.half = horizontal
+                    ? new float[]{half, WALL_HEIGHT / 2f, WALL_HALF_T}
+                    : new float[]{WALL_HALF_T, WALL_HEIGHT / 2f, half};
+            s.color = new float[]{0.46f, 0.48f, 0.55f};
+            doc.structures.add(s);
+            return;
         }
-        boolean horizontal = dx >= dz;
+        // diagonal: faixa de espessura 0,3 m ao longo do trecho
+        float len = (float) Math.hypot(bx - ax, bz - az);
+        float nx = -(bz - az) / len * WALL_HALF_T;
+        float nz = (bx - ax) / len * WALL_HALF_T;
         StructureObject s = new StructureObject(Ids.create(),
-                StructureObject.KIND_BLOCK);
+                StructureObject.KIND_POLY);
         s.role = StructureObject.ROLE_WALL;
-        float half = (horizontal ? dx : dz) / 2f + WALL_HALF_T;
-        s.transform.x = (ax + bx) / 2f;
+        s.polygon = new float[]{ax + nx, az + nz, bx + nx, bz + nz,
+                bx - nx, bz - nz, ax - nx, az - nz};
+        s.half = new float[]{0f, WALL_HEIGHT / 2f, 0f};
         s.transform.y = WALL_HEIGHT / 2f;
-        s.transform.z = (az + bz) / 2f;
-        s.half = horizontal
-                ? new float[]{half, WALL_HEIGHT / 2f, WALL_HALF_T}
-                : new float[]{WALL_HALF_T, WALL_HEIGHT / 2f, half};
         s.color = new float[]{0.46f, 0.48f, 0.55f};
+        s.syncPolyBounds();
         doc.structures.add(s);
-        return true;
     }
 
     /** Inimigo selecionado? Então o próximo toque marca a patrulha. */
@@ -606,7 +641,7 @@ public final class PlanEditorView extends View {
         float best = Math.max(0.4f, 36f / scale);
         float[] hit = null;
         for (StructureObject s : doc.structures) {
-            if (!StructureObject.ROLE_WALL
+            if (s.polygon != null || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -640,7 +675,7 @@ public final class PlanEditorView extends View {
         float best = Math.max(0.4f, 36f / scale);
         float[] hit = null;
         for (StructureObject s : doc.structures) {
-            if (!StructureObject.ROLE_WALL
+            if (s.polygon != null || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -799,19 +834,37 @@ public final class PlanEditorView extends View {
                 paintAt(rawX, rawZ);
                 break;
             case TOOL_POINTS: {
-                // tocar no primeiro ponto fecha o contorno
+                boolean wallLine =
+                        StructureObject.ROLE_WALL.equals(contourRole);
+                float grab = Math.max(0.4f, 26f / scale);
+                // tocar no primeiro ponto fecha o contorno/anel
                 if (contour.size() >= 3) {
                     float[] first = contour.get(0);
                     if (Math.hypot(curX - first[0], curZ - first[1])
-                            < Math.max(0.4f, 26f / scale)) {
-                        host.polygonClosed(!StructureObject.ROLE_CEILING
-                                .equals(contourRole));
+                            < grab) {
+                        if (wallLine) {
+                            finishWallLine(true);
+                        } else {
+                            host.polygonClosed(!StructureObject
+                                    .ROLE_CEILING.equals(contourRole));
+                        }
+                        break;
+                    }
+                }
+                // paredes: tocar no ÚLTIMO ponto encerra a linha aberta
+                if (wallLine && contour.size() >= 2) {
+                    float[] last = contour.get(contour.size() - 1);
+                    if (Math.hypot(curX - last[0], curZ - last[1])
+                            < grab) {
+                        finishWallLine(false);
                         break;
                     }
                 }
                 contour.add(new float[]{curX, curZ});
-                host.selectionChanged(contour.size()
-                        + " ponto(s) — toque no primeiro para fechar");
+                host.selectionChanged(contour.size() + " ponto(s) — "
+                        + (wallLine
+                        ? "toque no último p/ terminar, no primeiro p/ fechar"
+                        : "toque no primeiro para fechar"));
                 break;
             }
             case TOOL_SELECT:
@@ -966,6 +1019,13 @@ public final class PlanEditorView extends View {
      */
     private void paintWallSide(StructureObject s, float wx, float wz,
                                boolean allowBoth) {
+        if (s.polygon != null) {
+            // parede diagonal: cor única (sem lados por enquanto)
+            s.color = activePaint.clone();
+            s.color2 = null;
+            s.color3 = null;
+            return;
+        }
         boolean thinX = s.half[0] < s.half[2];
         float d = thinX ? wx - s.transform.x : wz - s.transform.z;
         float half = thinX ? s.half[0] : s.half[2];
@@ -1054,13 +1114,13 @@ public final class PlanEditorView extends View {
         host.selectionChanged(describeOpening(o));
     }
 
-    /** Parede cujo corpo está sob (ou bem perto de) o ponto tocado. */
+    /** Parede reta sob o toque (diagonais não aceitam vãos ainda). */
     private StructureObject wallAt(float wx, float wz) {
         float slack = Math.max(0.3f, 24f / scale);
         StructureObject best = null;
         float bestDist = Float.MAX_VALUE;
         for (StructureObject s : doc.structures) {
-            if (!StructureObject.ROLE_WALL
+            if (s.polygon != null || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }

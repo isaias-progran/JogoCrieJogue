@@ -72,6 +72,32 @@ public final class PolygonTest {
         Check.that(covered(level, 1.2f, 5.3f), "chão em 1,2×5,3");
         Check.that(!covered(level, 5.2f, 5.3f), "recorte sem chão");
 
+        // parede diagonal (faixa em pé): colisão bloqueia o meio dela
+        StructureObject diag = new StructureObject("diag",
+                StructureObject.KIND_POLY);
+        diag.role = StructureObject.ROLE_WALL;
+        // trecho de (0,0) a (4,4), espessura 0,3
+        float nx = -0.106f;
+        float nz = 0.106f;
+        diag.polygon = new float[]{nx, nz, 4f + nx, 4f + nz,
+                4f - nx, 4f - nz, -nx, -nz};
+        diag.half = new float[]{0f, 1.5f, 0f};
+        diag.transform.y = 1.5f;
+        diag.color = new float[]{0.5f, 0.5f, 0.5f};
+        diag.syncPolyBounds();
+        back.structures.add(diag);
+        RuntimeLevel withWall = LevelCompiler.compile(back, catalog);
+        boolean blockedMid = false;
+        for (float[] b : withWall.colliders()) {
+            if (2f > b[0] && 2f < b[3] && 2f > b[2] && 2f < b[5]
+                    && b[4] > 2f) {
+                blockedMid = true;
+                break;
+            }
+        }
+        Check.that(blockedMid, "parede diagonal colide no meio");
+        back.structures.remove(diag);
+
         // contorno cruzado é bloqueado pelo validador
         back.structures.get(0).polygon = crossed;
         back.structures.get(0).syncPolyBounds();
