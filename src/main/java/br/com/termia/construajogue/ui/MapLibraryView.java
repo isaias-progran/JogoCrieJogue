@@ -7,12 +7,14 @@ import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import br.com.termia.construajogue.persistence.MapStore;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -93,13 +95,31 @@ public final class MapLibraryView extends ScrollView {
         LinearLayout row = new LinearLayout(activity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setBackgroundColor(0xFF19222C);
-        row.setPadding(28, 8, 12, 8);
+        row.setPadding(16, 8, 12, 8);
         LinearLayout.LayoutParams rowParams =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT);
         rowParams.topMargin = 12;
         row.setLayoutParams(rowParams);
+
+        // miniatura: vista de topo do próprio mapa
+        ImageView thumb = new ImageView(activity);
+        float density = getResources().getDisplayMetrics().density;
+        int tw = (int) (84f * density);
+        int th = (int) (56f * density);
+        try {
+            thumb.setImageBitmap(MapThumbnail.render(
+                    store.load(entry.id), tw * 2, th * 2));
+        } catch (IOException | RuntimeException broken) {
+            thumb.setBackgroundColor(0xFF2A333D);
+        }
+        thumb.setOnClickListener(v -> listener.onBuild(entry.id));
+        LinearLayout.LayoutParams thumbParams =
+                new LinearLayout.LayoutParams(tw, th);
+        thumbParams.rightMargin = 20;
+        thumbParams.gravity = Gravity.CENTER_VERTICAL;
+        row.addView(thumb, thumbParams);
 
         TextView name = new TextView(activity);
         name.setText(entry.name);

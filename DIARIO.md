@@ -8,6 +8,14 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.9.6 (versionCode 20) — MINIATURAS na biblioteca (Fase 4).**
+  - `ui/MapThumbnail.render(doc, w, h)`: Bitmap com vista de topo
+    enquadrada no conteúdo — pisos, blocos/paredes, tetos translúcidos,
+    peças como pontos coloridos, início verde/saída azul; FUNDO na cor
+    do céu/neblina do mapa (mapa noturno fica escuro na lista).
+  - Biblioteca: ImageView 84×56dp por linha (bitmap 2x p/ nitidez),
+    gerada síncrona no refresh (mapas têm poucos KB); mapa corrompido
+    vira retângulo cinza; tocar na miniatura abre o Construir.
 - **v0.9.5 (versionCode 19) — BOLINHA DE SELEÇÃO por objeto.**
   - Problema: o 2D sobrepõe piso/teto/bloco e o toque não sabia qual
     selecionar. Agora todo piso/teto/bloco tem uma BOLINHA colorida
