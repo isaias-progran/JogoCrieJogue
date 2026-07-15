@@ -8,6 +8,12 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.8.2 (versionCode 13) — CÉU… (dia/entardecer/noite/instalação).**
+  - Botão CÉU… no editor: presets que gravam ambient/fogColor/fogFar do
+    documento (campos que já existiam) — Dia 0.60/azul/50m, Entardecer
+    0.42/laranja/38m, Noite 0.20/escuro/26m, Instalação (padrão da
+    campanha). O "céu" é o clearColor = cor da neblina; entra no undo.
+    Sem sol/lua/estrelas — seria skybox, anotar se pedirem.
 - **v0.8.1 (versionCode 12) — SETA DE FRENTE + 6 peças novas.**
   - Convenção nova: a FRENTE de todo móvel (porta do armário, torneira,
     assento, prateleiras abertas) aponta para -Z em yaw 0; a planta
