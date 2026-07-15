@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.view.MotionEvent;
 import android.view.View;
 
+import br.com.termia.construajogue.compiler.LevelCompiler;
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
@@ -184,6 +185,32 @@ public final class PlanEditorView extends View {
         }
         host.afterChange();
         invalidate();
+    }
+
+    /**
+     * Gira a seleção 90°: peça acumula yaw (porta troca as meias
+     * dimensões); estrutura troca largura × profundidade no lugar.
+     */
+    public void rotateSelected() {
+        if (selectedPrefab == null && selectedStructure == null) {
+            return;
+        }
+        mutateSelected(() -> {
+            if (selectedStructure != null) {
+                float tmp = selectedStructure.half[0];
+                selectedStructure.half[0] = selectedStructure.half[2];
+                selectedStructure.half[2] = tmp;
+                return;
+            }
+            PrefabInstance p = selectedPrefab;
+            if (p.prefabId.startsWith("door.")) {
+                float hx = p.floatProperty("halfX", 1.5f);
+                p.properties.put("halfX", p.floatProperty("halfZ", 0.4f));
+                p.properties.put("halfZ", hx);
+            } else {
+                p.transform.yaw = (p.transform.yaw + 90f) % 360f;
+            }
+        });
     }
 
     /** Mutação da seleção com undo + redesenho + status atualizado. */
@@ -943,9 +970,11 @@ public final class PlanEditorView extends View {
         int color;
         float[] footprint = PrefabMeshFactory.footprint(p.prefabId);
         if (footprint != null) {
-            // móvel/objeto: pegada real no plano + ponto central
-            float hx = footprint[0];
-            float hz = footprint[1];
+            // móvel/objeto: pegada real no plano, girada com a peça
+            boolean turned = (LevelCompiler
+                    .quarterTurns(p.transform.yaw) & 1) == 1;
+            float hx = turned ? footprint[1] : footprint[0];
+            float hz = turned ? footprint[0] : footprint[1];
             fill.setColor(0x8858728A);
             canvas.drawRect(toPxX(p.transform.x - hx),
                     toPxY(p.transform.z - hz),

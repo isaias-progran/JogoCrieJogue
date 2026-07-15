@@ -57,6 +57,7 @@ public final class EditorHost extends FrameLayout
     private Button redoButton;
     private Button deleteButton;
     private Button heightButton;
+    private Button rotateButton;
     private MapDocument doc;
 
     public EditorHost(Activity activity, MapStore store,
@@ -146,6 +147,9 @@ public final class EditorHost extends FrameLayout
         heightButton = action("MEDIDAS", this::editMeasures);
         heightButton.setTextColor(0xFF9CC9E4);
         row.addView(heightButton);
+        rotateButton = action("GIRAR", () -> plan.rotateSelected());
+        rotateButton.setTextColor(0xFFA0D9C9);
+        row.addView(rotateButton);
         deleteButton = action("EXCLUIR", () -> plan.deleteSelected());
         deleteButton.setTextColor(0xFFE49C9C);
         row.addView(deleteButton);
@@ -246,6 +250,10 @@ public final class EditorHost extends FrameLayout
         deleteButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
         heightButton.setEnabled(plan.hasSelection());
         heightButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
+        boolean rotatable = plan.selectedStructure() != null
+                || plan.selectedPrefab() != null;
+        rotateButton.setEnabled(rotatable);
+        rotateButton.setAlpha(rotatable ? 1f : 0.4f);
     }
 
     /** Cores da paleta (nome + RGB 0..1). */

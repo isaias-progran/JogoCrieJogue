@@ -101,19 +101,21 @@ public final class LevelCompiler {
                         throw new IllegalArgumentException(
                                 "peça estática sem malha: " + p.prefabId);
                     }
+                    int quarter = quarterTurns(p.transform.yaw);
                     for (float[] part : parts) {
+                        float[] r = rotateBox(part, quarter);
                         float[] bounds = new float[6];
-                        LegacyLevelLoader.toBounds(x + part[0], y + part[1],
-                                z + part[2], part[3], part[4], part[5],
-                                bounds);
+                        LegacyLevelLoader.toBounds(x + r[0], y + r[1],
+                                z + r[2], r[3], r[4], r[5], bounds);
                         visuals.add(bounds);
                         colors.add(new float[]{part[6], part[7], part[8]});
                         colors2.add(null);
                     }
                     for (float[] c : boxes) {
+                        float[] r = rotateBox(c, quarter);
                         float[] bounds = new float[6];
-                        LegacyLevelLoader.toBounds(x + c[0], y + c[1],
-                                z + c[2], c[3], c[4], c[5], bounds);
+                        LegacyLevelLoader.toBounds(x + r[0], y + r[1],
+                                z + r[2], r[3], r[4], r[5], bounds);
                         solids.add(bounds);
                     }
                     break;
@@ -235,6 +237,33 @@ public final class LevelCompiler {
         out[1] = bottom;
         out[4] = topY;
         return out;
+    }
+
+    /** Yaw arredondado para múltiplos de 90° (AABBs só giram assim). */
+    public static int quarterTurns(float yaw) {
+        int quarter = Math.round(yaw / 90f) % 4;
+        return quarter < 0 ? quarter + 4 : quarter;
+    }
+
+    /** Gira o centro e troca as meias-dimensões conforme o quarto. */
+    private static float[] rotateBox(float[] box, int quarter) {
+        if (quarter == 0) {
+            return box;
+        }
+        float cx = box[0];
+        float cz = box[2];
+        float hx = box[3];
+        float hz = box[5];
+        float rx;
+        float rz;
+        switch (quarter) {
+            case 1: rx = -cz; rz = cx; break;
+            case 2: rx = -cx; rz = -cz; break;
+            default: rx = cz; rz = -cx; break;
+        }
+        boolean swap = (quarter & 1) == 1;
+        return new float[]{rx, box[1], rz,
+                swap ? hz : hx, box[4], swap ? hx : hz};
     }
 
     /** {x, y, z, x2, z2}: segundo ponto de patrulha (padrão: parado). */

@@ -103,6 +103,15 @@ public final class WallOpeningTest {
                 MapValidator.validate(doc, catalog)), "mesa válida");
         Check.that(LevelCompiler.compile(doc, catalog).boxCount() == 8,
                 "mesa soma 1 collider (7 estruturais + 1)");
+        // girar 90°: collider da mesa troca largura × profundidade
+        float[] flat = LevelCompiler.compile(doc, catalog).colliders()[7];
+        table.transform.yaw = 90f;
+        float[] turned = LevelCompiler.compile(doc, catalog).colliders()[7];
+        Check.that(Math.abs((flat[3] - flat[0]) - (turned[5] - turned[2]))
+                < 1e-4f && Math.abs((flat[5] - flat[2])
+                - (turned[3] - turned[0])) < 1e-4f,
+                "mesa girada troca as dimensões do collider");
+        table.transform.yaw = 0f;
         // lâmpada de teto não colide
         doc.prefabs.add(new br.com.termia.construajogue.map
                 .PrefabInstance("luz", "prop.lamp.ceiling"));

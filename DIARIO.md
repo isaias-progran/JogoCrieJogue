@@ -8,6 +8,12 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.7.1 (versionCode 10) — botão GIRAR (90° por toque).**
+  - Peça estática: acumula yaw em `transform.yaw` (persistido);
+    compilador gira centro das caixas e troca meias-dimensões
+    (`quarterTurns`/`rotateBox` — AABBs só giram em passos de 90°).
+  - Porta (portão): girar troca halfX↔halfZ. Estrutura selecionada:
+    troca largura × profundidade no lugar. Pegada na planta acompanha.
 - **v0.7.0 (versionCode 9) — MÓVEIS, OBSTÁCULOS E LUMINÁRIAS.**
   - `PrefabMeshFactory`: 11 peças estáticas procedurais em caixas —
     mesa, cadeira, estante, armário, cama, bancada; caixa pequena/
