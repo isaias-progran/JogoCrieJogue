@@ -136,7 +136,7 @@ public final class EditorHost extends FrameLayout
         openingButton.setTextColor(0xFFC9A06C);
         toolButtons.add(openingButton);
         row.addView(openingButton);
-        heightButton = action("ALTURA", this::editHeight);
+        heightButton = action("MEDIDAS", this::editMeasures);
         heightButton.setTextColor(0xFF9CC9E4);
         row.addView(heightButton);
         deleteButton = action("EXCLUIR", () -> plan.deleteSelected());
@@ -181,13 +181,13 @@ public final class EditorHost extends FrameLayout
         }
         if (tool == PlanEditorView.TOOL_SELECT) {
             status.setText("toque para selecionar; arraste para mover; "
-                    + "ALTURA edita a medida real");
+                    + "MEDIDAS digita as dimensões reais");
         } else if (tool == PlanEditorView.TOOL_WALL) {
             status.setText("arraste para desenhar; começar perto da ponta "
                     + "de outra parede continua dela (círculos amarelos)");
         } else if (tool == PlanEditorView.TOOL_CEILING) {
-            status.setText("arraste o retângulo do teto; use ALTURA para "
-                    + "definir a elevação");
+            status.setText("arraste o retângulo do teto; use MEDIDAS "
+                    + "para definir a elevação");
         } else if (tool == PlanEditorView.TOOL_PREFAB) {
             PrefabDefinition def = plan.activePrefab();
             status.setText(def == null ? "escolha uma peça"
@@ -269,45 +269,121 @@ public final class EditorHost extends FrameLayout
                 .show();
     }
 
-    /** Diálogo para digitar a medida real da seleção. */
-    private void editHeight() {
-        StructureObject s = plan.selectedStructure();
-        if (s == null && plan.selectedPrefab() == null
-                && plan.selectedOpening() == null) {
+    /**
+     * Diálogo MEDIDAS: campos numéricos reais conforme a seleção.
+     * Parede: comprimento/altura/espessura. Demais estruturas:
+     * largura/profundidade + altura (sentido do papel). Vão:
+     * largura/altura/peitoril. Peça: distância do chão.
+     */
+    private void editMeasures() {
+        final StructureObject s = plan.selectedStructure();
+        final WallOpening o = plan.selectedOpening();
+        if (s == null && o == null && plan.selectedPrefab() == null) {
             return;
         }
-        float current;
+        LinearLayout form = new LinearLayout(activity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(48, 16, 48, 0);
+        final List<EditText> fields = new ArrayList<>();
         String title;
-        if (plan.selectedOpening() != null) {
-            current = plan.selectedOpening().height;
-            title = "Altura do vão (m)";
+
+        if (o != null) {
+            title = "Medidas do vão";
+            fields.add(field(form, "Largura (m)", o.width));
+            fields.add(field(form, "Altura (m)", o.height));
+            if (WallOpening.WINDOW.equals(o.type)) {
+                fields.add(field(form, "Peitoril (m)", o.sill));
+            }
         } else if (s != null) {
-            current = StructureRoles.heightValue(s);
-            title = StructureRoles.heightLabel(s);
+            boolean wall = StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s));
+            title = "Medidas — " + StructureRoles.name(s);
+            if (wall) {
+                fields.add(field(form, "Comprimento (m)",
+                        Math.max(s.half[0], s.half[2]) * 2f));
+                fields.add(field(form, "Altura (m)",
+                        StructureRoles.heightValue(s)));
+                fields.add(field(form, "Espessura (m)",
+                        Math.min(s.half[0], s.half[2]) * 2f));
+            } else {
+                fields.add(field(form, "Largura (m)", s.half[0] * 2f));
+                fields.add(field(form, "Profundidade (m)",
+                        s.half[2] * 2f));
+                fields.add(field(form, StructureRoles.heightLabel(s),
+                        StructureRoles.heightValue(s)));
+            }
         } else {
-            current = plan.selectedPrefab().transform.y;
-            title = "Distância do chão (m)";
+            title = "Medidas da peça";
+            fields.add(field(form, "Distância do chão (m)",
+                    plan.selectedPrefab().transform.y));
         }
+
+        new AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setView(form)
+                .setPositiveButton("Aplicar",
+                        (dialog, which) -> applyMeasures(s, o, fields))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void applyMeasures(StructureObject s, WallOpening o,
+                               List<EditText> fields) {
+        final float[] v = new float[fields.size()];
+        for (int i = 0; i < fields.size(); i++) {
+            try {
+                v[i] = Float.parseFloat(fields.get(i).getText()
+                        .toString().replace(',', '.'));
+            } catch (NumberFormatException bad) {
+                Toast.makeText(activity, "Número inválido",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        if (o != null) {
+            plan.mutateSelected(() -> {
+                o.width = clamp(v[0], 0.3f, 20f);
+                o.height = clamp(v[1], 0.3f, 10f);
+                if (v.length > 2) {
+                    o.sill = clamp(v[2], 0f, 5f);
+                }
+            });
+        } else if (s != null) {
+            boolean wall = StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s));
+            plan.mutateSelected(() -> {
+                if (wall) {
+                    boolean alongX = s.half[0] >= s.half[2];
+                    s.half[alongX ? 0 : 2] = clamp(v[0], 0.3f, 64f) / 2f;
+                    StructureRoles.applyHeight(s, v[1]);
+                    s.half[alongX ? 2 : 0] = clamp(v[2], 0.05f, 2f) / 2f;
+                } else {
+                    s.half[0] = clamp(v[0], 0.1f, 64f) / 2f;
+                    s.half[2] = clamp(v[1], 0.1f, 64f) / 2f;
+                    StructureRoles.applyHeight(s, v[2]);
+                }
+            });
+        } else {
+            plan.applySelectedHeight(v[0]);
+        }
+    }
+
+    private static float clamp(float v, float lo, float hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
+
+    private EditText field(LinearLayout form, String label, float value) {
+        TextView caption = new TextView(activity);
+        caption.setText(label);
+        caption.setTextSize(13f);
+        caption.setTextColor(0xFF8FA3B0);
+        form.addView(caption);
         EditText input = new EditText(activity);
         input.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setText(String.format(Locale.US, "%.2f", current));
-        input.selectAll();
-        new AlertDialog.Builder(activity)
-                .setTitle(title)
-                .setView(input)
-                .setPositiveButton("Aplicar", (dialog, which) -> {
-                    try {
-                        plan.applySelectedHeight(Float.parseFloat(
-                                input.getText().toString()
-                                        .replace(',', '.')));
-                    } catch (NumberFormatException bad) {
-                        Toast.makeText(activity, "Número inválido",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
+        input.setText(String.format(Locale.US, "%.2f", value));
+        form.addView(input);
+        return input;
     }
 
     private void undo() {

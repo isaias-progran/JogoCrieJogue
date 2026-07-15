@@ -7,7 +7,19 @@ App Android (builder TermIa, Java puro, sem Gradle/androidx) que une:
 Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → voltar.
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
-## Estado atual — 2026-07-14
+## Estado atual — 2026-07-15
+- **v0.5.1 (versionCode 7) — COTAS NA PLANTA + diálogo MEDIDAS.**
+  - Cota ao vivo enquanto desenha: retângulo mostra "L × P" (medida do
+    cômodo) e parede mostra o comprimento, acompanhando o dedo.
+  - Cotas permanentes: comprimento no meio de cada parede e L×P das
+    demais estruturas quando o zoom dá espaço (sempre na selecionada);
+    vão selecionado mostra largura × altura.
+  - ALTURA virou **MEDIDAS**: formulário com campos reais por tipo —
+    parede: comprimento/altura/espessura; piso/bloco/teto: largura/
+    profundidade/altura(sentido do papel); vão: largura/altura/peitoril
+    (janela); peça: distância do chão. Aceita vírgula decimal.
+  - `PlanEditorView.mutateSelected(Runnable)` centraliza mutação com
+    undo/status/redraw.
 - **v0.5.0 (versionCode 6) — VÃOS NAS PAREDES + seleção melhorada.**
   - Botão VÃO… (porta 1,0×2,1 / portal livre 1,6×altura da parede /
     janela 1,2×1,2 peitoril 0,9): tocar numa parede RECORTA o vão de

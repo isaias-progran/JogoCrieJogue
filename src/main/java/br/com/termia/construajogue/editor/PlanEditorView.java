@@ -58,6 +58,7 @@ public final class PlanEditorView extends View {
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gridPaint = new Paint();
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint measurePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // gesto atual (1 dedo)
     private boolean dragging;
@@ -90,6 +91,10 @@ public final class PlanEditorView extends View {
         stroke.setStyle(Paint.Style.STROKE);
         textPaint.setColor(0xFFAFC3D0);
         textPaint.setTextSize(28f);
+        measurePaint.setColor(0xFFF2E3A0);
+        measurePaint.setTextSize(26f);
+        measurePaint.setFakeBoldText(true);
+        measurePaint.setShadowLayer(4f, 0f, 0f, 0xFF000000);
         setBackgroundColor(0xFF10151B);
     }
 
@@ -168,6 +173,25 @@ public final class PlanEditorView extends View {
             host.selectionChanged(describePrefab(selectedPrefab));
         }
         host.afterChange();
+        invalidate();
+    }
+
+    /** Mutação da seleção com undo + redesenho + status atualizado. */
+    public void mutateSelected(Runnable change) {
+        if (!hasSelection()) {
+            return;
+        }
+        host.beforeChange();
+        change.run();
+        host.afterChange();
+        if (selectedOpening != null) {
+            host.selectionChanged(describeOpening(selectedOpening));
+        } else if (selectedStructure != null) {
+            host.selectionChanged(
+                    StructureRoles.describe(selectedStructure));
+        } else if (selectedPrefab != null) {
+            host.selectionChanged(describePrefab(selectedPrefab));
+        }
         invalidate();
     }
 
@@ -760,6 +784,7 @@ public final class PlanEditorView extends View {
         for (LogicMarker m : doc.markers) {
             drawMarker(canvas, m, m == selectedMarker);
         }
+        drawMeasureLabels(canvas);
     }
 
     /** Vãos sobre a parede: porta marrom, portal escuro, janela azul. */
@@ -939,11 +964,68 @@ public final class PlanEditorView extends View {
             float ez = horizontal ? startZ : curZ;
             canvas.drawLine(toPxX(startX), toPxY(startZ), toPxX(ex),
                     toPxY(ez), stroke);
+            float len = horizontal ? Math.abs(curX - startX)
+                    : Math.abs(curZ - startZ);
+            canvas.drawText(meters(len),
+                    toPxX((startX + ex) / 2f) + 12f,
+                    toPxY((startZ + ez) / 2f) - 12f, measurePaint);
             return;
         }
         canvas.drawRect(toPxX(Math.min(startX, curX)),
                 toPxY(Math.min(startZ, curZ)),
                 toPxX(Math.max(startX, curX)),
                 toPxY(Math.max(startZ, curZ)), stroke);
+        // cota ao vivo do retângulo (medida interna do cômodo)
+        canvas.drawText(meters(Math.abs(curX - startX)) + " × "
+                        + meters(Math.abs(curZ - startZ)),
+                toPxX((startX + curX) / 2f) - 60f,
+                toPxY((startZ + curZ) / 2f), measurePaint);
+    }
+
+    private static String meters(float value) {
+        return String.format("%.2f m", value).replace('.', ',');
+    }
+
+    /**
+     * Cotas permanentes: comprimento das paredes e L×P das demais
+     * estruturas, quando o zoom dá espaço (ou quando selecionadas).
+     */
+    private void drawMeasureLabels(Canvas canvas) {
+        for (StructureObject s : doc.structures) {
+            boolean selected = s == selectedStructure;
+            if (StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                float len = Math.max(s.half[0], s.half[2]) * 2f;
+                if (!selected && (scale < 16f || len * scale < 110f)) {
+                    continue;
+                }
+                boolean alongX = s.half[0] >= s.half[2];
+                canvas.drawText(meters(len),
+                        toPxX(s.transform.x) - 34f,
+                        toPxY(s.transform.z) + (alongX ? -14f : 0f),
+                        measurePaint);
+            } else {
+                if (!selected && (scale < 16f
+                        || s.half[0] * 2f * scale < 130f
+                        || s.half[2] * 2f * scale < 60f)) {
+                    continue;
+                }
+                canvas.drawText(meters(s.half[0] * 2f) + " × "
+                                + meters(s.half[2] * 2f),
+                        toPxX(s.transform.x) - 58f,
+                        toPxY(s.transform.z) + 8f, measurePaint);
+            }
+        }
+        if (selectedOpening != null) {
+            StructureObject wall = selectedOpeningWall;
+            boolean alongX = wall.half[0] >= wall.half[2];
+            float ox = alongX ? wall.transform.x + selectedOpening.offset
+                    : wall.transform.x;
+            float oz = alongX ? wall.transform.z
+                    : wall.transform.z + selectedOpening.offset;
+            canvas.drawText(meters(selectedOpening.width) + " × "
+                            + meters(selectedOpening.height),
+                    toPxX(ox) - 50f, toPxY(oz) - 20f, measurePaint);
+        }
     }
 }
