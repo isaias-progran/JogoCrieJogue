@@ -27,9 +27,15 @@ public final class StructureObject {
     public float[] color;
     /**
      * Cor da face larga voltada para o lado POSITIVO do eixo fino
-     * (parede pintada por lado). null = parede inteira usa `color`.
+     * (parede pintada por lado). null = usa `color`.
      */
     public float[] color2;
+    /**
+     * Cor da face larga do lado NEGATIVO. null = usa `color`. A cor
+     * base `color` fica só nas pontas/topo — pintar um lado nunca
+     * muda a base (senão a cor vaza pela ponta no canto).
+     */
+    public float[] color3;
     /** Vãos (só faz sentido em paredes). */
     public final java.util.List<WallOpening> openings =
             new java.util.ArrayList<>();

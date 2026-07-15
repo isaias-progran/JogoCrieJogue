@@ -45,19 +45,18 @@ public final class Boxes {
     }
 
     /**
-     * Caixa com as duas faces largas em cores diferentes (parede pintada
-     * por lado). `thinX` diz qual eixo é a espessura; a face voltada para
-     * o lado POSITIVO desse eixo recebe r2/g2/b2, o resto fica na base.
+     * Caixa de parede pintada POR FACE: `pos`/`neg` colorem as duas
+     * faces largas do eixo fino (`thinX`); `base` fica nas pontas,
+     * topo e fundo. pos/neg nulos caem na base.
      */
-    public static int emitBoundsSided(float[] out, int cursor,
-                                      float[] bounds, boolean thinX,
-                                      float r, float g, float b,
-                                      float r2, float g2, float b2) {
+    public static int emitBoundsPainted(float[] out, int cursor,
+                                        float[] bounds, boolean thinX,
+                                        float[] base, float[] pos,
+                                        float[] neg) {
         for (int[] face : FACES) {
-            boolean positive = thinX ? face[0] > 0 : face[2] > 0;
-            float fr = positive ? r2 : r;
-            float fg = positive ? g2 : g;
-            float fb = positive ? b2 : b;
+            int axis = thinX ? face[0] : face[2];
+            float[] color = axis > 0 && pos != null ? pos
+                    : axis < 0 && neg != null ? neg : base;
             for (int t : TRI) {
                 int corner = 3 + t * 3;
                 out[cursor++] = face[corner] == 0 ? bounds[0] : bounds[3];
@@ -66,9 +65,9 @@ public final class Boxes {
                 out[cursor++] = face[0];
                 out[cursor++] = face[1];
                 out[cursor++] = face[2];
-                out[cursor++] = fr;
-                out[cursor++] = fg;
-                out[cursor++] = fb;
+                out[cursor++] = color[0];
+                out[cursor++] = color[1];
+                out[cursor++] = color[2];
             }
         }
         return cursor;

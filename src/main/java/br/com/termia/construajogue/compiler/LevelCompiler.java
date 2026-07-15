@@ -32,6 +32,7 @@ public final class LevelCompiler {
         List<float[]> visuals = new ArrayList<>();
         List<float[]> colors = new ArrayList<>();
         List<float[]> colors2 = new ArrayList<>();
+        List<float[]> colors3 = new ArrayList<>();
         List<float[]> solids = new ArrayList<>();
         for (StructureObject s : doc.structures) {
             if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
@@ -41,14 +42,16 @@ public final class LevelCompiler {
             float[] bounds = new float[6];
             LegacyLevelLoader.toBounds(s.transform.x, s.transform.y,
                     s.transform.z, s.half[0], s.half[1], s.half[2], bounds);
-            float[] stubs = s.color2 == null ? null
+            float[] stubs = s.color2 == null && s.color3 == null ? null
                     : wallStubPlanes(s, doc.structures);
             if (s.openings.isEmpty()) {
-                addPainted(visuals, colors, colors2, bounds, s, stubs);
+                addPainted(visuals, colors, colors2, colors3, bounds, s,
+                        stubs);
                 solids.add(bounds);
             } else {
                 for (float[] piece : cutOpenings(s, bounds)) {
-                    addPainted(visuals, colors, colors2, piece, s, stubs);
+                    addPainted(visuals, colors, colors2, colors3, piece,
+                            s, stubs);
                     solids.add(piece);
                 }
             }
@@ -108,6 +111,7 @@ public final class LevelCompiler {
                         visuals.add(bounds);
                         colors.add(new float[]{part[6], part[7], part[8]});
                         colors2.add(null);
+                        colors3.add(null);
                     }
                     for (float[] c : boxes) {
                         float[] r = rotateBox(c, quarter);
@@ -145,15 +149,15 @@ public final class LevelCompiler {
         for (int i = 0; i < visuals.size(); i++) {
             float[] b = visuals.get(i);
             float[] color = colors.get(i);
-            float[] side = colors2.get(i);
-            if (side == null) {
+            float[] pos = colors2.get(i);
+            float[] neg = colors3.get(i);
+            if (pos == null && neg == null) {
                 cursor = Boxes.emitBounds(vertexData, cursor, b,
                         color[0], color[1], color[2]);
             } else {
                 boolean thinX = (b[3] - b[0]) < (b[5] - b[2]);
-                cursor = Boxes.emitBoundsSided(vertexData, cursor, b,
-                        thinX, color[0], color[1], color[2],
-                        side[0], side[1], side[2]);
+                cursor = Boxes.emitBoundsPainted(vertexData, cursor, b,
+                        thinX, color, pos, neg);
             }
         }
 
@@ -305,18 +309,25 @@ public final class LevelCompiler {
         return new float[]{loEnd, hiStart};
     }
 
+    /** Ponta pintada recua 1 cm no canto: evita briga de plano (listra). */
+    private static final float CORNER_INSET = 0.01f;
+
     /**
-     * Emite a caixa da parede pintada por lado, cortando a pintura nos
-     * planos de canto: o trecho de canto sai na cor base (acabamento).
+     * Emite a caixa da parede pintada por face, cortando a pintura nos
+     * planos de canto: o trecho de canto sai só na cor base e a ponta
+     * recua 1 cm para dentro da outra parede (a tampa ficava no MESMO
+     * plano da face dela — dava listra).
      */
     private static void addPainted(List<float[]> visuals,
                                    List<float[]> colors,
-                                   List<float[]> colors2, float[] b,
+                                   List<float[]> colors2,
+                                   List<float[]> colors3, float[] b,
                                    StructureObject s, float[] stubs) {
-        if (s.color2 == null) {
+        if (s.color2 == null && s.color3 == null) {
             visuals.add(b);
             colors.add(s.color);
             colors2.add(null);
+            colors3.add(null);
             return;
         }
         boolean thinX = s.half[0] < s.half[2];
@@ -326,22 +337,25 @@ public final class LevelCompiler {
         float bodyHi = b[hi];
         if (stubs != null && !Float.isNaN(stubs[0]) && stubs[0] > bodyLo) {
             float end = Math.min(stubs[0], bodyHi);
-            visuals.add(slice(b, lo, hi, bodyLo, end));
+            visuals.add(slice(b, lo, hi, bodyLo + CORNER_INSET, end));
             colors.add(s.color);
             colors2.add(null);
+            colors3.add(null);
             bodyLo = end;
         }
         if (stubs != null && !Float.isNaN(stubs[1]) && stubs[1] < bodyHi) {
             float start = Math.max(stubs[1], bodyLo);
-            visuals.add(slice(b, lo, hi, start, bodyHi));
+            visuals.add(slice(b, lo, hi, start, bodyHi - CORNER_INSET));
             colors.add(s.color);
             colors2.add(null);
+            colors3.add(null);
             bodyHi = start;
         }
         if (bodyHi > bodyLo) {
             visuals.add(slice(b, lo, hi, bodyLo, bodyHi));
             colors.add(s.color);
             colors2.add(s.color2);
+            colors3.add(s.color3);
         }
     }
 

@@ -635,6 +635,7 @@ public final class PlanEditorView extends View {
         if (!wall) {
             target.color = activePaint.clone();
             target.color2 = null;
+            target.color3 = null;
         } else if (paintBucket) {
             for (StructureObject w : connectedWalls(target)) {
                 paintWallSide(w, wx, wz, false);
@@ -647,8 +648,9 @@ public final class PlanEditorView extends View {
     }
 
     /**
-     * Pinta a face da parede voltada para (wx, wz). `allowBoth`: toque
-     * no terço central pinta a parede inteira de uma cor só.
+     * Pinta a FACE da parede voltada para (wx, wz) — a cor base (pontas
+     * e topo) nunca muda ao pintar um lado, senão vaza pelo canto.
+     * `allowBoth`: toque no terço central pinta a parede inteira.
      */
     private void paintWallSide(StructureObject s, float wx, float wz,
                                boolean allowBoth) {
@@ -658,13 +660,11 @@ public final class PlanEditorView extends View {
         if (allowBoth && Math.abs(d) <= half * 0.34f) {
             s.color = activePaint.clone();
             s.color2 = null;
+            s.color3 = null;
         } else if (d > 0f) {
             s.color2 = activePaint.clone();
         } else {
-            if (s.color2 == null) {
-                s.color2 = s.color.clone(); // preserva o outro lado
-            }
-            s.color = activePaint.clone();
+            s.color3 = activePaint.clone();
         }
     }
 
@@ -1199,17 +1199,30 @@ public final class PlanEditorView extends View {
                 (int) (s.color[0] * 255f), (int) (s.color[1] * 255f),
                 (int) (s.color[2] * 255f)));
         canvas.drawRect(l, t, r, b, fill);
-        if (s.color2 != null) {
-            // metade do lado positivo do eixo fino mostra a outra cor
-            fill.setColor(Color.argb(translucent ? 70 : 255,
-                    (int) (s.color2[0] * 255f),
-                    (int) (s.color2[1] * 255f),
-                    (int) (s.color2[2] * 255f)));
+        if (s.color2 != null || s.color3 != null) {
+            // cada metade do eixo fino mostra a cor da sua face
             boolean thinX = s.half[0] < s.half[2];
-            if (thinX) {
-                canvas.drawRect(toPxX(s.transform.x), t, r, b, fill);
-            } else {
-                canvas.drawRect(l, toPxY(s.transform.z), r, b, fill);
+            if (s.color2 != null) {
+                fill.setColor(Color.argb(translucent ? 70 : 255,
+                        (int) (s.color2[0] * 255f),
+                        (int) (s.color2[1] * 255f),
+                        (int) (s.color2[2] * 255f)));
+                if (thinX) {
+                    canvas.drawRect(toPxX(s.transform.x), t, r, b, fill);
+                } else {
+                    canvas.drawRect(l, toPxY(s.transform.z), r, b, fill);
+                }
+            }
+            if (s.color3 != null) {
+                fill.setColor(Color.argb(translucent ? 70 : 255,
+                        (int) (s.color3[0] * 255f),
+                        (int) (s.color3[1] * 255f),
+                        (int) (s.color3[2] * 255f)));
+                if (thinX) {
+                    canvas.drawRect(l, t, toPxX(s.transform.x), b, fill);
+                } else {
+                    canvas.drawRect(l, t, r, toPxY(s.transform.z), fill);
+                }
             }
         }
         stroke.setColor(selected ? 0xFFFFFFFF

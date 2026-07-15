@@ -8,7 +8,21 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
-- **v0.9.2 (versionCode 16) — CANTOS DE PAREDE PINTADA resolvidos.**
+- **v0.9.3 (versionCode 17) — pintura POR FACE (canto resolvido de vez).**
+  - A v0.9.2 NÃO resolveu no aparelho. Causa raiz dupla: (1) pintar o
+    lado NEGATIVO gravava na cor BASE, que também pinta as PONTAS →
+    faixa da cor interna vista de fora; (2) a tampa da ponta fica no
+    MESMO plano da face da parede perpendicular → briga de z (listra).
+  - Modelo novo: `color` = base (pontas/topo, nunca muda ao pintar
+    lado), `color2` = face positiva, `color3` = face negativa
+    (persistidos; `Boxes.emitBoundsPainted` com 3 cores).
+  - Compilador: trecho de canto sai só na base E a ponta pintada RECUA
+    1 cm (CORNER_INSET) para dentro da outra parede — some o coplanar.
+  - Editor: pintar grava na face tocada; meio = parede toda (base,
+    limpa faces); planta mostra as duas metades com as cores das faces.
+  - Mapas pintados na v0.6.0–0.9.2 usam a semântica velha: REPINTAR.
+- **v0.9.2 (versionCode 16) — CANTOS…** (superada; diagnóstico errado —
+  só cobria metade do problema).
   - Problema real do aparelho: a face pintada ia até a ponta e vazava
     pelo canto (faixa da cor interna vista de fora).
   - `LevelCompiler.wallStubPlanes` detecta parede perpendicular

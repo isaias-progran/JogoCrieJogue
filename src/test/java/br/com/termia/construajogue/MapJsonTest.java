@@ -25,6 +25,7 @@ public final class MapJsonTest {
         block.half = new float[]{0.5f, 0.25f, 3f};
         block.color = new float[]{0.7f, 0.6f, 0.5f};
         block.color2 = new float[]{0.2f, 0.3f, 0.4f};
+        block.color3 = new float[]{0.6f, 0.1f, 0.2f};
         doc.structures.add(block);
 
         PrefabInstance drone = new PrefabInstance("d1", "enemy.drone");
@@ -66,7 +67,8 @@ public final class MapJsonTest {
                 && b.transform.z == -2f, "transform do bloco");
         Check.sameFloats(b.half, block.half, "meias dimensões");
         Check.sameFloats(b.color, block.color, "cor");
-        Check.sameFloats(b.color2, block.color2, "cor do lado");
+        Check.sameFloats(b.color2, block.color2, "cor do lado +");
+        Check.sameFloats(b.color3, block.color3, "cor do lado -");
 
         Check.equal(back.prefabs.size(), 2, "peças");
         PrefabInstance d = back.prefabs.get(0);

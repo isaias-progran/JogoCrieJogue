@@ -64,6 +64,9 @@ public final class MapValidator {
             if (s.color2 != null) {
                 checkFloats(issues, label + " (cor do lado)", s.color2, 3);
             }
+            if (s.color3 != null) {
+                checkFloats(issues, label + " (cor do lado)", s.color3, 3);
+            }
             if (s.half != null && (s.half[0] <= 0f || s.half[1] <= 0f
                     || s.half[2] <= 0f)) {
                 error(issues, "estrutura.dimensao",
