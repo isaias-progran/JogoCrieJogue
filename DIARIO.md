@@ -8,6 +8,14 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.9.5 (versionCode 19) — BOLINHA DE SELEÇÃO por objeto.**
+  - Problema: o 2D sobrepõe piso/teto/bloco e o toque não sabia qual
+    selecionar. Agora todo piso/teto/bloco tem uma BOLINHA colorida
+    (teto azul acima do centro, piso cinza abaixo, bloco laranja no
+    centro — nunca coincidem) SEMPRE visível; tocar nela seleciona
+    aquele objeto com prioridade máxima (`chipPos`/pick).
+  - Etiqueta ganhou o NOME: "teto 3,00 × 5,00" (sempre na seleção;
+    com zoom quando cabe). Arrastar pela bolinha move o objeto.
 - **v0.9.4 (versionCode 18) — ALINHAMENTO DE LAJE + puxar arestas.**
   - Causa do desalinho: as FACES das paredes ficam fora da grade (centro
     na grade ± espessura 0,15) e o snap era só grade.

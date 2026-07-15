@@ -377,6 +377,30 @@ public final class PlanEditorView extends View {
         return Float.isNaN(hit) ? snap(v) : hit;
     }
 
+    /**
+     * Ponto de seleção de piso/teto/bloco (o 2D sobrepõe tudo; a
+     * bolinha desambigua). Teto fica acima do centro, piso abaixo —
+     * nunca coincidem.
+     */
+    private float[] chipPos(StructureObject s) {
+        float dz = 0f;
+        String role = StructureRoles.roleOf(s);
+        if (StructureObject.ROLE_CEILING.equals(role)) {
+            dz = -30f / scale;
+        } else if (StructureObject.ROLE_FLOOR.equals(role)) {
+            dz = 30f / scale;
+        }
+        return new float[]{s.transform.x, s.transform.z + dz};
+    }
+
+    private static int chipColor(StructureObject s) {
+        switch (StructureRoles.roleOf(s)) {
+            case StructureObject.ROLE_CEILING: return 0xFF8FA9C9;
+            case StructureObject.ROLE_FLOOR: return 0xFF9AA5AD;
+            default: return 0xFFC9A06C;
+        }
+    }
+
     /** Aresta da estrutura selecionada perto do toque, ou -1. */
     private int edgeAt(float wx, float wz) {
         StructureObject s = selectedStructure;
@@ -949,6 +973,30 @@ public final class PlanEditorView extends View {
         selectedPrefab = null;
         selectedOpening = null;
         selectedOpeningWall = null;
+        // bolinhas de seleção têm prioridade máxima: escolhem o objeto
+        // exato (teto × piso × bloco) mesmo com tudo sobreposto
+        float chipRadius = 20f / scale;
+        StructureObject chipHit = null;
+        float chipBest = chipRadius;
+        for (StructureObject s : doc.structures) {
+            if (StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            float[] cp = chipPos(s);
+            float d = (float) Math.hypot(wx - cp[0], wz - cp[1]);
+            if (d < chipBest) {
+                chipBest = d;
+                chipHit = s;
+            }
+        }
+        if (chipHit != null) {
+            selectedStructure = chipHit;
+            grabDx = chipHit.transform.x - wx;
+            grabDz = chipHit.transform.z - wz;
+            host.selectionChanged(StructureRoles.describe(chipHit));
+            return;
+        }
         // peças primeiro: ícones pequenos por cima das estruturas
         for (int i = doc.prefabs.size() - 1; i >= 0; i--) {
             PrefabInstance p = doc.prefabs.get(i);
@@ -1435,15 +1483,22 @@ public final class PlanEditorView extends View {
                         toPxY(s.transform.z) + (alongX ? -14f : 0f),
                         measurePaint);
             } else {
-                if (!selected && (scale < 16f
-                        || s.half[0] * 2f * scale < 130f
-                        || s.half[2] * 2f * scale < 60f)) {
-                    continue;
+                // bolinha de seleção sempre visível + "teto 3,00 × 5,00"
+                float[] cp = chipPos(s);
+                float px = toPxX(cp[0]);
+                float py = toPxY(cp[1]);
+                fill.setColor(chipColor(s));
+                canvas.drawCircle(px, py, 8f, fill);
+                stroke.setColor(selected ? 0xFFFFFFFF : 0x66000000);
+                stroke.setStrokeWidth(selected ? 3f : 1.5f);
+                canvas.drawCircle(px, py, selected ? 12f : 8f, stroke);
+                if (selected || (scale >= 14f
+                        && s.half[0] * 2f * scale >= 110f)) {
+                    canvas.drawText(StructureRoles.name(s) + "  "
+                                    + meters(s.half[0] * 2f) + " × "
+                                    + meters(s.half[2] * 2f),
+                            px + 14f, py + 9f, measurePaint);
                 }
-                canvas.drawText(meters(s.half[0] * 2f) + " × "
-                                + meters(s.half[2] * 2f),
-                        toPxX(s.transform.x) - 58f,
-                        toPxY(s.transform.z) + 8f, measurePaint);
             }
         }
         if (selectedOpening != null) {
