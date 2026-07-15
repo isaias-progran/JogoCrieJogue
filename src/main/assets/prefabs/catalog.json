@@ -126,6 +126,48 @@
       "category": "objetos",
       "behavior": "static",
       "properties": []
+    },
+    {
+      "id": "furniture.sink.kitchen",
+      "name": "Pia de cozinha",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.sink.bath",
+      "name": "Pia de banheiro",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.toilet",
+      "name": "Vaso sanitário",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.wardrobe",
+      "name": "Guarda-roupa",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "prop.plant.small",
+      "name": "Planta pequena",
+      "category": "objetos",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "prop.plant.tall",
+      "name": "Planta alta",
+      "category": "objetos",
+      "behavior": "static",
+      "properties": []
     }
   ]
 }

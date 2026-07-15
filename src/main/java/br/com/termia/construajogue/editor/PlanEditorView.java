@@ -1029,6 +1029,38 @@ public final class PlanEditorView extends View {
         }
     }
 
+    /**
+     * Seta de FRENTE do móvel: a frente (porta do armário, torneira,
+     * assento) aponta para -Z em yaw 0 e gira junto com a peça — assim
+     * dá para ver qual lado deve encostar na parede.
+     */
+    private void drawFrontArrow(Canvas canvas, PrefabInstance p,
+                                int quarter, float hx, float hz) {
+        float dx;
+        float dz;
+        switch (quarter) {
+            case 1: dx = 1f; dz = 0f; break;
+            case 2: dx = 0f; dz = 1f; break;
+            case 3: dx = -1f; dz = 0f; break;
+            default: dx = 0f; dz = -1f; break;
+        }
+        float edge = dx != 0f ? hx : hz;
+        float bx = toPxX(p.transform.x + dx * edge);
+        float by = toPxY(p.transform.z + dz * edge);
+        float tx = toPxX(p.transform.x + dx * (edge + 10f / scale));
+        float ty = toPxY(p.transform.z + dz * (edge + 10f / scale));
+        stroke.setColor(0xFFF2E3A0);
+        stroke.setStrokeWidth(3f);
+        canvas.drawLine(bx, by, tx, ty, stroke);
+        // cabeça da seta perpendicular à direção
+        float pxOff = dz != 0f ? 6f : 0f;
+        float pyOff = dx != 0f ? 6f : 0f;
+        canvas.drawLine(tx, ty, bx + pxOff + (tx - bx) / 2f,
+                by + pyOff + (ty - by) / 2f, stroke);
+        canvas.drawLine(tx, ty, bx - pxOff + (tx - bx) / 2f,
+                by - pyOff + (ty - by) / 2f, stroke);
+    }
+
     /** Ícone da peça: bolinha colorida com letra (porta vira barra). */
     private void drawPrefab(Canvas canvas, PrefabInstance p,
                             boolean selected) {
@@ -1039,8 +1071,8 @@ public final class PlanEditorView extends View {
         float[] footprint = PrefabMeshFactory.footprint(p.prefabId);
         if (footprint != null) {
             // móvel/objeto: pegada real no plano, girada com a peça
-            boolean turned = (LevelCompiler
-                    .quarterTurns(p.transform.yaw) & 1) == 1;
+            int quarter = LevelCompiler.quarterTurns(p.transform.yaw);
+            boolean turned = (quarter & 1) == 1;
             float hx = turned ? footprint[1] : footprint[0];
             float hz = turned ? footprint[0] : footprint[1];
             fill.setColor(0x8858728A);
@@ -1055,6 +1087,7 @@ public final class PlanEditorView extends View {
                     toPxY(p.transform.z - hz),
                     toPxX(p.transform.x + hx),
                     toPxY(p.transform.z + hz), stroke);
+            drawFrontArrow(canvas, p, quarter, hx, hz);
             if (selected) {
                 stroke.setColor(0xFFFFFFFF);
                 stroke.setStrokeWidth(3f);

@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.8.1 (versionCode 12) — SETA DE FRENTE + 6 peças novas.**
+  - Convenção nova: a FRENTE de todo móvel (porta do armário, torneira,
+    assento, prateleiras abertas) aponta para -Z em yaw 0; a planta
+    desenha uma SETA amarela nesse lado, girando com GIRAR — dá para
+    ver qual lado encosta na parede antes de testar. (Encosto da
+    cadeira foi virado para +Z para obedecer a convenção.)
+  - Peças novas (todas static): pia de cozinha (balcão+cuba+torneira),
+    pia de banheiro (coluna+bacia), vaso sanitário, guarda-roupa
+    (1,2×2,0m com frisos/puxadores), planta pequena e planta alta
+    (vaso terracota + folhagem). Catálogo com 24 peças; o teste de
+    integridade cobre malha/collider/pegada automaticamente.
 - **v0.8.0 (versionCode 11) — PATRULHA DOS INIMIGOS na planta.**
   - Botão ROTA (ativo com inimigo selecionado): o próximo toque na
     planta vira o 2º ponto de patrulha (patrolX/patrolZ); tocar no
