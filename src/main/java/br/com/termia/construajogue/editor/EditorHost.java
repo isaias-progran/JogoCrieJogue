@@ -10,7 +10,6 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -94,7 +93,7 @@ public final class EditorHost extends FrameLayout
         LayoutParams panelParams = new LayoutParams(
                 (int) (168f * density), LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.END);
-        panelParams.topMargin = (int) (54f * density);
+        panelParams.topMargin = (int) (104f * density);
         panelParams.rightMargin = 8;
         addView(sidePanel, panelParams);
         sidePanel.setVisibility(GONE);
@@ -102,42 +101,69 @@ public final class EditorHost extends FrameLayout
         refreshButtons();
     }
 
-    /** Topo enxuto: só o de uso constante (o resto vive no painel ☰). */
-    private HorizontalScrollView buildTopBar() {
-        LinearLayout bar = new LinearLayout(activity);
-        bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setPadding(8, 6, 8, 6);
+    /**
+     * Topo em DUAS linhas fixas; cada botão tem peso 1, então a barra
+     * sempre cabe na largura da tela, sem rolagem.
+     */
+    private LinearLayout buildTopBar() {
+        LinearLayout bars = new LinearLayout(activity);
+        bars.setOrientation(LinearLayout.VERTICAL);
+        bars.setBackgroundColor(0xCC141B22);
+        bars.setPadding(4, 4, 4, 4);
 
-        bar.addView(action("←", this::close));
+        LinearLayout row1 = topRow(bars);
+        addWeighted(row1, action("←", this::close));
         undoButton = action("↶", this::undo);
         redoButton = action("↷", this::redo);
-        bar.addView(undoButton);
-        bar.addView(redoButton);
+        addWeighted(row1, undoButton);
+        addWeighted(row1, redoButton);
+        Button tools = action("☰", this::togglePanel);
+        tools.setTextColor(0xFFE0C060);
+        addWeighted(row1, tools);
+        Button test = action("▶", this::test);
+        test.setTextColor(0xFF9CE49C);
+        addWeighted(row1, test);
+
+        LinearLayout row2 = topRow(bars);
         Button select = action("SELEC.",
                 () -> selectTool(PlanEditorView.TOOL_SELECT));
         select.setTag(PlanEditorView.TOOL_SELECT);
         toolButtons.add(select);
-        bar.addView(select);
+        addWeighted(row2, select);
         Button paintButton = action("PINTAR", this::choosePaint);
         paintButton.setTag(PlanEditorView.TOOL_PAINT);
         paintButton.setTextColor(0xFFC98FD9);
         toolButtons.add(paintButton);
-        bar.addView(paintButton);
+        addWeighted(row2, paintButton);
         rotateButton = action("GIRAR", () -> plan.rotateSelected());
         rotateButton.setTextColor(0xFFA0D9C9);
-        bar.addView(rotateButton);
-        Button tools = action("☰", this::togglePanel);
-        tools.setTextColor(0xFFE0C060);
-        bar.addView(tools);
-        Button test = action("▶", this::test);
-        test.setTextColor(0xFF9CE49C);
-        bar.addView(test);
+        addWeighted(row2, rotateButton);
+        heightButton = action("MEDIDAS", this::editMeasures);
+        heightButton.setTextColor(0xFF9CC9E4);
+        addWeighted(row2, heightButton);
+        deleteButton = action("EXCLUIR", () -> plan.deleteSelected());
+        deleteButton.setTextColor(0xFFE49C9C);
+        addWeighted(row2, deleteButton);
+        return bars;
+    }
 
-        HorizontalScrollView scroll = new HorizontalScrollView(activity);
-        scroll.setBackgroundColor(0xCC141B22);
-        scroll.setHorizontalScrollBarEnabled(false);
-        scroll.addView(bar);
-        return scroll;
+    private LinearLayout topRow(LinearLayout parent) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        parent.addView(row, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        return row;
+    }
+
+    /** Peso 1: os botões da linha dividem a largura por igual. */
+    private void addWeighted(LinearLayout row, Button button) {
+        button.setPadding(4, 8, 4, 8);
+        button.setSingleLine(true);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        params.rightMargin = 4;
+        row.addView(button, params);
     }
 
     /** Painel lateral recolhível, como no editor3d: uma linha por item. */
@@ -169,17 +195,6 @@ public final class EditorHost extends FrameLayout
             startRoute();
         }, null);
         panel.addView(routeButton);
-        heightButton = panelItem("Medidas", () -> {
-            hidePanel();
-            editMeasures();
-        }, null);
-        panel.addView(heightButton);
-        deleteButton = panelItem("Excluir", () -> {
-            hidePanel();
-            plan.deleteSelected();
-        }, null);
-        deleteButton.setTextColor(0xFFE49C9C);
-        panel.addView(deleteButton);
         panel.addView(panelItem("Céu…", () -> {
             hidePanel();
             chooseSky();

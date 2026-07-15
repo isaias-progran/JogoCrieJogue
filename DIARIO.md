@@ -8,6 +8,12 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.11.1 (versionCode 23) — topo em 2 LINHAS FIXAS (sem rolagem).**
+  - Linha 1: ← ↶ ↷ ☰ ▶. Linha 2: SELEC. PINTAR GIRAR MEDIDAS EXCLUIR.
+    Peso 1 por botão = sempre cabem na largura; sem HorizontalScroll.
+  - Medidas/Excluir saíram do painel ☰ (agora no topo; painel ficou:
+    Piso, Parede, Teto, Bloco, Desenho por pontos…, Vão…, Peça…,
+    Início, Saída, Rota do inimigo, Céu…). Painel desce p/ 104dp.
 - **v0.11.0 (versionCode 22) — DESENHO POR PONTOS (contorno livre).**
   - Painel ☰ → "Desenho por pontos…" (Piso ou Teto): toque marca
     pontos (cota do trecho ao vivo; ↶ remove o último; trocar de
