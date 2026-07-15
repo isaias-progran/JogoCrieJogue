@@ -11,6 +11,11 @@ public final class RuntimeLevel {
     public static final int ITEM_HEALTH = 0;
     public static final int ITEM_AMMO = 1;
 
+    public static final int SKY_NONE = 0;
+    public static final int SKY_DAY = 1;
+    public static final int SKY_DUSK = 2;
+    public static final int SKY_NIGHT = 3;
+
     private final float[][] colliders;
     private final float[] vertexData;
     private final float[] doorVertexData;
@@ -26,6 +31,7 @@ public final class RuntimeLevel {
     private final float ambient;
     private final float[] fogColor;
     private final float fogFar;
+    private int skyMode = SKY_NONE;
 
     public RuntimeLevel(float[][] colliders, float[] vertexData,
                         float[] doorVertexData, int doorIndex,
@@ -118,6 +124,16 @@ public final class RuntimeLevel {
 
     public float fogFar() {
         return fogFar;
+    }
+
+    /** Uma das constantes SKY_*; NONE = só a cor da neblina. */
+    public int skyMode() {
+        return skyMode;
+    }
+
+    /** Chamado apenas pelo compilador, logo após construir. */
+    public void setSkyMode(int mode) {
+        skyMode = mode;
     }
 
     public int boxCount() {

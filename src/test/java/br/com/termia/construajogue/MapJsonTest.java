@@ -15,6 +15,7 @@ public final class MapJsonTest {
         doc.ambient = 0.4f;
         doc.fogColor = new float[]{0.1f, 0.2f, 0.3f};
         doc.fogFar = 25f;
+        doc.sky = "night";
 
         StructureObject block = new StructureObject("b1",
                 StructureObject.KIND_BLOCK);
@@ -56,6 +57,7 @@ public final class MapJsonTest {
         Check.that(back.ambient == doc.ambient, "ambiente");
         Check.sameFloats(back.fogColor, doc.fogColor, "neblina");
         Check.that(back.fogFar == doc.fogFar, "distância da neblina");
+        Check.equal(back.sky, "night", "céu");
 
         Check.equal(back.structures.size(), 1, "estruturas");
         StructureObject b = back.structures.get(0);

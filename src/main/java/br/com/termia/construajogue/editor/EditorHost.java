@@ -273,16 +273,16 @@ public final class EditorHost extends FrameLayout
         }
     }
 
-    /** Presets de céu: nome, ambiente, cor do céu/neblina, alcance. */
+    /** Presets: nome, ambiente, horizonte/neblina, alcance, skybox. */
     private static final Object[][] SKIES = {
-            {"Dia (céu azul claro)", 0.60f,
-                    new float[]{0.55f, 0.70f, 0.86f}, 50f},
-            {"Entardecer (laranja)", 0.42f,
-                    new float[]{0.46f, 0.30f, 0.26f}, 38f},
-            {"Noite (escuro)", 0.20f,
-                    new float[]{0.02f, 0.03f, 0.08f}, 26f},
+            {"Dia (sol e céu azul)", 0.60f,
+                    new float[]{0.55f, 0.70f, 0.86f}, 50f, "day"},
+            {"Entardecer (sol baixo)", 0.42f,
+                    new float[]{0.46f, 0.30f, 0.26f}, 38f, "dusk"},
+            {"Noite (lua e estrelas)", 0.20f,
+                    new float[]{0.02f, 0.03f, 0.08f}, 26f, "night"},
             {"Instalação (padrão do jogo)", 0.35f,
-                    new float[]{0.04f, 0.05f, 0.07f}, 30f},
+                    new float[]{0.04f, 0.05f, 0.07f}, 30f, "none"},
     };
 
     /**
@@ -302,6 +302,7 @@ public final class EditorHost extends FrameLayout
                     doc.ambient = (Float) SKIES[which][1];
                     doc.fogColor = ((float[]) SKIES[which][2]).clone();
                     doc.fogFar = (Float) SKIES[which][3];
+                    doc.sky = (String) SKIES[which][4];
                     afterChange();
                     Toast.makeText(activity, "Céu: " + labels[which]
                             + " — teste para ver", Toast.LENGTH_SHORT)

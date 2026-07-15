@@ -30,6 +30,9 @@ public final class MapJson {
         env.put("ambient", doc.ambient);
         env.put("fog", floats(doc.fogColor));
         env.put("fogFar", doc.fogFar);
+        if (!"none".equals(doc.sky)) {
+            env.put("sky", doc.sky);
+        }
         root.put("environment", env);
 
         List<Object> structures = new ArrayList<>();
@@ -146,6 +149,7 @@ public final class MapJson {
             Map<?, ?> e = (Map<?, ?>) env;
             doc.ambient = floatOf(e, "ambient", doc.ambient);
             doc.fogFar = floatOf(e, "fogFar", doc.fogFar);
+            doc.sky = stringOf(e, "sky", "none");
             float[] fog = floatsOf(e.get("fog"), 3);
             if (fog != null) {
                 doc.fogColor = fog;

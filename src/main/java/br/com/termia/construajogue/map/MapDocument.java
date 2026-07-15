@@ -19,6 +19,8 @@ public final class MapDocument {
     public float ambient = 0.35f;
     public float[] fogColor = {0.04f, 0.05f, 0.07f};
     public float fogFar = 30f;
+    /** Céu: "none" (sem skybox), "day", "dusk" ou "night". */
+    public String sky = "none";
 
     public final List<StructureObject> structures = new ArrayList<>();
     public final List<PrefabInstance> prefabs = new ArrayList<>();

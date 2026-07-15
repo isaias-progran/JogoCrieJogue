@@ -119,6 +119,15 @@ public final class WallOpeningTest {
                 "lâmpada de teto sem collider");
         doc.prefabs.clear();
 
+        // céu: persiste e compila no modo certo (legado fica NONE)
+        doc.sky = "night";
+        Check.that(LevelCompiler.compile(MapJson.read(MapJson.write(doc)),
+                catalog).skyMode() == br.com.termia.construajogue.runtime
+                .RuntimeLevel.SKY_NIGHT, "céu noturno compilado");
+        doc.sky = "none";
+        Check.that(LevelCompiler.compile(doc, catalog).skyMode() == 0,
+                "sem skybox por padrão");
+
         // vão sobreposto e vão fora da parede são recusados
         WallOpening bad = new WallOpening("b", WallOpening.DOOR);
         bad.offset = -1.2f;

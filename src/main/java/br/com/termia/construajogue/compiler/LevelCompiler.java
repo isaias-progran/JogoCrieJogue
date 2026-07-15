@@ -176,13 +176,24 @@ public final class LevelCompiler {
                     LegacyLevelLoader.DOOR_COLOR[2]);
         }
 
-        return new RuntimeLevel(colliders, vertexData, doorVertexData,
-                doorIndex, doorOriginal, terminal, exit,
+        RuntimeLevel level = new RuntimeLevel(colliders, vertexData,
+                doorVertexData, doorIndex, doorOriginal, terminal, exit,
                 items.toArray(new float[0][]), spawn,
                 drones.toArray(new float[0][]),
                 waves.toArray(new float[0][]),
                 mutants.toArray(new float[0][]),
                 doc.ambient, doc.fogColor.clone(), doc.fogFar);
+        level.setSkyMode(skyModeOf(doc.sky));
+        return level;
+    }
+
+    public static int skyModeOf(String sky) {
+        switch (sky == null ? "" : sky) {
+            case "day": return RuntimeLevel.SKY_DAY;
+            case "dusk": return RuntimeLevel.SKY_DUSK;
+            case "night": return RuntimeLevel.SKY_NIGHT;
+            default: return RuntimeLevel.SKY_NONE;
+        }
     }
 
     /**

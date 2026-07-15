@@ -8,12 +8,20 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
-- **v0.8.2 (versionCode 13) — CÉU… (dia/entardecer/noite/instalação).**
-  - Botão CÉU… no editor: presets que gravam ambient/fogColor/fogFar do
-    documento (campos que já existiam) — Dia 0.60/azul/50m, Entardecer
-    0.42/laranja/38m, Noite 0.20/escuro/26m, Instalação (padrão da
-    campanha). O "céu" é o clearColor = cor da neblina; entra no undo.
-    Sem sol/lua/estrelas — seria skybox, anotar se pedirem.
+- **v0.9.0 (versionCode 14) — SKYBOX com sol, lua e estrelas.**
+  - `engine/Sky`: cubo desenhado por dentro, shader próprio — gradiente
+    horizonte→zênite (horizonte = cor da neblina do mapa, transição
+    suave), disco do sol + brilho (direção IGUAL à luz difusa do
+    cenário no dia), lua com halo à noite e ESTRELAS procedurais (hash
+    da direção, sem textura; brilho variado, some perto do horizonte).
+  - Desenhado antes do cenário com depth/cull off e view SEM translação
+    (gl_Position .xyww). Recriado em onSurfaceCreated como as malhas.
+  - `MapDocument.sky` ("none/day/dusk/night") persistido no environment;
+    `RuntimeLevel.skyMode()`; presets do CÉU… gravam o modo. Mapas
+    legados (.txt) e "Instalação" ficam SKY_NONE = comportamento antigo.
+  - Entardecer: sol baixo alaranjado + estrelas fracas (0.35).
+- **v0.8.2 (versionCode 13) — CÉU…** presets de ambient/fog (superado
+  pela v0.9.0, que adicionou o skybox de verdade).
 - **v0.8.1 (versionCode 12) — SETA DE FRENTE + 6 peças novas.**
   - Convenção nova: a FRENTE de todo móvel (porta do armário, torneira,
     assento, prateleiras abertas) aponta para -Z em yaw 0; a planta

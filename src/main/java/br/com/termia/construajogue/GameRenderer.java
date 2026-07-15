@@ -8,6 +8,7 @@ import android.os.SystemClock;
 import br.com.termia.construajogue.engine.FpsCamera;
 import br.com.termia.construajogue.engine.Mesh;
 import br.com.termia.construajogue.engine.Shader;
+import br.com.termia.construajogue.engine.Sky;
 import br.com.termia.construajogue.game.Enemy;
 import br.com.termia.construajogue.game.GameState;
 import br.com.termia.construajogue.game.Sounds;
@@ -94,6 +95,8 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private final float[] projection = new float[16];
     private final float[] view = new float[16];
     private final float[] viewProj = new float[16];
+    private final float[] skyView = new float[16];
+    private final float[] skyViewProj = new float[16];
     private final float[] eye = new float[3];
 
     private RuntimeLevel level;
@@ -101,6 +104,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private Mesh levelMesh;
     private Mesh doorMesh;
     private GameMeshes meshes;
+    private Sky sky;
     private int program;
     private int viewProjLoc;
     private int offsetLoc;
@@ -182,6 +186,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             gridLoc = GLES30.glGetUniformLocation(program, "uGrid");
             uploadLevelMeshes(false);
             meshes = new GameMeshes();
+            sky = new Sky();
             GLES30.glEnable(GLES30.GL_DEPTH_TEST);
             GLES30.glEnable(GLES30.GL_CULL_FACE);
             ready = true;
@@ -261,6 +266,16 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         Matrix.multiplyMM(viewProj, 0, projection, 0, view, 0);
         camera.eyeInto(eye);
         float[] fog = level.fogColor();
+
+        // skybox primeiro: view sem translação, sempre atrás de tudo
+        if (level.skyMode() != RuntimeLevel.SKY_NONE) {
+            System.arraycopy(view, 0, skyView, 0, 16);
+            skyView[12] = 0f;
+            skyView[13] = 0f;
+            skyView[14] = 0f;
+            Matrix.multiplyMM(skyViewProj, 0, projection, 0, skyView, 0);
+            sky.draw(skyViewProj, level.skyMode(), fog);
+        }
 
         GLES30.glUseProgram(program);
         GLES30.glUniformMatrix4fv(viewProjLoc, 1, false, viewProj, 0);
