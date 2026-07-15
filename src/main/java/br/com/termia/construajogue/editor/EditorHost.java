@@ -59,6 +59,7 @@ public final class EditorHost extends FrameLayout
     private Button heightButton;
     private Button rotateButton;
     private Button routeButton;
+    private LinearLayout sidePanel;
     private MapDocument doc;
 
     public EditorHost(Activity activity, MapStore store,
@@ -79,100 +80,146 @@ public final class EditorHost extends FrameLayout
         status.setTextColor(0xFFAFC3D0);
         status.setTextSize(13f);
         status.setPadding(24, 8, 24, 8);
+        status.setBackgroundColor(0x88141B22);
         LayoutParams statusParams = new LayoutParams(
-                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
+                LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM | Gravity.START);
-        statusParams.bottomMargin = 130;
         addView(status, statusParams);
 
         addView(buildTopBar(), new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT, Gravity.TOP));
-        addView(buildToolBar(), new LayoutParams(LayoutParams.MATCH_PARENT,
-                LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
+        sidePanel = buildSidePanel();
+        float density = activity.getResources()
+                .getDisplayMetrics().density;
+        LayoutParams panelParams = new LayoutParams(
+                (int) (168f * density), LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.END);
+        panelParams.topMargin = (int) (54f * density);
+        panelParams.rightMargin = 8;
+        addView(sidePanel, panelParams);
+        sidePanel.setVisibility(GONE);
         selectTool(PlanEditorView.TOOL_FLOOR);
         refreshButtons();
     }
 
-    private LinearLayout buildTopBar() {
+    /** Topo enxuto: só o de uso constante (o resto vive no painel ☰). */
+    private HorizontalScrollView buildTopBar() {
         LinearLayout bar = new LinearLayout(activity);
         bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setBackgroundColor(0xCC141B22);
-        bar.setPadding(12, 6, 12, 6);
+        bar.setPadding(8, 6, 8, 6);
 
-        bar.addView(action("← Mapas", this::close));
-        TextView title = new TextView(activity);
-        title.setText(doc.name);
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(15f);
-        title.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams grow = new LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        grow.gravity = Gravity.CENTER_VERTICAL;
-        bar.addView(title, grow);
+        bar.addView(action("←", this::close));
         undoButton = action("↶", this::undo);
         redoButton = action("↷", this::redo);
         bar.addView(undoButton);
         bar.addView(redoButton);
-        Button test = action("▶ TESTAR", this::test);
-        test.setTextColor(0xFF9CE49C);
-        bar.addView(test);
-        return bar;
-    }
-
-    private HorizontalScrollView buildToolBar() {
-        LinearLayout row = new LinearLayout(activity);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(8, 4, 8, 10);
-        addTool(row, "PISO", PlanEditorView.TOOL_FLOOR);
-        addTool(row, "PAREDE", PlanEditorView.TOOL_WALL);
-        addTool(row, "TETO", PlanEditorView.TOOL_CEILING);
-        addTool(row, "BLOCO", PlanEditorView.TOOL_BLOCK);
-        addTool(row, "INÍCIO", PlanEditorView.TOOL_SPAWN);
-        addTool(row, "SAÍDA", PlanEditorView.TOOL_EXIT);
-        addTool(row, "SELECIONAR", PlanEditorView.TOOL_SELECT);
-        Button prefabButton = action("PEÇA…", this::choosePrefab);
-        prefabButton.setTag(PlanEditorView.TOOL_PREFAB);
-        prefabButton.setTextColor(0xFFE0C060);
-        toolButtons.add(prefabButton);
-        row.addView(prefabButton);
-        Button openingButton = action("VÃO…", this::chooseOpening);
-        openingButton.setTag(PlanEditorView.TOOL_OPENING);
-        openingButton.setTextColor(0xFFC9A06C);
-        toolButtons.add(openingButton);
-        row.addView(openingButton);
-        Button paintButton = action("PINTAR…", this::choosePaint);
+        Button select = action("SELEC.",
+                () -> selectTool(PlanEditorView.TOOL_SELECT));
+        select.setTag(PlanEditorView.TOOL_SELECT);
+        toolButtons.add(select);
+        bar.addView(select);
+        Button paintButton = action("PINTAR", this::choosePaint);
         paintButton.setTag(PlanEditorView.TOOL_PAINT);
         paintButton.setTextColor(0xFFC98FD9);
         toolButtons.add(paintButton);
-        row.addView(paintButton);
-        Button skyButton = action("CÉU…", this::chooseSky);
-        skyButton.setTextColor(0xFF8FC9F2);
-        row.addView(skyButton);
-        heightButton = action("MEDIDAS", this::editMeasures);
-        heightButton.setTextColor(0xFF9CC9E4);
-        row.addView(heightButton);
+        bar.addView(paintButton);
         rotateButton = action("GIRAR", () -> plan.rotateSelected());
         rotateButton.setTextColor(0xFFA0D9C9);
-        row.addView(rotateButton);
-        routeButton = action("ROTA", this::startRoute);
-        routeButton.setTextColor(0xFFE0A0A0);
-        row.addView(routeButton);
-        deleteButton = action("EXCLUIR", () -> plan.deleteSelected());
-        deleteButton.setTextColor(0xFFE49C9C);
-        row.addView(deleteButton);
+        bar.addView(rotateButton);
+        Button tools = action("☰", this::togglePanel);
+        tools.setTextColor(0xFFE0C060);
+        bar.addView(tools);
+        Button test = action("▶", this::test);
+        test.setTextColor(0xFF9CE49C);
+        bar.addView(test);
 
         HorizontalScrollView scroll = new HorizontalScrollView(activity);
         scroll.setBackgroundColor(0xCC141B22);
         scroll.setHorizontalScrollBarEnabled(false);
-        scroll.addView(row);
+        scroll.addView(bar);
         return scroll;
     }
 
-    private void addTool(LinearLayout row, String label, int tool) {
-        Button button = action(label, () -> selectTool(tool));
-        button.setTag(tool);
+    /** Painel lateral recolhível, como no editor3d: uma linha por item. */
+    private LinearLayout buildSidePanel() {
+        LinearLayout panel = new LinearLayout(activity);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackgroundColor(0xEE141B22);
+        panel.setPadding(8, 8, 8, 8);
+        addPanelTool(panel, "Piso", PlanEditorView.TOOL_FLOOR);
+        addPanelTool(panel, "Parede", PlanEditorView.TOOL_WALL);
+        addPanelTool(panel, "Teto", PlanEditorView.TOOL_CEILING);
+        addPanelTool(panel, "Bloco", PlanEditorView.TOOL_BLOCK);
+        panel.addView(panelItem("Vão…", () -> {
+            hidePanel();
+            chooseOpening();
+        }, PlanEditorView.TOOL_OPENING));
+        panel.addView(panelItem("Peça…", () -> {
+            hidePanel();
+            choosePrefab();
+        }, PlanEditorView.TOOL_PREFAB));
+        addPanelTool(panel, "Início", PlanEditorView.TOOL_SPAWN);
+        addPanelTool(panel, "Saída", PlanEditorView.TOOL_EXIT);
+        routeButton = panelItem("Rota do inimigo", () -> {
+            hidePanel();
+            startRoute();
+        }, null);
+        panel.addView(routeButton);
+        heightButton = panelItem("Medidas", () -> {
+            hidePanel();
+            editMeasures();
+        }, null);
+        panel.addView(heightButton);
+        deleteButton = panelItem("Excluir", () -> {
+            hidePanel();
+            plan.deleteSelected();
+        }, null);
+        deleteButton.setTextColor(0xFFE49C9C);
+        panel.addView(deleteButton);
+        panel.addView(panelItem("Céu…", () -> {
+            hidePanel();
+            chooseSky();
+        }, null));
+        return panel;
+    }
+
+    private void addPanelTool(LinearLayout panel, String label, int tool) {
+        Button button = panelItem(label, () -> {
+            hidePanel();
+            selectTool(tool);
+        }, tool);
         toolButtons.add(button);
-        row.addView(button);
+        panel.addView(button);
+    }
+
+    private Button panelItem(String label, Runnable onClick, Integer tag) {
+        Button button = new Button(activity);
+        button.setText(label);
+        button.setTextSize(14f);
+        button.setTextColor(0xFFDDE7EE);
+        button.setAllCaps(false);
+        button.setBackgroundColor(0x00000000);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        button.setPadding(24, 0, 12, 0);
+        if (tag != null) {
+            button.setTag(tag);
+        }
+        button.setOnClickListener(v -> onClick.run());
+        float density = activity.getResources()
+                .getDisplayMetrics().density;
+        button.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (int) (40f * density)));
+        return button;
+    }
+
+    private void togglePanel() {
+        sidePanel.setVisibility(sidePanel.getVisibility() == VISIBLE
+                ? GONE : VISIBLE);
+    }
+
+    private void hidePanel() {
+        sidePanel.setVisibility(GONE);
     }
 
     private Button action(String label, Runnable onClick) {

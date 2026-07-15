@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.10.0 (versionCode 21) — UI reorganizada + retrato no editor.**
+  - Orientação POR MODO: biblioteca e Construir em RETRATO
+    (setRequestedOrientation; manifest sem orientação fixa, e
+    configChanges evita recriar a Activity); Testar/Jogar continua
+    paisagem.
+  - Topo enxuto: ← ↶ ↷ SELEC. PINTAR GIRAR ☰ ▶ (scroll horizontal se
+    faltar largura). Barra de baixo REMOVIDA; status ocupa o rodapé.
+  - Painel LATERAL recolhível (☰, estilo editor3d, 168dp, linhas de
+    40dp): Piso, Parede, Teto, Bloco, Vão…, Peça…, Início, Saída,
+    Rota do inimigo, Medidas, Excluir, Céu…. Fecha ao escolher.
+  - refreshButtons continua valendo (refs preservadas nos dois lugares).
 - **v0.9.6 (versionCode 20) — MINIATURAS na biblioteca (Fase 4).**
   - `ui/MapThumbnail.render(doc, w, h)`: Bitmap com vista de topo
     enquadrada no conteúdo — pisos, blocos/paredes, tetos translúcidos,

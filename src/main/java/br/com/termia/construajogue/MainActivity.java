@@ -78,6 +78,8 @@ public final class MainActivity extends Activity
         teardownPlay();
         editor = null;
         mode = MODE_LIBRARY;
+        setRequestedOrientation(android.content.pm.ActivityInfo
+                .SCREEN_ORIENTATION_PORTRAIT);
         root.removeAllViews();
         root.addView(new MapLibraryView(this, store, this));
     }
@@ -85,6 +87,8 @@ public final class MainActivity extends Activity
     private void showEditor(MapDocument doc) {
         teardownPlay();
         mode = MODE_EDIT;
+        setRequestedOrientation(android.content.pm.ActivityInfo
+                .SCREEN_ORIENTATION_PORTRAIT);
         root.removeAllViews();
         try {
             editor = new EditorHost(this, store, catalog(), doc, this);
@@ -100,6 +104,8 @@ public final class MainActivity extends Activity
     private void showEditorAgain() {
         teardownPlay();
         mode = MODE_EDIT;
+        setRequestedOrientation(android.content.pm.ActivityInfo
+                .SCREEN_ORIENTATION_PORTRAIT);
         root.removeAllViews();
         root.addView(editor);
     }
@@ -108,6 +114,8 @@ public final class MainActivity extends Activity
         teardownPlay();
         mode = MODE_PLAY;
         playCameFromEditor = fromEditor;
+        setRequestedOrientation(android.content.pm.ActivityInfo
+                .SCREEN_ORIENTATION_LANDSCAPE);
         root.removeAllViews();
         Hud hud = new Hud(this);
         controls = new TouchControls(this);
