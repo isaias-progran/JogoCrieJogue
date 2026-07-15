@@ -28,6 +28,7 @@ public final class LevelCompiler {
                                        PrefabCatalog catalog) {
         List<float[]> blocks = new ArrayList<>();
         List<float[]> colors = new ArrayList<>();
+        List<float[]> colors2 = new ArrayList<>();
         for (StructureObject s : doc.structures) {
             if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
                 throw new IllegalArgumentException(
@@ -39,10 +40,12 @@ public final class LevelCompiler {
             if (s.openings.isEmpty()) {
                 blocks.add(bounds);
                 colors.add(s.color);
+                colors2.add(s.color2);
             } else {
                 for (float[] piece : cutOpenings(s, bounds)) {
                     blocks.add(piece);
                     colors.add(s.color);
+                    colors2.add(s.color2);
                 }
             }
         }
@@ -107,8 +110,17 @@ public final class LevelCompiler {
         for (int i = 0; i < blocks.size(); i++) {
             colliders[i] = blocks.get(i);
             float[] color = colors.get(i);
-            cursor = Boxes.emitBounds(vertexData, cursor, colliders[i],
-                    color[0], color[1], color[2]);
+            float[] side = colors2.get(i);
+            if (side == null) {
+                cursor = Boxes.emitBounds(vertexData, cursor, colliders[i],
+                        color[0], color[1], color[2]);
+            } else {
+                float[] b = colliders[i];
+                boolean thinX = (b[3] - b[0]) < (b[5] - b[2]);
+                cursor = Boxes.emitBoundsSided(vertexData, cursor, b,
+                        thinX, color[0], color[1], color[2],
+                        side[0], side[1], side[2]);
+            }
         }
 
         int doorIndex = -1;

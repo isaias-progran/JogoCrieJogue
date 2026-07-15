@@ -8,6 +8,19 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.6.0 (versionCode 8) — PINTAR: individual, por lado e balde.**
+  - Botão PINTAR… abre paleta de 13 cores + caixa "Balde".
+  - Toque pinta a estrutura; em PAREDE pinta o LADO voltado para o dedo
+    (terço central = parede inteira). Balde: varre as paredes LIGADAS
+    (encostadas em XZ) e pinta em cada uma a face voltada para o ponto
+    tocado → tocar dentro do cômodo pinta todo o interior; fora, o
+    exterior. Usa coordenada SEM snap (rawX/rawZ) p/ decidir o lado.
+  - Modelo: `StructureObject.color2` = cor da face larga do lado
+    POSITIVO do eixo fino (null = cor única). `Boxes.emitBoundsSided`
+    emite as duas faces largas em cores distintas; compilador usa
+    quando color2 != null (mapas legados intactos — caminho antigo).
+    Planta desenha a parede em duas metades quando pintada por lado.
+  - Persistido como `color2` no JSON; validado; testes atualizados.
 - **v0.5.1 (versionCode 7) — COTAS NA PLANTA + diálogo MEDIDAS.**
   - Cota ao vivo enquanto desenha: retângulo mostra "L × P" (medida do
     cômodo) e parede mostra o comprimento, acompanhando o dedo.

@@ -60,6 +60,9 @@ public final class MapValidator {
                     s.transform.x, s.transform.y, s.transform.z}, 3);
             checkFloats(issues, label + " (meias dimensões)", s.half, 3);
             checkFloats(issues, label + " (cor)", s.color, 3);
+            if (s.color2 != null) {
+                checkFloats(issues, label + " (cor do lado)", s.color2, 3);
+            }
             if (s.half != null && (s.half[0] <= 0f || s.half[1] <= 0f
                     || s.half[2] <= 0f)) {
                 error(issues, "estrutura.dimensao",

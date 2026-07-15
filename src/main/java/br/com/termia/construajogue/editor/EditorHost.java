@@ -6,8 +6,10 @@ import android.graphics.Color;
 import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.GridLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -136,6 +138,11 @@ public final class EditorHost extends FrameLayout
         openingButton.setTextColor(0xFFC9A06C);
         toolButtons.add(openingButton);
         row.addView(openingButton);
+        Button paintButton = action("PINTAR…", this::choosePaint);
+        paintButton.setTag(PlanEditorView.TOOL_PAINT);
+        paintButton.setTextColor(0xFFC98FD9);
+        toolButtons.add(paintButton);
+        row.addView(paintButton);
         heightButton = action("MEDIDAS", this::editMeasures);
         heightButton.setTextColor(0xFF9CC9E4);
         row.addView(heightButton);
@@ -195,6 +202,10 @@ public final class EditorHost extends FrameLayout
         } else if (tool == PlanEditorView.TOOL_OPENING) {
             status.setText("toque em cima de uma parede para recortar "
                     + "o vão; SELECIONAR arrasta o vão pela parede");
+        } else if (tool == PlanEditorView.TOOL_PAINT) {
+            status.setText("toque para pintar; na parede pinta o LADO "
+                    + "tocado (o meio pinta os dois); balde pinta as "
+                    + "paredes ligadas");
         } else {
             status.setText("arraste com um dedo; dois dedos movem a vista");
         }
@@ -235,6 +246,65 @@ public final class EditorHost extends FrameLayout
         deleteButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
         heightButton.setEnabled(plan.hasSelection());
         heightButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
+    }
+
+    /** Cores da paleta (nome + RGB 0..1). */
+    private static final Object[][] PALETTE = {
+            {"Branco", new float[]{0.92f, 0.92f, 0.95f}},
+            {"Cinza claro", new float[]{0.65f, 0.66f, 0.70f}},
+            {"Cinza", new float[]{0.45f, 0.47f, 0.52f}},
+            {"Grafite", new float[]{0.24f, 0.26f, 0.30f}},
+            {"Tijolo", new float[]{0.62f, 0.32f, 0.22f}},
+            {"Madeira", new float[]{0.55f, 0.40f, 0.25f}},
+            {"Areia", new float[]{0.80f, 0.72f, 0.55f}},
+            {"Verde", new float[]{0.30f, 0.55f, 0.35f}},
+            {"Azul", new float[]{0.30f, 0.45f, 0.65f}},
+            {"Ciano", new float[]{0.35f, 0.65f, 0.70f}},
+            {"Roxo", new float[]{0.50f, 0.35f, 0.65f}},
+            {"Amarelo", new float[]{0.85f, 0.75f, 0.30f}},
+            {"Vermelho", new float[]{0.70f, 0.25f, 0.25f}},
+    };
+
+    /** Paleta + modo balde (paredes ligadas pintadas de uma vez). */
+    private void choosePaint() {
+        LinearLayout box = new LinearLayout(activity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(40, 16, 40, 8);
+        final CheckBox bucket = new CheckBox(activity);
+        bucket.setText("Balde: pintar todas as paredes ligadas "
+                + "(o lado voltado para o toque)");
+        bucket.setTextSize(13f);
+
+        GridLayout grid = new GridLayout(activity);
+        grid.setColumnCount(4);
+        final AlertDialog dialog = new AlertDialog.Builder(activity)
+                .setTitle("Escolha a cor")
+                .setView(box)
+                .setNegativeButton("Cancelar", null)
+                .create();
+        for (Object[] entry : PALETTE) {
+            final float[] rgb = (float[]) entry[1];
+            Button swatch = new Button(activity);
+            swatch.setText((String) entry[0]);
+            swatch.setTextSize(11f);
+            float glow = rgb[0] + rgb[1] + rgb[2];
+            swatch.setTextColor(glow > 1.6f ? 0xFF10151B : 0xFFEEEEEE);
+            swatch.setBackgroundColor(Color.rgb((int) (rgb[0] * 255f),
+                    (int) (rgb[1] * 255f), (int) (rgb[2] * 255f)));
+            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+            params.width = 200;
+            params.setMargins(8, 8, 8, 8);
+            swatch.setLayoutParams(params);
+            swatch.setOnClickListener(v -> {
+                plan.setActivePaint(rgb, bucket.isChecked());
+                selectTool(PlanEditorView.TOOL_PAINT);
+                dialog.dismiss();
+            });
+            grid.addView(swatch);
+        }
+        box.addView(grid);
+        box.addView(bucket);
+        dialog.show();
     }
 
     /** Tipo de vão para recortar na parede tocada. */

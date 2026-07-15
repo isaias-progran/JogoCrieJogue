@@ -85,6 +85,8 @@ public final class WallOpeningTest {
         }
         Check.that(!MapValidator.hasError(
                 MapValidator.validate(doc, catalog)), "documento válido");
+        // parede pintada por lado: mesma contagem, sem quebrar nada
+        wall.color2 = new float[]{0.8f, 0.2f, 0.2f};
         MapDocument back = MapJson.read(MapJson.write(doc));
         Check.equal(back.structures.get(1).openings.size(), 2,
                 "vãos persistidos");

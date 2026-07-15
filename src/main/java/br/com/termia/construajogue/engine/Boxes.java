@@ -44,6 +44,36 @@ public final class Boxes {
         return cursor;
     }
 
+    /**
+     * Caixa com as duas faces largas em cores diferentes (parede pintada
+     * por lado). `thinX` diz qual eixo é a espessura; a face voltada para
+     * o lado POSITIVO desse eixo recebe r2/g2/b2, o resto fica na base.
+     */
+    public static int emitBoundsSided(float[] out, int cursor,
+                                      float[] bounds, boolean thinX,
+                                      float r, float g, float b,
+                                      float r2, float g2, float b2) {
+        for (int[] face : FACES) {
+            boolean positive = thinX ? face[0] > 0 : face[2] > 0;
+            float fr = positive ? r2 : r;
+            float fg = positive ? g2 : g;
+            float fb = positive ? b2 : b;
+            for (int t : TRI) {
+                int corner = 3 + t * 3;
+                out[cursor++] = face[corner] == 0 ? bounds[0] : bounds[3];
+                out[cursor++] = face[corner + 1] == 0 ? bounds[1] : bounds[4];
+                out[cursor++] = face[corner + 2] == 0 ? bounds[2] : bounds[5];
+                out[cursor++] = face[0];
+                out[cursor++] = face[1];
+                out[cursor++] = face[2];
+                out[cursor++] = fr;
+                out[cursor++] = fg;
+                out[cursor++] = fb;
+            }
+        }
+        return cursor;
+    }
+
     /** Caixa por centro + meia-extensão (para malhas locais). */
     public static int emitCentered(float[] out, int cursor,
                                    float cx, float cy, float cz,

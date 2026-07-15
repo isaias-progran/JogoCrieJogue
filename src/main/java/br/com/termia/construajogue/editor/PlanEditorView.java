@@ -15,6 +15,8 @@ import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.util.Ids;
 
+import java.util.List;
+
 /**
  * Planta 2D (vista de topo, X→direita, Z→baixo) que edita o MapDocument
  * direto. Um dedo aplica a ferramenta; dois dedos fazem pan/zoom e
@@ -31,6 +33,7 @@ public final class PlanEditorView extends View {
     public static final int TOOL_CEILING = 6;
     public static final int TOOL_PREFAB = 7;
     public static final int TOOL_OPENING = 8;
+    public static final int TOOL_PAINT = 9;
 
     /** O host guarda snapshots p/ undo e reage a mudanças/seleção. */
     public interface Host {
@@ -84,6 +87,12 @@ public final class PlanEditorView extends View {
     private String activeOpeningType;
     private WallOpening selectedOpening;
     private StructureObject selectedOpeningWall;
+    // tinta armada (ferramenta PINTAR)
+    private float[] activePaint;
+    private boolean paintBucket;
+    // último toque SEM snap (pintura decide o lado pela posição exata)
+    private float rawX;
+    private float rawZ;
 
     public PlanEditorView(Context context, Host host) {
         super(context);
@@ -349,6 +358,8 @@ public final class PlanEditorView extends View {
             case MotionEvent.ACTION_DOWN:
                 dragging = true;
                 panning = false;
+                rawX = toWorldX(e.getX());
+                rawZ = toWorldZ(e.getY());
                 startX = curX = snapPoint(toWorldX(e.getX()),
                         toWorldZ(e.getY()), true);
                 startZ = curZ = snapPoint(toWorldX(e.getX()),
@@ -381,6 +392,8 @@ public final class PlanEditorView extends View {
                     lastSpan = sp;
                     invalidate();
                 } else if (dragging) {
+                    rawX = toWorldX(e.getX());
+                    rawZ = toWorldZ(e.getY());
                     curX = snapPoint(toWorldX(e.getX()),
                             toWorldZ(e.getY()), true);
                     curZ = snapPoint(toWorldX(e.getX()),
@@ -455,6 +468,9 @@ public final class PlanEditorView extends View {
             case TOOL_OPENING:
                 placeOpening();
                 break;
+            case TOOL_PAINT:
+                paintAt(rawX, rawZ);
+                break;
             case TOOL_SELECT:
                 if (movedSelection) {
                     host.afterChange();
@@ -510,6 +526,108 @@ public final class PlanEditorView extends View {
         s.color = new float[]{0.46f, 0.48f, 0.55f};
         doc.structures.add(s);
         host.afterChange();
+    }
+
+    /** Arma a ferramenta PINTAR. `bucket` = paredes ligadas juntas. */
+    public void setActivePaint(float[] color, boolean bucket) {
+        activePaint = color.clone();
+        paintBucket = bucket;
+        setTool(TOOL_PAINT);
+    }
+
+    /**
+     * Pinta o que foi tocado. Parede: pinta o LADO voltado para o dedo
+     * (toque no terço do meio pinta os dois). Balde: percorre as paredes
+     * conectadas e pinta em cada uma a face voltada para o ponto tocado
+     * — tocar dentro do cômodo pinta o interior inteiro, tocar fora
+     * pinta o exterior.
+     */
+    private void paintAt(float wx, float wz) {
+        if (activePaint == null) {
+            return;
+        }
+        StructureObject target = structureAt(wx, wz);
+        if (target == null) {
+            host.selectionChanged("toque numa estrutura para pintar");
+            return;
+        }
+        boolean wall = StructureObject.ROLE_WALL
+                .equals(StructureRoles.roleOf(target));
+        host.beforeChange();
+        if (!wall) {
+            target.color = activePaint.clone();
+            target.color2 = null;
+        } else if (paintBucket) {
+            for (StructureObject w : connectedWalls(target)) {
+                paintWallSide(w, wx, wz, false);
+            }
+        } else {
+            paintWallSide(target, wx, wz, true);
+        }
+        host.afterChange();
+        invalidate();
+    }
+
+    /**
+     * Pinta a face da parede voltada para (wx, wz). `allowBoth`: toque
+     * no terço central pinta a parede inteira de uma cor só.
+     */
+    private void paintWallSide(StructureObject s, float wx, float wz,
+                               boolean allowBoth) {
+        boolean thinX = s.half[0] < s.half[2];
+        float d = thinX ? wx - s.transform.x : wz - s.transform.z;
+        float half = thinX ? s.half[0] : s.half[2];
+        if (allowBoth && Math.abs(d) <= half * 0.34f) {
+            s.color = activePaint.clone();
+            s.color2 = null;
+        } else if (d > 0f) {
+            s.color2 = activePaint.clone();
+        } else {
+            if (s.color2 == null) {
+                s.color2 = s.color.clone(); // preserva o outro lado
+            }
+            s.color = activePaint.clone();
+        }
+    }
+
+    /** Paredes conectadas à inicial (encostadas em XZ), via varredura. */
+    private List<StructureObject> connectedWalls(StructureObject start) {
+        List<StructureObject> found = new java.util.ArrayList<>();
+        found.add(start);
+        for (int i = 0; i < found.size(); i++) {
+            StructureObject a = found.get(i);
+            for (StructureObject s : doc.structures) {
+                if (found.contains(s) || !StructureObject.ROLE_WALL
+                        .equals(StructureRoles.roleOf(s))) {
+                    continue;
+                }
+                if (Math.abs(a.transform.x - s.transform.x)
+                        <= a.half[0] + s.half[0] + 0.05f
+                        && Math.abs(a.transform.z - s.transform.z)
+                        <= a.half[2] + s.half[2] + 0.05f) {
+                    found.add(s);
+                }
+            }
+        }
+        return found;
+    }
+
+    /** Estrutura sob o ponto (teto por último, como na seleção). */
+    private StructureObject structureAt(float wx, float wz) {
+        for (int pass = 0; pass < 2; pass++) {
+            boolean wantCeiling = pass == 1;
+            for (int i = doc.structures.size() - 1; i >= 0; i--) {
+                StructureObject s = doc.structures.get(i);
+                if (StructureRoles.isCeiling(s) != wantCeiling) {
+                    continue;
+                }
+                if (Math.abs(wx - s.transform.x) <= s.half[0]
+                        && Math.abs(wz - s.transform.z) <= s.half[2]) {
+                    return s;
+                }
+            }
+        }
+        return null;
     }
 
     /** Recorta o vão armado na parede tocada. */
@@ -923,6 +1041,19 @@ public final class PlanEditorView extends View {
                 (int) (s.color[0] * 255f), (int) (s.color[1] * 255f),
                 (int) (s.color[2] * 255f)));
         canvas.drawRect(l, t, r, b, fill);
+        if (s.color2 != null) {
+            // metade do lado positivo do eixo fino mostra a outra cor
+            fill.setColor(Color.argb(translucent ? 70 : 255,
+                    (int) (s.color2[0] * 255f),
+                    (int) (s.color2[1] * 255f),
+                    (int) (s.color2[2] * 255f)));
+            boolean thinX = s.half[0] < s.half[2];
+            if (thinX) {
+                canvas.drawRect(toPxX(s.transform.x), t, r, b, fill);
+            } else {
+                canvas.drawRect(l, toPxY(s.transform.z), r, b, fill);
+            }
+        }
         stroke.setColor(selected ? 0xFFFFFFFF
                 : translucent ? 0x998FA9C9 : 0x66000000);
         stroke.setStrokeWidth(selected ? 4f : 1.5f);

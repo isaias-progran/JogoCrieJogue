@@ -47,6 +47,9 @@ public final class MapJson {
             if (s.color != null) {
                 item.put("color", floats(s.color));
             }
+            if (s.color2 != null) {
+                item.put("color2", floats(s.color2));
+            }
             if (!s.openings.isEmpty()) {
                 List<Object> openings = new ArrayList<>();
                 for (WallOpening o : s.openings) {
@@ -156,6 +159,7 @@ public final class MapJson {
             structure.transform = transformOf(s.get("transform"));
             structure.half = floatsOf(s.get("half"), 3);
             structure.color = floatsOf(s.get("color"), 3);
+            structure.color2 = floatsOf(s.get("color2"), 3);
             for (Object cut : listOf(s.get("openings"))) {
                 Map<?, ?> c = asMap(cut, "opening");
                 WallOpening opening = new WallOpening(
