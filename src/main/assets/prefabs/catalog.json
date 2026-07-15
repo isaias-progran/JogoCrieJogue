@@ -170,6 +170,27 @@
       "properties": []
     },
     {
+      "id": "furniture.sofa",
+      "name": "Sofá",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "prop.tv",
+      "name": "TV de LED (parede)",
+      "category": "objetos",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "prop.mirror.round",
+      "name": "Espelho redondo (parede)",
+      "category": "objetos",
+      "behavior": "static",
+      "properties": []
+    },
+    {
       "id": "stairs.small",
       "name": "Escada pequena (sobe 1 m)",
       "category": "circulação",

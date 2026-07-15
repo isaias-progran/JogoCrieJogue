@@ -8,6 +8,18 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.12.1 (versionCode 25) — sofá, TV, espelho, janela de banheiro
+  e pintura de piso/teto.**
+  - Peças novas (static): Sofá (assento/encosto/braços, collider 1
+    bloco), TV de LED de parede (tela emissiva; fixa a 1,4m, sem
+    collider), Espelho redondo de parede (círculo em 3 faixas, "vidro"
+    azul-claro >1 — reflexo FAKE, não espelha; fixa a 1,5m, sem
+    collider). Catálogo com 27 peças.
+  - Vão novo: "Janela de banheiro" 0,6×0,6 peitoril 1,5 (preset
+    window_bath do editor; SALVA como window normal no JSON).
+  - PINTAR agora usa as BOLINHAS: tocar na bolinha pinta aquele
+    piso/teto/bloco específico (mesma desambiguação da seleção; antes
+    o teto era impintável — structureAt achava o piso primeiro).
 - **v0.12.0 (versionCode 24) — MAPAS DE EXEMPLO na biblioteca.**
   - 3 exemplos GERADOS POR CÓDIGO (`ExampleMapsGenerator` em src/test,
     roda no test-core.sh: valida + compila ou quebra o build; IDs

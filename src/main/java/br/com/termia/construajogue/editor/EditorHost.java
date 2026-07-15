@@ -281,9 +281,9 @@ public final class EditorHost extends FrameLayout
             status.setText("toque em cima de uma parede para recortar "
                     + "o vão; SELECIONAR arrasta o vão pela parede");
         } else if (tool == PlanEditorView.TOOL_PAINT) {
-            status.setText("toque para pintar; na parede pinta o LADO "
-                    + "tocado (o meio pinta os dois); balde pinta as "
-                    + "paredes ligadas");
+            status.setText("toque para pintar; parede pinta o LADO "
+                    + "tocado; a BOLINHA pinta o piso/teto/bloco dela; "
+                    + "balde pinta paredes ligadas");
         } else if (tool == PlanEditorView.TOOL_POINTS) {
             status.setText("toque ponto a ponto; toque no PRIMEIRO "
                     + "ponto (verde) para fechar; ↶ remove o último");
@@ -480,10 +480,11 @@ public final class EditorHost extends FrameLayout
     /** Tipo de vão para recortar na parede tocada. */
     private void chooseOpening() {
         final String[] types = {WallOpening.DOOR, WallOpening.PORTAL,
-                WallOpening.WINDOW};
+                WallOpening.WINDOW, "window_bath"};
         String[] labels = {"Porta (1,0 × 2,1 m)",
                 "Portal livre (até o teto da parede)",
-                "Janela (1,2 × 1,2 m, peitoril 0,9 m)"};
+                "Janela (1,2 × 1,2 m, peitoril 0,9 m)",
+                "Janela de banheiro (0,6 × 0,6 m, peitoril 1,5 m)"};
         new AlertDialog.Builder(activity)
                 .setTitle("Vão na parede")
                 .setItems(labels, (dialog, which) -> {

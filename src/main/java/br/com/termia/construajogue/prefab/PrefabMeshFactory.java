@@ -19,6 +19,8 @@ public final class PrefabMeshFactory {
     private static final float[] GLOW = {1.9f, 1.75f, 1.25f};
     private static final float[] CERAMIC = {0.90f, 0.92f, 0.95f};
     private static final float[] CONCRETE = {0.52f, 0.53f, 0.56f};
+    /** "Reflexo" fake: azul-claro acima de 1 (não espelha de verdade). */
+    private static final float[] MIRROR = {1.05f, 1.15f, 1.25f};
     private static final float[] TERRACOTA = {0.65f, 0.35f, 0.22f};
     private static final float[] LEAF = {0.25f, 0.50f, 0.28f};
     private static final float[] LEAF_LIGHT = {0.35f, 0.62f, 0.33f};
@@ -148,6 +150,32 @@ public final class PrefabMeshFactory {
                         box(0, 0.52f, 0, 0.03f, 0.24f, 0.03f, WOOD_DARK),
                         box(0, 1.02f, 0, 0.22f, 0.30f, 0.22f, LEAF),
                         box(0, 1.40f, 0, 0.14f, 0.13f, 0.14f, LEAF_LIGHT)};
+            case "furniture.sofa":
+                return new float[][]{
+                        box(0, 0.22f, 0.05f, 0.85f, 0.22f, 0.40f, CLOTH),
+                        box(0, 0.62f, 0.38f, 0.85f, 0.28f, 0.10f, CLOTH),
+                        box(-0.78f, 0.52f, 0.02f, 0.08f, 0.14f, 0.36f,
+                                CLOTH),
+                        box(0.78f, 0.52f, 0.02f, 0.08f, 0.14f, 0.36f,
+                                CLOTH),
+                        box(0, 0.05f, 0.05f, 0.82f, 0.05f, 0.38f,
+                                WOOD_DARK)};
+            case "prop.tv":
+                // TV de LED na parede: pendura da origem (fixar ~1.3m)
+                return new float[][]{
+                        box(0, 0f, 0.02f, 0.62f, 0.36f, 0.02f, GRAFITE),
+                        box(0, 0f, -0.005f, 0.58f, 0.32f, 0.008f,
+                                new float[]{1.3f, 1.4f, 1.55f})};
+            case "prop.mirror.round":
+                // espelho redondo: círculo aproximado em 3 faixas
+                return new float[][]{
+                        box(0, 0f, 0.015f, 0.30f, 0.30f, 0.012f, METAL),
+                        box(0, 0f, 0.001f, 0.27f, 0.15f, 0.012f,
+                                MIRROR),
+                        box(0, 0.21f, 0.001f, 0.19f, 0.06f, 0.012f,
+                                MIRROR),
+                        box(0, -0.21f, 0.001f, 0.19f, 0.06f, 0.012f,
+                                MIRROR)};
             case "stairs.small":
                 return stairs(4, 0.25f, 0.30f, 0.60f, CONCRETE);
             case "stairs.floor":
@@ -217,6 +245,12 @@ public final class PrefabMeshFactory {
                 return new float[][]{{0, 0.25f, 0, 0.12f, 0.25f, 0.12f}};
             case "prop.plant.tall":
                 return new float[][]{{0, 0.50f, 0, 0.15f, 0.50f, 0.15f}};
+            case "furniture.sofa":
+                return new float[][]{{0, 0.45f, 0.05f,
+                        0.86f, 0.45f, 0.42f}};
+            case "prop.tv":
+            case "prop.mirror.round":
+                return new float[][]{}; // na parede: não colidem
             case "stairs.small":
             case "stairs.floor":
             case "ramp.short":

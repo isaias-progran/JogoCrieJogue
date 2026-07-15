@@ -285,7 +285,11 @@ public final class PlanEditorView extends View {
         return activePrefab;
     }
 
-    /** Arma a ferramenta VÃO (porta/portal/janela sobre parede). */
+    /**
+     * Arma a ferramenta VÃO. Tipos: door/portal/window do WallOpening
+     * ou o preset "window_bath" (janela alta e pequena de banheiro,
+     * salva como window).
+     */
     public void setActiveOpening(String type) {
         activeOpeningType = type;
         setTool(TOOL_OPENING);
@@ -907,6 +911,31 @@ public final class PlanEditorView extends View {
         if (activePaint == null) {
             return;
         }
+        // bolinha desambigua piso × teto × bloco também na pintura
+        StructureObject chip = null;
+        float chipBest = 20f / scale;
+        for (StructureObject s : doc.structures) {
+            if (StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            float[] cp = chipPos(s);
+            float d = (float) Math.hypot(wx - cp[0], wz - cp[1]);
+            if (d < chipBest) {
+                chipBest = d;
+                chip = s;
+            }
+        }
+        if (chip != null) {
+            host.beforeChange();
+            chip.color = activePaint.clone();
+            chip.color2 = null;
+            chip.color3 = null;
+            host.afterChange();
+            host.selectionChanged(StructureRoles.name(chip) + " pintado");
+            invalidate();
+            return;
+        }
         StructureObject target = structureAt(wx, wz);
         if (target == null) {
             host.selectionChanged("toque numa estrutura para pintar");
@@ -1001,14 +1030,18 @@ public final class PlanEditorView extends View {
             host.selectionChanged("toque em cima de uma parede");
             return;
         }
-        boolean window = WallOpening.WINDOW.equals(activeOpeningType);
+        boolean bath = "window_bath".equals(activeOpeningType);
+        boolean window = bath
+                || WallOpening.WINDOW.equals(activeOpeningType);
         boolean portal = WallOpening.PORTAL.equals(activeOpeningType);
-        WallOpening o = new WallOpening(Ids.create(), activeOpeningType);
-        o.width = window ? 1.2f : portal ? 1.6f : 1.0f;
-        o.sill = window ? 0.9f : 0f;
+        WallOpening o = new WallOpening(Ids.create(),
+                window ? WallOpening.WINDOW : activeOpeningType);
+        o.width = bath ? 0.6f : window ? 1.2f : portal ? 1.6f : 1.0f;
+        o.sill = bath ? 1.5f : window ? 0.9f : 0f;
         float wallHeight = wall.half[1] * 2f;
         o.height = portal ? wallHeight
-                : Math.min(window ? 1.2f : 2.1f, wallHeight - o.sill);
+                : Math.min(bath ? 0.6f : window ? 1.2f : 2.1f,
+                wallHeight - o.sill);
         boolean alongX = wall.half[0] >= wall.half[2];
         float along = alongX ? curX : curZ;
         float centerAlong = alongX ? wall.transform.x : wall.transform.z;
@@ -1088,8 +1121,17 @@ public final class PlanEditorView extends View {
             case PrefabDefinition.BEHAVIOR_DOOR:
                 return 1.4f;
             case PrefabDefinition.BEHAVIOR_STATIC:
-                // pendurada: nasce na altura padrão do teto
-                return "prop.lamp.ceiling".equals(def.id) ? 3.0f : 0f;
+                // peças de parede nascem na altura típica de fixação
+                if ("prop.lamp.ceiling".equals(def.id)) {
+                    return 3.0f;
+                }
+                if ("prop.tv".equals(def.id)) {
+                    return 1.4f;
+                }
+                if ("prop.mirror.round".equals(def.id)) {
+                    return 1.5f;
+                }
+                return 0f;
             default:
                 return 0.5f; // itens balançando perto do chão
         }
