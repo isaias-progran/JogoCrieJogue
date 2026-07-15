@@ -95,6 +95,9 @@ public final class PlanEditorView extends View {
     private boolean paintBucket;
     // próximo toque define a patrulha do inimigo selecionado
     private boolean routeMode;
+    // aresta da estrutura selecionada sendo puxada (-1 nenhuma;
+    // 0=minX, 1=maxX, 2=minZ, 3=maxZ)
+    private int dragEdge = -1;
     // último toque SEM snap (pintura decide o lado pela posição exata)
     private float rawX;
     private float rawZ;
@@ -335,7 +338,98 @@ public final class PlanEditorView extends View {
                 return xAxis ? end[0] : end[1];
             }
         }
+        // laje/piso/bloco: gruda nas FACES das paredes (a face externa
+        // fica fora da grade por causa da espessura — era impossível
+        // alinhar a laje só com a grade)
+        if (tool == TOOL_FLOOR || tool == TOOL_CEILING
+                || tool == TOOL_BLOCK) {
+            return faceOrGrid(xAxis ? wx : wz, xAxis, null);
+        }
         return snap(xAxis ? wx : wz);
+    }
+
+    /**
+     * Alinha à face de parede mais próxima nesse eixo (as duas faces
+     * laterais E as pontas contam); longe de todas, cai na grade.
+     */
+    private float faceOrGrid(float v, boolean xAxis,
+                             StructureObject exclude) {
+        float best = Math.max(0.24f, 28f / scale);
+        float hit = Float.NaN;
+        for (StructureObject s : doc.structures) {
+            if (s == exclude || !StructureObject.ROLE_WALL
+                    .equals(StructureRoles.roleOf(s))) {
+                continue;
+            }
+            float c = xAxis ? s.transform.x : s.transform.z;
+            float h = xAxis ? s.half[0] : s.half[2];
+            float dLo = Math.abs(v - (c - h));
+            if (dLo < best) {
+                best = dLo;
+                hit = c - h;
+            }
+            float dHi = Math.abs(v - (c + h));
+            if (dHi < best) {
+                best = dHi;
+                hit = c + h;
+            }
+        }
+        return Float.isNaN(hit) ? snap(v) : hit;
+    }
+
+    /** Aresta da estrutura selecionada perto do toque, ou -1. */
+    private int edgeAt(float wx, float wz) {
+        StructureObject s = selectedStructure;
+        float r = Math.max(0.2f, 24f / scale);
+        float minX = s.transform.x - s.half[0];
+        float maxX = s.transform.x + s.half[0];
+        float minZ = s.transform.z - s.half[2];
+        float maxZ = s.transform.z + s.half[2];
+        int best = -1;
+        float bd = r;
+        if (wz > minZ - r && wz < maxZ + r) {
+            if (Math.abs(wx - minX) < bd) {
+                bd = Math.abs(wx - minX);
+                best = 0;
+            }
+            if (Math.abs(wx - maxX) < bd) {
+                bd = Math.abs(wx - maxX);
+                best = 1;
+            }
+        }
+        if (wx > minX - r && wx < maxX + r) {
+            if (Math.abs(wz - minZ) < bd) {
+                bd = Math.abs(wz - minZ);
+                best = 2;
+            }
+            if (Math.abs(wz - maxZ) < bd) {
+                best = 3;
+            }
+        }
+        return best;
+    }
+
+    /** Puxa a aresta: só aquele lado move, grudando em face/grade. */
+    private void dragEdgeTo() {
+        StructureObject s = selectedStructure;
+        boolean xAxis = dragEdge <= 1;
+        float v = faceOrGrid(xAxis ? rawX : rawZ, xAxis, s);
+        int hIdx = xAxis ? 0 : 2;
+        float c = xAxis ? s.transform.x : s.transform.z;
+        float h = s.half[hIdx];
+        float lo = c - h;
+        float hi = c + h;
+        if (dragEdge == 0 || dragEdge == 2) {
+            lo = Math.min(v, hi - 0.1f);
+        } else {
+            hi = Math.max(v, lo + 0.1f);
+        }
+        if (xAxis) {
+            s.transform.x = (lo + hi) / 2f;
+        } else {
+            s.transform.z = (lo + hi) / 2f;
+        }
+        s.half[hIdx] = (hi - lo) / 2f;
     }
 
     /**
@@ -417,7 +511,11 @@ public final class PlanEditorView extends View {
                 startZ = curZ = snapPoint(toWorldX(e.getX()),
                         toWorldZ(e.getY()), false);
                 if (tool == TOOL_SELECT) {
-                    pick(toWorldX(e.getX()), toWorldZ(e.getY()));
+                    dragEdge = selectedStructure == null ? -1
+                            : edgeAt(rawX, rawZ);
+                    if (dragEdge < 0) {
+                        pick(toWorldX(e.getX()), toWorldZ(e.getY()));
+                    }
                 }
                 invalidate();
                 return true;
@@ -468,6 +566,7 @@ public final class PlanEditorView extends View {
                     invalidate();
                 }
                 panning = false;
+                dragEdge = -1;
                 return true;
             case MotionEvent.ACTION_CANCEL:
                 dragging = false;
@@ -921,6 +1020,12 @@ public final class PlanEditorView extends View {
             host.beforeChange();
             movedSelection = true;
         }
+        if (dragEdge >= 0 && selectedStructure != null) {
+            dragEdgeTo();
+            host.selectionChanged(
+                    StructureRoles.describe(selectedStructure));
+            return;
+        }
         if (selectedOpening != null) {
             // vão desliza pela própria parede
             StructureObject wall = selectedOpeningWall;
@@ -977,6 +1082,9 @@ public final class PlanEditorView extends View {
         if (dragging && tool != TOOL_SELECT) {
             drawPreview(canvas);
         }
+        if (tool == TOOL_SELECT && selectedStructure != null) {
+            drawEdgeHandles(canvas, selectedStructure);
+        }
         for (PrefabInstance p : doc.prefabs) {
             drawRoute(canvas, p, p == selectedPrefab);
         }
@@ -987,6 +1095,26 @@ public final class PlanEditorView extends View {
             drawMarker(canvas, m, m == selectedMarker);
         }
         drawMeasureLabels(canvas);
+    }
+
+    /** Alças no meio das arestas: puxe para esticar até alinhar. */
+    private void drawEdgeHandles(Canvas canvas, StructureObject s) {
+        float cx = toPxX(s.transform.x);
+        float cy = toPxY(s.transform.z);
+        float[][] handles = {
+                {toPxX(s.transform.x - s.half[0]), cy},
+                {toPxX(s.transform.x + s.half[0]), cy},
+                {cx, toPxY(s.transform.z - s.half[2])},
+                {cx, toPxY(s.transform.z + s.half[2])}};
+        for (float[] handle : handles) {
+            fill.setColor(0xFFFFFFFF);
+            canvas.drawRect(handle[0] - 9f, handle[1] - 9f,
+                    handle[0] + 9f, handle[1] + 9f, fill);
+            stroke.setColor(0xFF2E5A8A);
+            stroke.setStrokeWidth(2f);
+            canvas.drawRect(handle[0] - 9f, handle[1] - 9f,
+                    handle[0] + 9f, handle[1] + 9f, stroke);
+        }
     }
 
     /** Rota de patrulha: linha tracejada até um anel no destino. */

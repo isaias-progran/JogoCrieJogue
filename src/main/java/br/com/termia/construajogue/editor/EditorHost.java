@@ -198,8 +198,9 @@ public final class EditorHost extends FrameLayout
             button.setBackgroundColor(active ? 0xFF2E5A8A : 0x33222E3A);
         }
         if (tool == PlanEditorView.TOOL_SELECT) {
-            status.setText("toque para selecionar; arraste para mover; "
-                    + "MEDIDAS digita as dimensões reais");
+            status.setText("toque seleciona; arraste move; puxe o "
+                    + "quadradinho da borda para esticar até alinhar "
+                    + "com a parede");
         } else if (tool == PlanEditorView.TOOL_WALL) {
             status.setText("arraste para desenhar; começar perto da ponta "
                     + "de outra parede continua dela (círculos amarelos)");

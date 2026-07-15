@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.9.4 (versionCode 18) — ALINHAMENTO DE LAJE + puxar arestas.**
+  - Causa do desalinho: as FACES das paredes ficam fora da grade (centro
+    na grade ± espessura 0,15) e o snap era só grade.
+  - Desenhar PISO/TETO/BLOCO agora gruda cada eixo na face de parede
+    mais próxima (laterais E pontas; raio 28px/escala, mín 0,24m);
+    longe de faces, cai na grade (`faceOrGrid`).
+  - SELECIONAR + estrutura selecionada: 4 ALÇAS brancas no meio das
+    arestas; puxar move SÓ aquela aresta, grudando em faces/grade
+    (`edgeAt`/`dragEdgeTo`, mínimo 0,1m para não inverter). Serve
+    também para esticar comprimento/espessura de parede.
+  - Mover (arrastar pelo meio) continua igual; undo compartilhado.
 - **v0.9.3 (versionCode 17) — pintura POR FACE (canto resolvido de vez).**
   - A v0.9.2 NÃO resolveu no aparelho. Causa raiz dupla: (1) pintar o
     lado NEGATIVO gravava na cor BASE, que também pinta as PONTAS →
