@@ -8,6 +8,19 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.7.0 (versionCode 9) — MÓVEIS, OBSTÁCULOS E LUMINÁRIAS.**
+  - `PrefabMeshFactory`: 11 peças estáticas procedurais em caixas —
+    mesa, cadeira, estante, armário, cama, bancada; caixa pequena/
+    grande, barril; luminária de pé e lâmpada de teto (pendura da
+    origem p/ baixo; nasce em y=3.0). Cúpulas com cor >1 = "acesas"
+    (emissivo fake — NÃO há luz dinâmica; anotar se pedirem sombra).
+  - Comportamento `static` no catálogo: malha visual detalhada +
+    collider SIMPLIFICADO separado (mesa = 1 bloco; lâmpada de teto
+    sem collider). Compilador refatorado: listas `visuals` × `solids`
+    independentes (arena legada segue bit a bit — teste prova).
+  - Planta desenha a PEGADA real do móvel (retângulo translúcido;
+    contorno amarelado nas luminárias). Validador exige malha
+    registrada p/ toda peça static.
 - **v0.6.0 (versionCode 8) — PINTAR: individual, por lado e balde.**
   - Botão PINTAR… abre paleta de 13 cores + caixa "Balde".
   - Toque pinta a estrutura; em PAREDE pinta o LADO voltado para o dedo

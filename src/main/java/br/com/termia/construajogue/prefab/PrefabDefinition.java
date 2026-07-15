@@ -18,6 +18,8 @@ public final class PrefabDefinition {
     public static final String BEHAVIOR_PICKUP_AMMO = "pickup_ammo";
     public static final String BEHAVIOR_TERMINAL = "terminal";
     public static final String BEHAVIOR_DOOR = "door";
+    /** Cenário parado: malha e collider vêm da PrefabMeshFactory. */
+    public static final String BEHAVIOR_STATIC = "static";
 
     public String id;
     public String name;

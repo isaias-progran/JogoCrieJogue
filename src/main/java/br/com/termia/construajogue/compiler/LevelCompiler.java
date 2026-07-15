@@ -8,6 +8,7 @@ import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
+import br.com.termia.construajogue.prefab.PrefabMeshFactory;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
 import br.com.termia.construajogue.runtime.RuntimeLevel;
 
@@ -26,9 +27,12 @@ public final class LevelCompiler {
 
     public static RuntimeLevel compile(MapDocument doc,
                                        PrefabCatalog catalog) {
-        List<float[]> blocks = new ArrayList<>();
+        // visuais e colisão andam separados: estruturas entram nos dois;
+        // móveis/objetos têm malha detalhada e collider simplificado
+        List<float[]> visuals = new ArrayList<>();
         List<float[]> colors = new ArrayList<>();
         List<float[]> colors2 = new ArrayList<>();
+        List<float[]> solids = new ArrayList<>();
         for (StructureObject s : doc.structures) {
             if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
                 throw new IllegalArgumentException(
@@ -38,14 +42,16 @@ public final class LevelCompiler {
             LegacyLevelLoader.toBounds(s.transform.x, s.transform.y,
                     s.transform.z, s.half[0], s.half[1], s.half[2], bounds);
             if (s.openings.isEmpty()) {
-                blocks.add(bounds);
+                visuals.add(bounds);
                 colors.add(s.color);
                 colors2.add(s.color2);
+                solids.add(bounds);
             } else {
                 for (float[] piece : cutOpenings(s, bounds)) {
-                    blocks.add(piece);
+                    visuals.add(piece);
                     colors.add(s.color);
                     colors2.add(s.color2);
+                    solids.add(piece);
                 }
             }
         }
@@ -87,6 +93,31 @@ public final class LevelCompiler {
                 case PrefabDefinition.BEHAVIOR_DOOR:
                     door = p;
                     break;
+                case PrefabDefinition.BEHAVIOR_STATIC: {
+                    float[][] parts = PrefabMeshFactory.parts(p.prefabId);
+                    float[][] boxes =
+                            PrefabMeshFactory.colliders(p.prefabId);
+                    if (parts == null || boxes == null) {
+                        throw new IllegalArgumentException(
+                                "peça estática sem malha: " + p.prefabId);
+                    }
+                    for (float[] part : parts) {
+                        float[] bounds = new float[6];
+                        LegacyLevelLoader.toBounds(x + part[0], y + part[1],
+                                z + part[2], part[3], part[4], part[5],
+                                bounds);
+                        visuals.add(bounds);
+                        colors.add(new float[]{part[6], part[7], part[8]});
+                        colors2.add(null);
+                    }
+                    for (float[] c : boxes) {
+                        float[] bounds = new float[6];
+                        LegacyLevelLoader.toBounds(x + c[0], y + c[1],
+                                z + c[2], c[3], c[4], c[5], bounds);
+                        solids.add(bounds);
+                    }
+                    break;
+                }
                 default:
                     throw new IllegalArgumentException("comportamento '"
                             + def.behavior + "' sem suporte no compilador");
@@ -103,19 +134,22 @@ public final class LevelCompiler {
             }
         }
 
-        int colliderCount = blocks.size() + (door == null ? 0 : 1);
+        int colliderCount = solids.size() + (door == null ? 0 : 1);
         float[][] colliders = new float[colliderCount][6];
-        float[] vertexData = new float[blocks.size() * Boxes.FLOATS_PER_BOX];
+        for (int i = 0; i < solids.size(); i++) {
+            colliders[i] = solids.get(i);
+        }
+        float[] vertexData =
+                new float[visuals.size() * Boxes.FLOATS_PER_BOX];
         int cursor = 0;
-        for (int i = 0; i < blocks.size(); i++) {
-            colliders[i] = blocks.get(i);
+        for (int i = 0; i < visuals.size(); i++) {
+            float[] b = visuals.get(i);
             float[] color = colors.get(i);
             float[] side = colors2.get(i);
             if (side == null) {
-                cursor = Boxes.emitBounds(vertexData, cursor, colliders[i],
+                cursor = Boxes.emitBounds(vertexData, cursor, b,
                         color[0], color[1], color[2]);
             } else {
-                float[] b = colliders[i];
                 boolean thinX = (b[3] - b[0]) < (b[5] - b[2]);
                 cursor = Boxes.emitBoundsSided(vertexData, cursor, b,
                         thinX, color[0], color[1], color[2],
@@ -127,7 +161,7 @@ public final class LevelCompiler {
         float[] doorVertexData = null;
         float[] doorOriginal = null;
         if (door != null) {
-            doorIndex = blocks.size();
+            doorIndex = solids.size();
             LegacyLevelLoader.toBounds(door.transform.x, door.transform.y,
                     door.transform.z, door.floatProperty("halfX", 0f),
                     door.floatProperty("halfY", 0f),

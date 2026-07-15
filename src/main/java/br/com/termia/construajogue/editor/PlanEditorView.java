@@ -13,6 +13,7 @@ import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
+import br.com.termia.construajogue.prefab.PrefabMeshFactory;
 import br.com.termia.construajogue.util.Ids;
 
 import java.util.List;
@@ -726,6 +727,9 @@ public final class PlanEditorView extends View {
             case PrefabDefinition.BEHAVIOR_TERMINAL:
             case PrefabDefinition.BEHAVIOR_DOOR:
                 return 1.4f;
+            case PrefabDefinition.BEHAVIOR_STATIC:
+                // pendurada: nasce na altura padrão do teto
+                return "prop.lamp.ceiling".equals(def.id) ? 3.0f : 0f;
             default:
                 return 0.5f; // itens balançando perto do chão
         }
@@ -937,6 +941,30 @@ public final class PlanEditorView extends View {
         float py = toPxY(p.transform.z);
         String letter;
         int color;
+        float[] footprint = PrefabMeshFactory.footprint(p.prefabId);
+        if (footprint != null) {
+            // móvel/objeto: pegada real no plano + ponto central
+            float hx = footprint[0];
+            float hz = footprint[1];
+            fill.setColor(0x8858728A);
+            canvas.drawRect(toPxX(p.transform.x - hx),
+                    toPxY(p.transform.z - hz),
+                    toPxX(p.transform.x + hx),
+                    toPxY(p.transform.z + hz), fill);
+            stroke.setColor(p.prefabId.startsWith("prop.lamp")
+                    ? 0xFFF2E3A0 : 0xFF8FA9C9);
+            stroke.setStrokeWidth(2f);
+            canvas.drawRect(toPxX(p.transform.x - hx),
+                    toPxY(p.transform.z - hz),
+                    toPxX(p.transform.x + hx),
+                    toPxY(p.transform.z + hz), stroke);
+            if (selected) {
+                stroke.setColor(0xFFFFFFFF);
+                stroke.setStrokeWidth(3f);
+                canvas.drawCircle(px, py, 18f, stroke);
+            }
+            return;
+        }
         if (p.prefabId.startsWith("enemy.mutant")) {
             letter = "M";
             color = 0xFFB05CC9;

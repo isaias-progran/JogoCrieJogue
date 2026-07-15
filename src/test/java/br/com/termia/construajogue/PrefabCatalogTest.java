@@ -2,6 +2,7 @@ package br.com.termia.construajogue;
 
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
+import br.com.termia.construajogue.prefab.PrefabMeshFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -43,6 +44,22 @@ public final class PrefabCatalogTest {
         Check.that(catalog.find("door.gate").allowsProperty("controllerId"),
                 "porta permite controllerId");
         Check.that(catalog.find("nao.existe") == null, "id inexistente");
+
+        // toda peça estática do catálogo tem malha, collider e pegada
+        int statics = 0;
+        for (PrefabDefinition def : catalog.all()) {
+            if (!PrefabDefinition.BEHAVIOR_STATIC.equals(def.behavior)) {
+                continue;
+            }
+            statics++;
+            Check.that(PrefabMeshFactory.parts(def.id) != null,
+                    def.id + " tem malha");
+            Check.that(PrefabMeshFactory.colliders(def.id) != null,
+                    def.id + " tem colliders");
+            Check.that(PrefabMeshFactory.footprint(def.id) != null,
+                    def.id + " tem pegada");
+        }
+        Check.that(statics >= 11, "móveis/obstáculos/objetos no catálogo");
 
         Check.fails(() -> PrefabCatalog.parse(
                 "{\"prefabs\": [{\"id\": \"x\", \"name\": \"X\", "

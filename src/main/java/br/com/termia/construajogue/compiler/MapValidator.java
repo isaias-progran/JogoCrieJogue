@@ -8,6 +8,7 @@ import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
+import br.com.termia.construajogue.prefab.PrefabMeshFactory;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
 
 import java.util.ArrayList;
@@ -117,6 +118,12 @@ public final class MapValidator {
                     break;
                 case PrefabDefinition.BEHAVIOR_DOOR:
                     doors.add(p);
+                    break;
+                case PrefabDefinition.BEHAVIOR_STATIC:
+                    if (PrefabMeshFactory.parts(p.prefabId) == null) {
+                        error(issues, "peca.malha", label
+                                + ": peça estática sem malha registrada");
+                    }
                     break;
                 default:
                     break;

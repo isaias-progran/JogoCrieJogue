@@ -49,6 +49,83 @@
       "category": "jogo",
       "behavior": "door",
       "properties": ["halfX", "halfY", "halfZ", "controllerId"]
+    },
+    {
+      "id": "furniture.table",
+      "name": "Mesa",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.chair",
+      "name": "Cadeira",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.shelf",
+      "name": "Estante",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.cabinet",
+      "name": "Armário",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.bed",
+      "name": "Cama",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "furniture.workbench",
+      "name": "Bancada",
+      "category": "móveis",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "obstacle.crate.small",
+      "name": "Caixa pequena",
+      "category": "obstáculos",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "obstacle.crate.large",
+      "name": "Caixa grande",
+      "category": "obstáculos",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "obstacle.barrel",
+      "name": "Barril",
+      "category": "obstáculos",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "prop.lamp.floor",
+      "name": "Luminária de pé",
+      "category": "objetos",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "prop.lamp.ceiling",
+      "name": "Lâmpada de teto",
+      "category": "objetos",
+      "behavior": "static",
+      "properties": []
     }
   ]
 }

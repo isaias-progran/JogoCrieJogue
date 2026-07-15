@@ -93,6 +93,23 @@ public final class WallOpeningTest {
         Check.that(LevelCompiler.compile(back, catalog)
                 .boxCount() == 7, "compila piso + 6 pedaços");
 
+        // móvel: visual detalhado, mas UM collider simplificado
+        br.com.termia.construajogue.map.PrefabInstance table =
+                new br.com.termia.construajogue.map.PrefabInstance(
+                        "mesa", "furniture.table");
+        table.transform.x = 2f;
+        doc.prefabs.add(table);
+        Check.that(!MapValidator.hasError(
+                MapValidator.validate(doc, catalog)), "mesa válida");
+        Check.that(LevelCompiler.compile(doc, catalog).boxCount() == 8,
+                "mesa soma 1 collider (7 estruturais + 1)");
+        // lâmpada de teto não colide
+        doc.prefabs.add(new br.com.termia.construajogue.map
+                .PrefabInstance("luz", "prop.lamp.ceiling"));
+        Check.that(LevelCompiler.compile(doc, catalog).boxCount() == 8,
+                "lâmpada de teto sem collider");
+        doc.prefabs.clear();
+
         // vão sobreposto e vão fora da parede são recusados
         WallOpening bad = new WallOpening("b", WallOpening.DOOR);
         bad.offset = -1.2f;
