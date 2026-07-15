@@ -8,6 +8,14 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.8.0 (versionCode 11) — PATRULHA DOS INIMIGOS na planta.**
+  - Botão ROTA (ativo com inimigo selecionado): o próximo toque na
+    planta vira o 2º ponto de patrulha (patrolX/patrolZ); tocar no
+    próprio inimigo REMOVE a rota (fica de guarda). Rota desenhada
+    tracejada vermelha com anel no destino (branca na seleção).
+  - Rota é ancorada no mapa (mover o inimigo não move o destino).
+  - O motor já fazia a patrulha (formato {x,y,z,x2,z2}) — só faltava a
+    edição. Drone patrulha voando na própria altura; mutante no chão.
 - **v0.7.1 (versionCode 10) — botão GIRAR (90° por toque).**
   - Peça estática: acumula yaw em `transform.yaw` (persistido);
     compilador gira centro das caixas e troca meias-dimensões

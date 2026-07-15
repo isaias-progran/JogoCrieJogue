@@ -58,6 +58,7 @@ public final class EditorHost extends FrameLayout
     private Button deleteButton;
     private Button heightButton;
     private Button rotateButton;
+    private Button routeButton;
     private MapDocument doc;
 
     public EditorHost(Activity activity, MapStore store,
@@ -150,6 +151,9 @@ public final class EditorHost extends FrameLayout
         rotateButton = action("GIRAR", () -> plan.rotateSelected());
         rotateButton.setTextColor(0xFFA0D9C9);
         row.addView(rotateButton);
+        routeButton = action("ROTA", this::startRoute);
+        routeButton.setTextColor(0xFFE0A0A0);
+        row.addView(routeButton);
         deleteButton = action("EXCLUIR", () -> plan.deleteSelected());
         deleteButton.setTextColor(0xFFE49C9C);
         row.addView(deleteButton);
@@ -254,6 +258,16 @@ public final class EditorHost extends FrameLayout
                 || plan.selectedPrefab() != null;
         rotateButton.setEnabled(rotatable);
         rotateButton.setAlpha(rotatable ? 1f : 0.4f);
+        routeButton.setEnabled(plan.selectedIsEnemy());
+        routeButton.setAlpha(plan.selectedIsEnemy() ? 1f : 0.4f);
+    }
+
+    /** Próximo toque na planta marca a patrulha do inimigo. */
+    private void startRoute() {
+        if (plan.startRouteMode()) {
+            status.setText("toque onde o inimigo deve patrulhar; toque "
+                    + "no próprio inimigo para deixá-lo parado");
+        }
     }
 
     /** Cores da paleta (nome + RGB 0..1). */

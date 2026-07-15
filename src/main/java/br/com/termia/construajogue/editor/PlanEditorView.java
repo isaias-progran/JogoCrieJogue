@@ -64,6 +64,7 @@ public final class PlanEditorView extends View {
     private final Paint gridPaint = new Paint();
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint measurePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint routePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // gesto atual (1 dedo)
     private boolean dragging;
@@ -92,6 +93,8 @@ public final class PlanEditorView extends View {
     // tinta armada (ferramenta PINTAR)
     private float[] activePaint;
     private boolean paintBucket;
+    // próximo toque define a patrulha do inimigo selecionado
+    private boolean routeMode;
     // último toque SEM snap (pintura decide o lado pela posição exata)
     private float rawX;
     private float rawZ;
@@ -106,6 +109,11 @@ public final class PlanEditorView extends View {
         measurePaint.setTextSize(26f);
         measurePaint.setFakeBoldText(true);
         measurePaint.setShadowLayer(4f, 0f, 0f, 0xFF000000);
+        routePaint.setStyle(Paint.Style.STROKE);
+        routePaint.setStrokeWidth(3f);
+        routePaint.setPathEffect(
+                new android.graphics.DashPathEffect(
+                        new float[]{14f, 10f}, 0f));
         setBackgroundColor(0xFF10151B);
     }
 
@@ -118,10 +126,26 @@ public final class PlanEditorView extends View {
     public void setTool(int tool) {
         this.tool = tool;
         dragging = false;
+        routeMode = false;
         if (tool != TOOL_SELECT) {
             clearSelection();
         }
         invalidate();
+    }
+
+    /** Inimigo selecionado? Então o próximo toque marca a patrulha. */
+    public boolean startRouteMode() {
+        if (selectedPrefab == null
+                || !selectedPrefab.prefabId.startsWith("enemy.")) {
+            return false;
+        }
+        routeMode = true;
+        return true;
+    }
+
+    public boolean selectedIsEnemy() {
+        return selectedPrefab != null
+                && selectedPrefab.prefabId.startsWith("enemy.");
     }
 
     public int tool() {
@@ -466,6 +490,10 @@ public final class PlanEditorView extends View {
     }
 
     private void finishGesture() {
+        if (routeMode && selectedPrefab != null) {
+            applyRoute();
+            return;
+        }
         switch (tool) {
             case TOOL_FLOOR:
                 addRect(StructureObject.ROLE_FLOOR, -0.15f, 0.15f,
@@ -554,6 +582,28 @@ public final class PlanEditorView extends View {
         s.color = new float[]{0.46f, 0.48f, 0.55f};
         doc.structures.add(s);
         host.afterChange();
+    }
+
+    /**
+     * Define a patrulha do inimigo selecionado no ponto tocado; tocar
+     * no próprio inimigo remove a rota (fica de guarda parado).
+     */
+    private void applyRoute() {
+        routeMode = false;
+        final PrefabInstance p = selectedPrefab;
+        boolean clear = Math.hypot(curX - p.transform.x,
+                curZ - p.transform.z) < Math.max(0.4f, 24f / scale);
+        mutateSelected(() -> {
+            if (clear) {
+                p.properties.remove("patrolX");
+                p.properties.remove("patrolZ");
+            } else {
+                p.properties.put("patrolX", curX);
+                p.properties.put("patrolZ", curZ);
+            }
+        });
+        host.selectionChanged(clear ? "inimigo de guarda (parado)"
+                : String.format("patrulha até %.1f, %.1f", curX, curZ));
     }
 
     /** Arma a ferramenta PINTAR. `bucket` = paredes ligadas juntas. */
@@ -928,12 +978,30 @@ public final class PlanEditorView extends View {
             drawPreview(canvas);
         }
         for (PrefabInstance p : doc.prefabs) {
+            drawRoute(canvas, p, p == selectedPrefab);
+        }
+        for (PrefabInstance p : doc.prefabs) {
             drawPrefab(canvas, p, p == selectedPrefab);
         }
         for (LogicMarker m : doc.markers) {
             drawMarker(canvas, m, m == selectedMarker);
         }
         drawMeasureLabels(canvas);
+    }
+
+    /** Rota de patrulha: linha tracejada até um anel no destino. */
+    private void drawRoute(Canvas canvas, PrefabInstance p,
+                           boolean selected) {
+        if (!p.prefabId.startsWith("enemy.")
+                || !p.properties.containsKey("patrolX")) {
+            return;
+        }
+        float tx = p.floatProperty("patrolX", p.transform.x);
+        float tz = p.floatProperty("patrolZ", p.transform.z);
+        routePaint.setColor(selected ? 0xFFFFFFFF : 0x99E05555);
+        canvas.drawLine(toPxX(p.transform.x), toPxY(p.transform.z),
+                toPxX(tx), toPxY(tz), routePaint);
+        canvas.drawCircle(toPxX(tx), toPxY(tz), 10f, routePaint);
     }
 
     /** Vãos sobre a parede: porta marrom, portal escuro, janela azul. */
