@@ -41,16 +41,14 @@ public final class LevelCompiler {
             float[] bounds = new float[6];
             LegacyLevelLoader.toBounds(s.transform.x, s.transform.y,
                     s.transform.z, s.half[0], s.half[1], s.half[2], bounds);
+            float[] stubs = s.color2 == null ? null
+                    : wallStubPlanes(s, doc.structures);
             if (s.openings.isEmpty()) {
-                visuals.add(bounds);
-                colors.add(s.color);
-                colors2.add(s.color2);
+                addPainted(visuals, colors, colors2, bounds, s, stubs);
                 solids.add(bounds);
             } else {
                 for (float[] piece : cutOpenings(s, bounds)) {
-                    visuals.add(piece);
-                    colors.add(s.color);
-                    colors2.add(s.color2);
+                    addPainted(visuals, colors, colors2, piece, s, stubs);
                     solids.add(piece);
                 }
             }
@@ -247,6 +245,111 @@ public final class LevelCompiler {
         out[hi] = to;
         out[1] = bottom;
         out[4] = topY;
+        return out;
+    }
+
+    /**
+     * Planos de canto de uma parede pintada por lado: onde outra parede
+     * perpendicular encosta numa ponta, a pintura do lado deve PARAR na
+     * face interna dela — senão a cor interna vaza pela ponta e vira
+     * uma faixa vista de fora. Devolve {fimDoCantoBaixo, inícioDoCanto
+     * Alto} ao longo do eixo comprido (NaN = ponta sem canto).
+     */
+    public static float[] wallStubPlanes(StructureObject s,
+                                         List<StructureObject> all) {
+        boolean thinX = s.half[0] < s.half[2];
+        float alongC = thinX ? s.transform.z : s.transform.x;
+        float alongH = thinX ? s.half[2] : s.half[0];
+        float crossC = thinX ? s.transform.x : s.transform.z;
+        float crossH = thinX ? s.half[0] : s.half[2];
+        float loEnd = Float.NaN;
+        float hiStart = Float.NaN;
+        for (StructureObject t : all) {
+            if (t == s || t.half == null
+                    || !StructureObject.KIND_BLOCK.equals(t.kind)) {
+                continue;
+            }
+            // no eixo comprido de s, a outra parede é fina; no fino, longa
+            float tAlongC = thinX ? t.transform.z : t.transform.x;
+            float tAlongH = thinX ? t.half[2] : t.half[0];
+            float tCrossC = thinX ? t.transform.x : t.transform.z;
+            float tCrossH = thinX ? t.half[0] : t.half[2];
+            if (tAlongH >= alongH || tCrossH <= tAlongH) {
+                continue; // não é perpendicular fina cruzando s
+            }
+            if (Math.abs(tCrossC - crossC) > tCrossH + crossH - 0.01f) {
+                continue; // não alcança a faixa da parede
+            }
+            float sY0 = s.transform.y - s.half[1];
+            float sY1 = s.transform.y + s.half[1];
+            float tY0 = t.transform.y - t.half[1];
+            float tY1 = t.transform.y + t.half[1];
+            if (tY1 <= sY0 + 0.01f || tY0 >= sY1 - 0.01f) {
+                continue; // alturas não se cruzam
+            }
+            float tLo = tAlongC - tAlongH;
+            float tHi = tAlongC + tAlongH;
+            float sLo = alongC - alongH;
+            float sHi = alongC + alongH;
+            if (tHi <= sLo || tLo >= sHi) {
+                continue;
+            }
+            // só vale perto de uma ponta (canto), não junção em T no meio
+            if (tAlongC >= alongC && tHi >= sHi - 0.6f) {
+                hiStart = Float.isNaN(hiStart) ? tLo
+                        : Math.min(hiStart, tLo);
+            } else if (tAlongC < alongC && tLo <= sLo + 0.6f) {
+                loEnd = Float.isNaN(loEnd) ? tHi : Math.max(loEnd, tHi);
+            }
+        }
+        return new float[]{loEnd, hiStart};
+    }
+
+    /**
+     * Emite a caixa da parede pintada por lado, cortando a pintura nos
+     * planos de canto: o trecho de canto sai na cor base (acabamento).
+     */
+    private static void addPainted(List<float[]> visuals,
+                                   List<float[]> colors,
+                                   List<float[]> colors2, float[] b,
+                                   StructureObject s, float[] stubs) {
+        if (s.color2 == null) {
+            visuals.add(b);
+            colors.add(s.color);
+            colors2.add(null);
+            return;
+        }
+        boolean thinX = s.half[0] < s.half[2];
+        int lo = thinX ? 2 : 0;
+        int hi = lo + 3;
+        float bodyLo = b[lo];
+        float bodyHi = b[hi];
+        if (stubs != null && !Float.isNaN(stubs[0]) && stubs[0] > bodyLo) {
+            float end = Math.min(stubs[0], bodyHi);
+            visuals.add(slice(b, lo, hi, bodyLo, end));
+            colors.add(s.color);
+            colors2.add(null);
+            bodyLo = end;
+        }
+        if (stubs != null && !Float.isNaN(stubs[1]) && stubs[1] < bodyHi) {
+            float start = Math.max(stubs[1], bodyLo);
+            visuals.add(slice(b, lo, hi, start, bodyHi));
+            colors.add(s.color);
+            colors2.add(null);
+            bodyHi = start;
+        }
+        if (bodyHi > bodyLo) {
+            visuals.add(slice(b, lo, hi, bodyLo, bodyHi));
+            colors.add(s.color);
+            colors2.add(s.color2);
+        }
+    }
+
+    private static float[] slice(float[] b, int lo, int hi,
+                                 float from, float to) {
+        float[] out = b.clone();
+        out[lo] = from;
+        out[hi] = to;
         return out;
     }
 

@@ -128,6 +128,34 @@ public final class WallOpeningTest {
         Check.that(LevelCompiler.compile(doc, catalog).skyMode() == 0,
                 "sem skybox por padrão");
 
+        // canto em L: a pintura do lado para na face interna da outra
+        // parede (sem faixa de cor interna vazando pela ponta)
+        StructureObject wa = new StructureObject("wa",
+                StructureObject.KIND_BLOCK);
+        wa.role = StructureObject.ROLE_WALL;
+        wa.transform.y = 1.5f;
+        wa.half = new float[]{2f, 1.5f, 0.15f};
+        wa.color = new float[]{0.5f, 0.5f, 0.5f};
+        wa.color2 = new float[]{0.9f, 0.2f, 0.2f};
+        StructureObject wb = new StructureObject("wb",
+                StructureObject.KIND_BLOCK);
+        wb.role = StructureObject.ROLE_WALL;
+        wb.transform.x = 2f;
+        wb.transform.y = 1.5f;
+        wb.transform.z = 2f;
+        wb.half = new float[]{0.15f, 1.5f, 2f};
+        wb.color = new float[]{0.5f, 0.5f, 0.5f};
+        java.util.List<StructureObject> both =
+                java.util.Arrays.asList(wa, wb);
+        float[] stubs = LevelCompiler.wallStubPlanes(wa, both);
+        Check.that(Float.isNaN(stubs[0]), "ponta baixa sem canto");
+        Check.that(Math.abs(stubs[1] - 1.85f) < 1e-4f,
+                "pintura para na face interna (x=1,85)");
+        float[] stubsB = LevelCompiler.wallStubPlanes(wb, both);
+        Check.that(Float.isNaN(stubsB[1]), "wb: ponta alta sem canto");
+        Check.that(Math.abs(stubsB[0] - 0.15f) < 1e-4f,
+                "wb corta em z=0,15 se pintada");
+
         // vão sobreposto e vão fora da parede são recusados
         WallOpening bad = new WallOpening("b", WallOpening.DOOR);
         bad.offset = -1.2f;

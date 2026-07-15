@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.9.2 (versionCode 16) — CANTOS DE PAREDE PINTADA resolvidos.**
+  - Problema real do aparelho: a face pintada ia até a ponta e vazava
+    pelo canto (faixa da cor interna vista de fora).
+  - `LevelCompiler.wallStubPlanes` detecta parede perpendicular
+    encostada numa PONTA (a até 0,6m dela; junção em T no meio não
+    conta) e `addPainted` corta a pintura na face interna da outra
+    parede: o trecho do canto sai na cor base (acabamento). Só afeta
+    o visual — colliders intactos. Corte diagonal 45° de verdade não
+    dá: colisão é AABB.
+  - Funciona também com vãos (cada pedaço do recorte passa pelos
+    mesmos planos de canto). Testes do canto em WallOpeningTest.
 - **v0.9.1 (versionCode 15) — ESCADAS E RAMPAS (subir andares).**
   - 4 peças de circulação geradas por código (`PrefabMeshFactory.stairs`):
     escada pequena 1m (4 degraus de 0,25), escada de andar 3m (12
