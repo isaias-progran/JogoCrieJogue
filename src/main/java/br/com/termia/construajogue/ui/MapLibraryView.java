@@ -36,6 +36,12 @@ public final class MapLibraryView extends ScrollView {
         void onDelete(String id);
 
         void onPlayCampaign();
+
+        /** Joga um mapa de exemplo embarcado (somente leitura). */
+        void onPlayExample(String assetPath);
+
+        /** Copia o exemplo para os mapas do usuário e abre o editor. */
+        void onCopyExample(String assetPath);
     }
 
     private final Activity activity;
@@ -78,17 +84,107 @@ public final class MapLibraryView extends ScrollView {
         List<MapStore.Entry> entries = store.list();
         if (entries.isEmpty()) {
             TextView empty = new TextView(activity);
-            empty.setText("Nenhum mapa ainda. Crie o primeiro e desenhe "
-                    + "piso, paredes, início e saída.");
+            empty.setText("Nenhum mapa ainda. Crie o primeiro ou "
+                    + "comece por um exemplo abaixo.");
             empty.setTextColor(0xFF8FA3B0);
             empty.setTextSize(15f);
             empty.setPadding(0, 24, 0, 0);
             column.addView(empty);
-            return;
         }
         for (MapStore.Entry entry : entries) {
             column.addView(row(entry));
         }
+        addExamples();
+    }
+
+    /** Seção de exemplos embarcados (somente leitura; edita a cópia). */
+    private void addExamples() {
+        String[] files;
+        try {
+            files = activity.getAssets().list("maps/exemplos");
+        } catch (IOException missing) {
+            return;
+        }
+        if (files == null || files.length == 0) {
+            return;
+        }
+        TextView title = new TextView(activity);
+        title.setText("EXEMPLOS");
+        title.setTextColor(0xFF8FA3B0);
+        title.setTextSize(15f);
+        title.setPadding(0, 36, 0, 4);
+        column.addView(title);
+        for (String file : files) {
+            if (file.endsWith(".json")) {
+                column.addView(exampleRow("maps/exemplos/" + file));
+            }
+        }
+    }
+
+    private LinearLayout exampleRow(String assetPath) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setBackgroundColor(0xFF15202B);
+        row.setPadding(16, 8, 12, 8);
+        LinearLayout.LayoutParams rowParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.topMargin = 12;
+        row.setLayoutParams(rowParams);
+
+        String mapName = "(exemplo)";
+        ImageView thumb = new ImageView(activity);
+        float density = getResources().getDisplayMetrics().density;
+        int tw = (int) (84f * density);
+        int th = (int) (56f * density);
+        try {
+            br.com.termia.construajogue.map.MapDocument doc =
+                    readExample(assetPath);
+            mapName = doc.name;
+            thumb.setImageBitmap(MapThumbnail.render(doc, tw * 2, th * 2));
+        } catch (IOException | RuntimeException broken) {
+            thumb.setBackgroundColor(0xFF2A333D);
+        }
+        thumb.setOnClickListener(v -> listener.onPlayExample(assetPath));
+        LinearLayout.LayoutParams thumbParams =
+                new LinearLayout.LayoutParams(tw, th);
+        thumbParams.rightMargin = 20;
+        thumbParams.gravity = Gravity.CENTER_VERTICAL;
+        row.addView(thumb, thumbParams);
+
+        TextView name = new TextView(activity);
+        name.setText(mapName);
+        name.setTextColor(0xFFC9D6E0);
+        name.setTextSize(16f);
+        name.setGravity(Gravity.CENTER_VERTICAL);
+        name.setOnClickListener(v -> listener.onPlayExample(assetPath));
+        LinearLayout.LayoutParams grow = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
+        row.addView(name, grow);
+
+        row.addView(smallButton("JOGAR",
+                () -> listener.onPlayExample(assetPath)));
+        row.addView(smallButton("EDITAR CÓPIA",
+                () -> listener.onCopyExample(assetPath)));
+        return row;
+    }
+
+    private br.com.termia.construajogue.map.MapDocument readExample(
+            String assetPath) throws IOException {
+        java.io.ByteArrayOutputStream buffer =
+                new java.io.ByteArrayOutputStream();
+        try (java.io.InputStream input =
+                activity.getAssets().open(assetPath)) {
+            byte[] chunk = new byte[4096];
+            int read;
+            while ((read = input.read(chunk)) > 0) {
+                buffer.write(chunk, 0, read);
+            }
+        }
+        return br.com.termia.construajogue.persistence.MapJson.read(
+                new String(buffer.toByteArray(),
+                        java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private LinearLayout row(MapStore.Entry entry) {

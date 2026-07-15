@@ -218,6 +218,48 @@ public final class MainActivity extends Activity
         play(new AssetLevelProvider(getAssets()), false);
     }
 
+    @Override
+    public void onPlayExample(String assetPath) {
+        try {
+            RuntimeLevel level = compile(readAssetMap(assetPath));
+            if (level != null) {
+                play(new SingleLevelProvider(level), false);
+            }
+        } catch (IOException | RuntimeException failure) {
+            toast("Não consegui jogar o exemplo: "
+                    + failure.getMessage());
+        }
+    }
+
+    @Override
+    public void onCopyExample(String assetPath) {
+        try {
+            MapDocument copy = readAssetMap(assetPath);
+            copy.id = br.com.termia.construajogue.util.Ids.create();
+            copy.name = copy.name + " (minha cópia)";
+            store.save(copy);
+            showEditor(copy);
+        } catch (IOException | RuntimeException failure) {
+            toast("Não consegui copiar o exemplo: "
+                    + failure.getMessage());
+        }
+    }
+
+    private MapDocument readAssetMap(String assetPath) throws IOException {
+        java.io.ByteArrayOutputStream buffer =
+                new java.io.ByteArrayOutputStream();
+        try (java.io.InputStream input = getAssets().open(assetPath)) {
+            byte[] chunk = new byte[4096];
+            int read;
+            while ((read = input.read(chunk)) > 0) {
+                buffer.write(chunk, 0, read);
+            }
+        }
+        return br.com.termia.construajogue.persistence.MapJson.read(
+                new String(buffer.toByteArray(),
+                        java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     // ---- EditorHost.Listener ----
 
     @Override

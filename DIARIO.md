@@ -8,6 +8,20 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.12.0 (versionCode 24) — MAPAS DE EXEMPLO na biblioteca.**
+  - 3 exemplos GERADOS POR CÓDIGO (`ExampleMapsGenerator` em src/test,
+    roda no test-core.sh: valida + compila ou quebra o build; IDs
+    determinísticos) → `assets/maps/exemplos/*.json`:
+    1. Casa com quintal (dia): casa mobiliada c/ porta+janela, teto,
+       lâmpadas, drone rondando o quintal;
+    2. Pátio noturno: caixas/barris/luminárias, 2 drones + mutante em
+       patrulhas cruzadas, coberturas;
+    3. Fortaleza do terminal (entardecer): terminal abre o portão do
+       muro divisório, escada p/ plataforma com munição, drone
+       dormente de guarda.
+  - Biblioteca ganhou seção EXEMPLOS: miniatura + JOGAR + EDITAR CÓPIA
+    (copia p/ os mapas do usuário com id novo e "(minha cópia)" e abre
+    o editor). Originais são somente leitura (assets).
 - **v0.11.1 (versionCode 23) — topo em 2 LINHAS FIXAS (sem rolagem).**
   - Linha 1: ← ↶ ↷ ☰ ▶. Linha 2: SELEC. PINTAR GIRAR MEDIDAS EXCLUIR.
     Peso 1 por botão = sempre cabem na largura; sem HorizontalScroll.

@@ -27,6 +27,9 @@ javac -d "$OUT" -encoding UTF-8 \
     "$SRC"/runtime/SingleLevelProvider.java \
     "$TEST"/*.java
 
+# mapas de exemplo: gerados, validados e compilados (falha quebra aqui)
+java -cp "$OUT" br.com.termia.construajogue.ExampleMapsGenerator
+
 # arena.json não pode divergir do que o conversor gera da arena.txt
 java -cp "$OUT" br.com.termia.construajogue.LegacyTxtConverter \
     src/main/assets/levels/arena.txt build/arena-gerada.json arena

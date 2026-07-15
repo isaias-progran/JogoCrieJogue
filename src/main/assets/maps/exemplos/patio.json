@@ -1,0 +1,256 @@
+{
+  "environment": {
+    "ambient": 0.2,
+    "fog": [0.02, 0.03, 0.08],
+    "fogFar": 26,
+    "sky": "night"
+  },
+  "id": "exemplo-patio",
+  "markers": [
+    {
+      "id": "spawn",
+      "type": "player_spawn",
+      "x": -7.5,
+      "y": 0,
+      "yaw": 45,
+      "z": -7.5
+    },
+    {
+      "id": "exit",
+      "radius": 1.2,
+      "type": "exit",
+      "x": 7.5,
+      "y": 0,
+      "z": 7.5
+    }
+  ],
+  "name": "Pátio noturno",
+  "prefabs": [
+    {
+      "id": "cx1",
+      "prefabId": "obstacle.crate.large",
+      "transform": {
+        "x": -5,
+        "y": 0,
+        "z": -5
+      }
+    },
+    {
+      "id": "cx2",
+      "prefabId": "obstacle.crate.small",
+      "transform": {
+        "x": -4.2,
+        "y": 0,
+        "z": -5.4
+      }
+    },
+    {
+      "id": "cx3",
+      "prefabId": "obstacle.crate.large",
+      "transform": {
+        "x": 5,
+        "y": 0,
+        "yaw": 45,
+        "z": 5
+      }
+    },
+    {
+      "id": "barril1",
+      "prefabId": "obstacle.barrel",
+      "transform": {
+        "x": 4.3,
+        "y": 0,
+        "z": 5.8
+      }
+    },
+    {
+      "id": "barril2",
+      "prefabId": "obstacle.barrel",
+      "transform": {
+        "x": -6,
+        "y": 0,
+        "z": 4
+      }
+    },
+    {
+      "id": "lum1",
+      "prefabId": "prop.lamp.floor",
+      "transform": {
+        "x": -2,
+        "y": 0,
+        "z": -2
+      }
+    },
+    {
+      "id": "lum2",
+      "prefabId": "prop.lamp.floor",
+      "transform": {
+        "x": 2,
+        "y": 0,
+        "z": 2
+      }
+    },
+    {
+      "id": "lum3",
+      "prefabId": "prop.lamp.floor",
+      "transform": {
+        "x": 6,
+        "y": 0,
+        "z": -6
+      }
+    },
+    {
+      "id": "drone1",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": 6,
+        "patrolZ": 0
+      },
+      "transform": {
+        "x": -6,
+        "y": 1.8,
+        "z": 0
+      }
+    },
+    {
+      "id": "drone2",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": 0,
+        "patrolZ": -6
+      },
+      "transform": {
+        "x": 0,
+        "y": 2.2,
+        "z": 6
+      }
+    },
+    {
+      "id": "mutante",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": -5,
+        "patrolZ": -3
+      },
+      "transform": {
+        "x": 5,
+        "y": 0.85,
+        "z": -3
+      }
+    },
+    {
+      "id": "kit",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": -2,
+        "y": 0.5,
+        "z": 2.6
+      }
+    },
+    {
+      "id": "mun1",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": -5,
+        "y": 0.5,
+        "z": -4.2
+      }
+    },
+    {
+      "id": "mun2",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": 5.8,
+        "y": 0.5,
+        "z": 4.3
+      }
+    }
+  ],
+  "schema": 1,
+  "structures": [
+    {
+      "color": [0.26, 0.28, 0.33],
+      "half": [9, 0.15, 9],
+      "id": "chao",
+      "kind": "block",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.15,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [9.15, 1.5, 0.15],
+      "id": "mur-n",
+      "kind": "block",
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": -9
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [9.15, 1.5, 0.15],
+      "id": "mur-s",
+      "kind": "block",
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": 9
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [0.15, 1.5, 9.15],
+      "id": "mur-o",
+      "kind": "block",
+      "role": "wall",
+      "transform": {
+        "x": -9,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [0.15, 1.5, 9.15],
+      "id": "mur-l",
+      "kind": "block",
+      "role": "wall",
+      "transform": {
+        "x": 9,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.62, 0.45, 0.3],
+      "half": [1.4, 0.6, 0.9],
+      "id": "cob-1",
+      "kind": "block",
+      "role": "block",
+      "transform": {
+        "x": -3,
+        "y": 0.6,
+        "z": 2
+      }
+    },
+    {
+      "color": [0.62, 0.45, 0.3],
+      "half": [1.4, 0.6, 0.9],
+      "id": "cob-2",
+      "kind": "block",
+      "role": "block",
+      "transform": {
+        "x": 3,
+        "y": 0.6,
+        "z": -2
+      }
+    }
+  ]
+}

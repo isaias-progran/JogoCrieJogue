@@ -1,0 +1,231 @@
+{
+  "environment": {
+    "ambient": 0.6,
+    "fog": [0.55, 0.7, 0.86],
+    "fogFar": 50,
+    "sky": "day"
+  },
+  "id": "exemplo-casa",
+  "markers": [
+    {
+      "id": "spawn",
+      "type": "player_spawn",
+      "x": -4,
+      "y": 0,
+      "yaw": 180,
+      "z": 0.6
+    },
+    {
+      "id": "exit",
+      "radius": 1.2,
+      "type": "exit",
+      "x": 6.8,
+      "y": 0,
+      "z": -4.8
+    }
+  ],
+  "name": "Casa com quintal",
+  "prefabs": [
+    {
+      "id": "cama",
+      "prefabId": "furniture.bed",
+      "transform": {
+        "x": -4.3,
+        "y": 0,
+        "z": -1.4
+      }
+    },
+    {
+      "id": "guarda",
+      "prefabId": "furniture.wardrobe",
+      "transform": {
+        "x": -2.5,
+        "y": 0,
+        "z": -2.1
+      }
+    },
+    {
+      "id": "mesa",
+      "prefabId": "furniture.table",
+      "transform": {
+        "x": -3,
+        "y": 0,
+        "z": 1.2
+      }
+    },
+    {
+      "id": "cadeira",
+      "prefabId": "furniture.chair",
+      "transform": {
+        "x": -3,
+        "y": 0,
+        "yaw": 180,
+        "z": 0.3
+      }
+    },
+    {
+      "id": "pia",
+      "prefabId": "furniture.sink.kitchen",
+      "transform": {
+        "x": 0.4,
+        "y": 0,
+        "z": -2.05
+      }
+    },
+    {
+      "id": "lumi",
+      "prefabId": "prop.lamp.floor",
+      "transform": {
+        "x": -4.5,
+        "y": 0,
+        "z": 1.9
+      }
+    },
+    {
+      "id": "luz-teto",
+      "prefabId": "prop.lamp.ceiling",
+      "transform": {
+        "x": -2,
+        "y": 3.2,
+        "z": 0
+      }
+    },
+    {
+      "id": "planta",
+      "prefabId": "prop.plant.tall",
+      "transform": {
+        "x": 0.6,
+        "y": 0,
+        "z": 1.9
+      }
+    },
+    {
+      "id": "drone",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": 5.5,
+        "patrolZ": 4
+      },
+      "transform": {
+        "x": 5.5,
+        "y": 1.8,
+        "z": -4
+      }
+    },
+    {
+      "id": "kit",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": 6.8,
+        "y": 0.5,
+        "z": 4.8
+      }
+    }
+  ],
+  "schema": 1,
+  "structures": [
+    {
+      "color": [0.32, 0.48, 0.3],
+      "half": [8, 0.15, 6],
+      "id": "quintal",
+      "kind": "block",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.15,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.55, 0.44, 0.32],
+      "half": [3.2, 0.15, 2.6],
+      "id": "casa-piso",
+      "kind": "block",
+      "role": "floor",
+      "transform": {
+        "x": -2,
+        "y": -0.15,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [3.3500001, 1.5, 0.15],
+      "id": "casa-s",
+      "kind": "block",
+      "openings": [
+        {
+          "height": 2.1,
+          "id": "casa-porta",
+          "offset": 1.2,
+          "type": "door",
+          "width": 1
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": -2,
+        "y": 1.5,
+        "z": 2.6
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [3.3500001, 1.5, 0.15],
+      "id": "casa-n",
+      "kind": "block",
+      "openings": [
+        {
+          "height": 1.2,
+          "id": "casa-janela",
+          "offset": 0,
+          "sill": 0.9,
+          "type": "window",
+          "width": 1.4
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": -2,
+        "y": 1.5,
+        "z": -2.6
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [0.15, 1.5, 2.75],
+      "id": "casa-o",
+      "kind": "block",
+      "role": "wall",
+      "transform": {
+        "x": -5.2,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.46, 0.48, 0.55],
+      "half": [0.15, 1.5, 2.75],
+      "id": "casa-l",
+      "kind": "block",
+      "role": "wall",
+      "transform": {
+        "x": 1.2,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.38, 0.41, 0.48],
+      "half": [3.35, 0.15, 2.75],
+      "id": "casa-teto",
+      "kind": "block",
+      "role": "ceiling",
+      "transform": {
+        "x": -2,
+        "y": 3.15,
+        "z": 0
+      }
+    }
+  ]
+}
