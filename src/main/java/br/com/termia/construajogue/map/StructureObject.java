@@ -9,6 +9,8 @@ package br.com.termia.construajogue.map;
 public final class StructureObject {
 
     public static final String KIND_BLOCK = "block";
+    /** Laje poligonal desenhada por pontos (contorno livre). */
+    public static final String KIND_POLY = "poly";
 
     /** Papel semântico p/ o editor (altura padrão, desenho, encaixe). */
     public static final String ROLE_FLOOR = "floor";
@@ -39,6 +41,36 @@ public final class StructureObject {
     /** Vãos (só faz sentido em paredes). */
     public final java.util.List<WallOpening> openings =
             new java.util.ArrayList<>();
+    /**
+     * Contorno em pares x,z ABSOLUTOS (kind poly). transform.x/z e
+     * half[0]/half[2] guardam o retângulo envolvente sincronizado
+     * (seleção/medidas); transform.y e half[1] dão base e espessura.
+     */
+    public float[] polygon;
+
+    /** Recalcula o envolvente a partir do contorno. */
+    public void syncPolyBounds() {
+        if (polygon == null) {
+            return;
+        }
+        if (half == null) {
+            half = new float[]{0f, 0.15f, 0f};
+        }
+        float minX = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+        for (int i = 0; i < polygon.length; i += 2) {
+            minX = Math.min(minX, polygon[i]);
+            maxX = Math.max(maxX, polygon[i]);
+            minZ = Math.min(minZ, polygon[i + 1]);
+            maxZ = Math.max(maxZ, polygon[i + 1]);
+        }
+        transform.x = (minX + maxX) / 2f;
+        transform.z = (minZ + maxZ) / 2f;
+        half[0] = (maxX - minX) / 2f;
+        half[2] = (maxZ - minZ) / 2f;
+    }
 
     public StructureObject() {
     }

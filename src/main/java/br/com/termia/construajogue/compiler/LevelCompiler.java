@@ -1,6 +1,7 @@
 package br.com.termia.construajogue.compiler;
 
 import br.com.termia.construajogue.engine.Boxes;
+import br.com.termia.construajogue.geometry.Triangulator;
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
@@ -34,7 +35,16 @@ public final class LevelCompiler {
         List<float[]> colors2 = new ArrayList<>();
         List<float[]> colors3 = new ArrayList<>();
         List<float[]> solids = new ArrayList<>();
+        List<float[]> polyMeshes = new ArrayList<>();
+        int polyFloats = 0;
         for (StructureObject s : doc.structures) {
+            if (StructureObject.KIND_POLY.equals(s.kind)) {
+                float[] mesh = polyTriangles(s);
+                polyMeshes.add(mesh);
+                polyFloats += mesh.length;
+                polyColliders(s, solids);
+                continue;
+            }
             if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
                 throw new IllegalArgumentException(
                         "estrutura não suportada: " + s.kind);
@@ -143,8 +153,8 @@ public final class LevelCompiler {
         for (int i = 0; i < solids.size(); i++) {
             colliders[i] = solids.get(i);
         }
-        float[] vertexData =
-                new float[visuals.size() * Boxes.FLOATS_PER_BOX];
+        float[] vertexData = new float[visuals.size()
+                * Boxes.FLOATS_PER_BOX + polyFloats];
         int cursor = 0;
         for (int i = 0; i < visuals.size(); i++) {
             float[] b = visuals.get(i);
@@ -159,6 +169,11 @@ public final class LevelCompiler {
                 cursor = Boxes.emitBoundsPainted(vertexData, cursor, b,
                         thinX, color, pos, neg);
             }
+        }
+
+        for (float[] mesh : polyMeshes) {
+            System.arraycopy(mesh, 0, vertexData, cursor, mesh.length);
+            cursor += mesh.length;
         }
 
         int doorIndex = -1;
@@ -365,6 +380,128 @@ public final class LevelCompiler {
         out[lo] = from;
         out[hi] = to;
         return out;
+    }
+
+    /**
+     * Malha da laje poligonal: tampo e fundo triangulados (corte de
+     * orelhas) + lados verticais. Winding igual ao das caixas (CCW
+     * visto de fora) para conviver com o back-face culling.
+     */
+    static float[] polyTriangles(StructureObject s) {
+        float[] ccw = Triangulator.ccw(s.polygon);
+        int[] tris = Triangulator.earClip(ccw);
+        int n = ccw.length / 2;
+        float y0 = s.transform.y - s.half[1];
+        float y1 = s.transform.y + s.half[1];
+        float r = s.color[0];
+        float g = s.color[1];
+        float b = s.color[2];
+        float[] out = new float[(tris.length * 2 + n * 6) * 9];
+        int o = 0;
+        // tampo (+Y): ordem invertida do CCW matemático p/ o culling
+        for (int t = 0; t < tris.length; t += 3) {
+            o = vertex(out, o, ccw, tris[t], y1, 0f, 1f, 0f, r, g, b);
+            o = vertex(out, o, ccw, tris[t + 2], y1, 0f, 1f, 0f, r, g, b);
+            o = vertex(out, o, ccw, tris[t + 1], y1, 0f, 1f, 0f, r, g, b);
+        }
+        // fundo (-Y)
+        for (int t = 0; t < tris.length; t += 3) {
+            o = vertex(out, o, ccw, tris[t], y0, 0f, -1f, 0f, r, g, b);
+            o = vertex(out, o, ccw, tris[t + 1], y0, 0f, -1f, 0f, r, g, b);
+            o = vertex(out, o, ccw, tris[t + 2], y0, 0f, -1f, 0f, r, g, b);
+        }
+        // lados: percorre o contorno em ordem horária (normais p/ fora)
+        for (int i = 0; i < n; i++) {
+            int a = (n - 1 - i);
+            int c = (n - i) % n;
+            float ax = ccw[a * 2];
+            float az = ccw[a * 2 + 1];
+            float bx = ccw[c * 2];
+            float bz = ccw[c * 2 + 1];
+            float dx = bx - ax;
+            float dz = bz - az;
+            float len = (float) Math.hypot(dx, dz);
+            if (len < 1e-5f) {
+                len = 1f;
+            }
+            float nx = -dz / len;
+            float nz = dx / len;
+            float[][] quad = {{ax, y0, az}, {bx, y0, bz},
+                    {bx, y1, bz}, {ax, y1, az}};
+            int[] order = {0, 1, 2, 0, 2, 3};
+            for (int q : order) {
+                out[o++] = quad[q][0];
+                out[o++] = quad[q][1];
+                out[o++] = quad[q][2];
+                out[o++] = nx;
+                out[o++] = 0f;
+                out[o++] = nz;
+                out[o++] = r;
+                out[o++] = g;
+                out[o++] = b;
+            }
+        }
+        float[] trimmed = new float[o];
+        System.arraycopy(out, 0, trimmed, 0, o);
+        return trimmed;
+    }
+
+    private static int vertex(float[] out, int o, float[] p, int i,
+                              float y, float nx, float ny, float nz,
+                              float r, float g, float b) {
+        out[o++] = p[i * 2];
+        out[o++] = y;
+        out[o++] = p[i * 2 + 1];
+        out[o++] = nx;
+        out[o++] = ny;
+        out[o++] = nz;
+        out[o++] = r;
+        out[o++] = g;
+        out[o++] = b;
+        return o;
+    }
+
+    /**
+     * Colisão da laje poligonal: faixas horizontais de 0,5 m
+     * rasterizadas dentro do contorno (andável; borda diagonal fica
+     * serrilhada só na física, invisível).
+     */
+    static void polyColliders(StructureObject s, List<float[]> solids) {
+        float[] p = s.polygon;
+        int n = p.length / 2;
+        float minZ = Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+        for (int i = 0; i < n; i++) {
+            minZ = Math.min(minZ, p[i * 2 + 1]);
+            maxZ = Math.max(maxZ, p[i * 2 + 1]);
+        }
+        float y0 = s.transform.y - s.half[1];
+        float y1 = s.transform.y + s.half[1];
+        float step = 0.5f;
+        List<Float> hits = new ArrayList<>();
+        for (float z = minZ; z < maxZ; z += step) {
+            float zHi = Math.min(z + step, maxZ);
+            float mid = (z + zHi) / 2f;
+            hits.clear();
+            for (int i = 0; i < n; i++) {
+                int j = (i + 1) % n;
+                float z1 = p[i * 2 + 1];
+                float z2 = p[j * 2 + 1];
+                if ((z1 <= mid) == (z2 <= mid)) {
+                    continue;
+                }
+                hits.add(p[i * 2] + (mid - z1)
+                        * (p[j * 2] - p[i * 2]) / (z2 - z1));
+            }
+            hits.sort(Float::compare);
+            for (int i = 0; i + 1 < hits.size(); i += 2) {
+                float xa = hits.get(i);
+                float xb = hits.get(i + 1);
+                if (xb - xa > 0.05f) {
+                    solids.add(new float[]{xa, y0, z, xb, y1, zHi});
+                }
+            }
+        }
     }
 
     /** Yaw arredondado para múltiplos de 90° (AABBs só giram assim). */

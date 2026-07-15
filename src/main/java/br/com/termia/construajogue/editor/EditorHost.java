@@ -150,6 +150,10 @@ public final class EditorHost extends FrameLayout
         addPanelTool(panel, "Parede", PlanEditorView.TOOL_WALL);
         addPanelTool(panel, "Teto", PlanEditorView.TOOL_CEILING);
         addPanelTool(panel, "Bloco", PlanEditorView.TOOL_BLOCK);
+        panel.addView(panelItem("Desenho por pontos…", () -> {
+            hidePanel();
+            chooseContour();
+        }, PlanEditorView.TOOL_POINTS));
         panel.addView(panelItem("Vão…", () -> {
             hidePanel();
             chooseOpening();
@@ -265,6 +269,9 @@ public final class EditorHost extends FrameLayout
             status.setText("toque para pintar; na parede pinta o LADO "
                     + "tocado (o meio pinta os dois); balde pinta as "
                     + "paredes ligadas");
+        } else if (tool == PlanEditorView.TOOL_POINTS) {
+            status.setText("toque ponto a ponto; toque no PRIMEIRO "
+                    + "ponto (verde) para fechar; ↶ remove o último");
         } else {
             status.setText("arraste com um dedo; dois dedos movem a vista");
         }
@@ -297,8 +304,11 @@ public final class EditorHost extends FrameLayout
         if (undoButton == null || deleteButton == null) {
             return; // setDocument dispara isto antes das barras existirem
         }
-        undoButton.setEnabled(history.canUndo());
-        undoButton.setAlpha(history.canUndo() ? 1f : 0.4f);
+        boolean canUndo = history.canUndo()
+                || (plan.tool() == PlanEditorView.TOOL_POINTS
+                && plan.contourPoints() > 0);
+        undoButton.setEnabled(canUndo);
+        undoButton.setAlpha(canUndo ? 1f : 0.4f);
         redoButton.setEnabled(history.canRedo());
         redoButton.setAlpha(history.canRedo() ? 1f : 0.4f);
         deleteButton.setEnabled(plan.hasSelection());
@@ -416,6 +426,40 @@ public final class EditorHost extends FrameLayout
         box.addView(grid);
         box.addView(bucket);
         dialog.show();
+    }
+
+    /** Contorno livre: escolhe o papel e arma a ferramenta de pontos. */
+    private void chooseContour() {
+        new AlertDialog.Builder(activity)
+                .setTitle("Desenho por pontos")
+                .setItems(new String[]{"Piso (contorno livre)",
+                        "Teto (contorno livre)"}, (dialog, which) -> {
+                    plan.startContour(which == 0
+                            ? StructureObject.ROLE_FLOOR
+                            : StructureObject.ROLE_CEILING);
+                    selectTool(PlanEditorView.TOOL_POINTS);
+                })
+                .show();
+    }
+
+    // ---- PlanEditorView.Host: contorno fechado ----
+
+    @Override
+    public void polygonClosed(boolean floorRole) {
+        if (!floorRole) {
+            plan.finishContour(false);
+            return;
+        }
+        new AlertDialog.Builder(activity)
+                .setTitle("Fechar contorno")
+                .setMessage("Criar paredes nos trechos retos do "
+                        + "contorno? (diagonais ficam sem parede "
+                        + "por enquanto)")
+                .setPositiveButton("Piso + paredes",
+                        (dialog, which) -> plan.finishContour(true))
+                .setNegativeButton("Só o piso",
+                        (dialog, which) -> plan.finishContour(false))
+                .show();
     }
 
     /** Tipo de vão para recortar na parede tocada. */
@@ -568,6 +612,12 @@ public final class EditorHost extends FrameLayout
     }
 
     private void undo() {
+        // desenhando contorno, ↶ remove o último ponto marcado
+        if (plan.tool() == PlanEditorView.TOOL_POINTS
+                && plan.contourPoints() > 0) {
+            plan.removeLastContourPoint();
+            return;
+        }
         restore(history.undo(MapJson.write(doc)));
     }
 

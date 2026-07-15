@@ -1,6 +1,7 @@
 package br.com.termia.construajogue.compiler;
 
 import br.com.termia.construajogue.engine.Collision;
+import br.com.termia.construajogue.geometry.Triangulator;
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
@@ -51,6 +52,29 @@ public final class MapValidator {
         for (StructureObject s : doc.structures) {
             String label = "estrutura " + shortId(s.id);
             checkId(issues, ids, s.id, label);
+            if (StructureObject.KIND_POLY.equals(s.kind)) {
+                if (s.polygon == null || s.polygon.length < 6) {
+                    error(issues, "contorno.pontos",
+                            label + ": contorno precisa de 3+ pontos");
+                    continue;
+                }
+                checkFloats(issues, label + " (contorno)", s.polygon,
+                        s.polygon.length);
+                if (Triangulator.selfIntersects(s.polygon)) {
+                    error(issues, "contorno.cruzado",
+                            label + ": o contorno cruza a si mesmo");
+                }
+                if (Math.abs(Triangulator.area2(s.polygon)) < 0.2f) {
+                    error(issues, "contorno.area",
+                            label + ": contorno sem área");
+                }
+                if (s.half == null || s.half[1] <= 0f) {
+                    error(issues, "estrutura.dimensao",
+                            label + ": espessura deve ser positiva");
+                }
+                checkFloats(issues, label + " (cor)", s.color, 3);
+                continue;
+            }
             if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
                 error(issues, "estrutura.tipo",
                         label + ": tipo '" + s.kind

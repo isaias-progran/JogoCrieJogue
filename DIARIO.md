@@ -8,6 +8,26 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.11.0 (versionCode 22) — DESENHO POR PONTOS (contorno livre).**
+  - Painel ☰ → "Desenho por pontos…" (Piso ou Teto): toque marca
+    pontos (cota do trecho ao vivo; ↶ remove o último; trocar de
+    ferramenta cancela); tocar no PRIMEIRO ponto (verde) fecha. Piso
+    pergunta "Piso + paredes / Só o piso" — paredes automáticas nos
+    trechos RETOS; diagonais ficam sem parede (aviso conta quantos).
+  - Novo `kind: poly`: `polygon` (pares x,z ABSOLUTOS) + envolvente
+    sincronizado em transform/half (`syncPolyBounds`) p/ seleção/chip/
+    miniatura funcionarem sem mudança. Persistido/validado (3+ pontos,
+    sem auto-cruzamento — `Triangulator.selfIntersects`, área mínima).
+  - `geometry/Triangulator`: ear clipping puro-Java (CCW normalizado).
+    `LevelCompiler.polyTriangles`: tampo+fundo triangulados + lados
+    verticais (winding CCW visto de fora, culling ok);
+    `polyColliders`: faixas de 0,5m rasterizadas (borda diagonal
+    serrilhada SÓ na física, invisível).
+  - SELECIONAR em laje poly: alças NOS VÉRTICES (puxar remodela, com
+    grude em face/grade), arrastar pelo meio move o contorno inteiro,
+    GIRAR rotaciona 90° em torno do centro.
+  - `PolygonTest` (13 verificações; pegadinha: pontos de sondagem não
+    podem cair na fronteira exata das faixas de 0,5m).
 - **v0.10.0 (versionCode 21) — UI reorganizada + retrato no editor.**
   - Orientação POR MODO: biblioteca e Construir em RETRATO
     (setRequestedOrientation; manifest sem orientação fixa, e

@@ -16,6 +16,7 @@ javac -d "$OUT" -encoding UTF-8 \
     "$SRC"/engine/Boxes.java \
     "$SRC"/engine/Collision.java \
     "$SRC"/util/*.java \
+    "$SRC"/geometry/Triangulator.java \
     "$SRC"/map/*.java \
     "$SRC"/persistence/MapJson.java \
     "$SRC"/prefab/*.java \
@@ -37,7 +38,7 @@ if ! diff -q src/main/assets/maps/arena.json build/arena-gerada.json \
 fi
 
 for TESTE in JsonTest MapJsonTest PrefabCatalogTest MapValidatorTest \
-        LevelCompilerTest WallOpeningTest StairsTest; do
+        LevelCompilerTest WallOpeningTest StairsTest PolygonTest; do
     java -cp "$OUT" "br.com.termia.construajogue.$TESTE"
 done
 echo "testes do núcleo OK"

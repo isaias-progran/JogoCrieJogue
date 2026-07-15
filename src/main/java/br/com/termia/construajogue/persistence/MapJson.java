@@ -56,6 +56,9 @@ public final class MapJson {
             if (s.color3 != null) {
                 item.put("color3", floats(s.color3));
             }
+            if (s.polygon != null) {
+                item.put("polygon", floats(s.polygon));
+            }
             if (!s.openings.isEmpty()) {
                 List<Object> openings = new ArrayList<>();
                 for (WallOpening o : s.openings) {
@@ -168,6 +171,16 @@ public final class MapJson {
             structure.color = floatsOf(s.get("color"), 3);
             structure.color2 = floatsOf(s.get("color2"), 3);
             structure.color3 = floatsOf(s.get("color3"), 3);
+            Object polygon = s.get("polygon");
+            if (polygon instanceof List) {
+                List<?> list = (List<?>) polygon;
+                structure.polygon = new float[list.size()];
+                for (int i = 0; i < list.size(); i++) {
+                    structure.polygon[i] =
+                            ((Json.Num) list.get(i)).floatValue();
+                }
+                structure.syncPolyBounds();
+            }
             for (Object cut : listOf(s.get("openings"))) {
                 Map<?, ?> c = asMap(cut, "opening");
                 WallOpening opening = new WallOpening(

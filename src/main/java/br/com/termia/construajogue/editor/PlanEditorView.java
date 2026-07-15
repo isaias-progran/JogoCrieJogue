@@ -36,6 +36,7 @@ public final class PlanEditorView extends View {
     public static final int TOOL_PREFAB = 7;
     public static final int TOOL_OPENING = 8;
     public static final int TOOL_PAINT = 9;
+    public static final int TOOL_POINTS = 10;
 
     /** O host guarda snapshots p/ undo e reage a mudanças/seleção. */
     public interface Host {
@@ -44,6 +45,9 @@ public final class PlanEditorView extends View {
         void afterChange();
 
         void selectionChanged(String description);
+
+        /** Contorno fechado; o host decide (piso só / piso+paredes). */
+        void polygonClosed(boolean floorRole);
     }
 
     private static final float SNAP = 0.25f;
@@ -98,6 +102,10 @@ public final class PlanEditorView extends View {
     // aresta da estrutura selecionada sendo puxada (-1 nenhuma;
     // 0=minX, 1=maxX, 2=minZ, 3=maxZ)
     private int dragEdge = -1;
+    // contorno por pontos (ferramenta DESENHO) e vértice arrastado
+    private final List<float[]> contour = new java.util.ArrayList<>();
+    private String contourRole;
+    private int dragPoint = -1;
     // último toque SEM snap (pintura decide o lado pela posição exata)
     private float rawX;
     private float rawZ;
@@ -130,10 +138,109 @@ public final class PlanEditorView extends View {
         this.tool = tool;
         dragging = false;
         routeMode = false;
+        if (tool != TOOL_POINTS) {
+            contour.clear();
+        }
         if (tool != TOOL_SELECT) {
             clearSelection();
         }
         invalidate();
+    }
+
+    /** Arma o desenho por pontos (contorno livre de piso/teto). */
+    public void startContour(String role) {
+        contourRole = role;
+        contour.clear();
+        setTool(TOOL_POINTS);
+    }
+
+    public int contourPoints() {
+        return contour.size();
+    }
+
+    /** Remove o último ponto do contorno em andamento. */
+    public void removeLastContourPoint() {
+        if (!contour.isEmpty()) {
+            contour.remove(contour.size() - 1);
+            invalidate();
+        }
+    }
+
+    public void cancelContour() {
+        contour.clear();
+        invalidate();
+    }
+
+    /**
+     * Fecha o contorno: cria a laje poligonal e, se pedido, paredes
+     * nos trechos retos alinhados aos eixos (diagonais ainda não têm
+     * collider de parede — ficam sem).
+     */
+    public void finishContour(boolean withWalls) {
+        if (contour.size() < 3) {
+            cancelContour();
+            return;
+        }
+        host.beforeChange();
+        float[] polygon = new float[contour.size() * 2];
+        for (int i = 0; i < contour.size(); i++) {
+            polygon[i * 2] = contour.get(i)[0];
+            polygon[i * 2 + 1] = contour.get(i)[1];
+        }
+        boolean ceiling = StructureObject.ROLE_CEILING.equals(contourRole);
+        StructureObject s = new StructureObject(Ids.create(),
+                StructureObject.KIND_POLY);
+        s.role = contourRole;
+        s.polygon = polygon;
+        s.half = new float[]{0f, 0.15f, 0f};
+        s.transform.y = ceiling ? WALL_HEIGHT + 0.15f : -0.15f;
+        s.color = ceiling ? new float[]{0.38f, 0.41f, 0.48f}
+                : new float[]{0.30f, 0.33f, 0.38f};
+        s.syncPolyBounds();
+        doc.structures.add(s);
+        int skipped = 0;
+        if (withWalls) {
+            for (int i = 0; i < contour.size(); i++) {
+                float[] a = contour.get(i);
+                float[] b = contour.get((i + 1) % contour.size());
+                if (!addContourWall(a[0], a[1], b[0], b[1])) {
+                    skipped++;
+                }
+            }
+        }
+        contour.clear();
+        host.afterChange();
+        host.selectionChanged(skipped > 0
+                ? skipped + " trecho(s) diagonais ficaram sem parede"
+                : (ceiling ? "teto" : "piso") + " de contorno criado");
+        invalidate();
+    }
+
+    /** Parede reta entre dois pontos; false se o trecho for diagonal. */
+    private boolean addContourWall(float ax, float az,
+                                   float bx, float bz) {
+        float dx = Math.abs(bx - ax);
+        float dz = Math.abs(bz - az);
+        if (Math.max(dx, dz) < 0.4f) {
+            return true; // curto demais: ignora em silêncio
+        }
+        if (Math.min(dx, dz) > 0.01f) {
+            return false; // diagonal: sem collider de parede ainda
+        }
+        boolean horizontal = dx >= dz;
+        StructureObject s = new StructureObject(Ids.create(),
+                StructureObject.KIND_BLOCK);
+        s.role = StructureObject.ROLE_WALL;
+        float half = (horizontal ? dx : dz) / 2f + WALL_HALF_T;
+        s.transform.x = (ax + bx) / 2f;
+        s.transform.y = WALL_HEIGHT / 2f;
+        s.transform.z = (az + bz) / 2f;
+        s.half = horizontal
+                ? new float[]{half, WALL_HEIGHT / 2f, WALL_HALF_T}
+                : new float[]{WALL_HALF_T, WALL_HEIGHT / 2f, half};
+        s.color = new float[]{0.46f, 0.48f, 0.55f};
+        doc.structures.add(s);
+        return true;
     }
 
     /** Inimigo selecionado? Então o próximo toque marca a patrulha. */
@@ -224,6 +331,20 @@ public final class PlanEditorView extends View {
         }
         mutateSelected(() -> {
             if (selectedStructure != null) {
+                if (selectedStructure.polygon != null) {
+                    // gira o contorno 90° em torno do centro
+                    float cx = selectedStructure.transform.x;
+                    float cz = selectedStructure.transform.z;
+                    float[] p = selectedStructure.polygon;
+                    for (int i = 0; i < p.length / 2; i++) {
+                        float dx = p[i * 2] - cx;
+                        float dz = p[i * 2 + 1] - cz;
+                        p[i * 2] = cx - dz;
+                        p[i * 2 + 1] = cz + dx;
+                    }
+                    selectedStructure.syncPolyBounds();
+                    return;
+                }
                 float tmp = selectedStructure.half[0];
                 selectedStructure.half[0] = selectedStructure.half[2];
                 selectedStructure.half[2] = tmp;
@@ -401,6 +522,22 @@ public final class PlanEditorView extends View {
         }
     }
 
+    /** Vértice do contorno selecionado perto do toque, ou -1. */
+    private int polyPointAt(float wx, float wz) {
+        float[] p = selectedStructure.polygon;
+        float best = Math.max(0.3f, 26f / scale);
+        int hit = -1;
+        for (int i = 0; i < p.length / 2; i++) {
+            float d = (float) Math.hypot(wx - p[i * 2],
+                    wz - p[i * 2 + 1]);
+            if (d < best) {
+                best = d;
+                hit = i;
+            }
+        }
+        return hit;
+    }
+
     /** Aresta da estrutura selecionada perto do toque, ou -1. */
     private int edgeAt(float wx, float wz) {
         StructureObject s = selectedStructure;
@@ -535,9 +672,15 @@ public final class PlanEditorView extends View {
                 startZ = curZ = snapPoint(toWorldX(e.getX()),
                         toWorldZ(e.getY()), false);
                 if (tool == TOOL_SELECT) {
-                    dragEdge = selectedStructure == null ? -1
-                            : edgeAt(rawX, rawZ);
-                    if (dragEdge < 0) {
+                    dragEdge = -1;
+                    dragPoint = -1;
+                    if (selectedStructure != null
+                            && selectedStructure.polygon != null) {
+                        dragPoint = polyPointAt(rawX, rawZ);
+                    } else if (selectedStructure != null) {
+                        dragEdge = edgeAt(rawX, rawZ);
+                    }
+                    if (dragEdge < 0 && dragPoint < 0) {
                         pick(toWorldX(e.getX()), toWorldZ(e.getY()));
                     }
                 }
@@ -591,6 +734,7 @@ public final class PlanEditorView extends View {
                 }
                 panning = false;
                 dragEdge = -1;
+                dragPoint = -1;
                 return true;
             case MotionEvent.ACTION_CANCEL:
                 dragging = false;
@@ -650,6 +794,22 @@ public final class PlanEditorView extends View {
             case TOOL_PAINT:
                 paintAt(rawX, rawZ);
                 break;
+            case TOOL_POINTS: {
+                // tocar no primeiro ponto fecha o contorno
+                if (contour.size() >= 3) {
+                    float[] first = contour.get(0);
+                    if (Math.hypot(curX - first[0], curZ - first[1])
+                            < Math.max(0.4f, 26f / scale)) {
+                        host.polygonClosed(!StructureObject.ROLE_CEILING
+                                .equals(contourRole));
+                        break;
+                    }
+                }
+                contour.add(new float[]{curX, curZ});
+                host.selectionChanged(contour.size()
+                        + " ponto(s) — toque no primeiro para fechar");
+                break;
+            }
             case TOOL_SELECT:
                 if (movedSelection) {
                     host.afterChange();
@@ -1074,6 +1234,16 @@ public final class PlanEditorView extends View {
                     StructureRoles.describe(selectedStructure));
             return;
         }
+        if (dragPoint >= 0 && selectedStructure != null
+                && selectedStructure.polygon != null) {
+            // puxar vértice do contorno
+            selectedStructure.polygon[dragPoint * 2] =
+                    faceOrGrid(rawX, true, selectedStructure);
+            selectedStructure.polygon[dragPoint * 2 + 1] =
+                    faceOrGrid(rawZ, false, selectedStructure);
+            selectedStructure.syncPolyBounds();
+            return;
+        }
         if (selectedOpening != null) {
             // vão desliza pela própria parede
             StructureObject wall = selectedOpeningWall;
@@ -1090,6 +1260,16 @@ public final class PlanEditorView extends View {
         float nx = snap(curX + grabDx);
         float nz = snap(curZ + grabDz);
         if (selectedStructure != null) {
+            if (selectedStructure.polygon != null) {
+                // contorno viaja junto com o centro
+                float ddx = nx - selectedStructure.transform.x;
+                float ddz = nz - selectedStructure.transform.z;
+                float[] p = selectedStructure.polygon;
+                for (int i = 0; i < p.length / 2; i++) {
+                    p[i * 2] += ddx;
+                    p[i * 2 + 1] += ddz;
+                }
+            }
             selectedStructure.transform.x = nx;
             selectedStructure.transform.z = nz;
         } else if (selectedPrefab != null) {
@@ -1130,9 +1310,11 @@ public final class PlanEditorView extends View {
         if (dragging && tool != TOOL_SELECT) {
             drawPreview(canvas);
         }
-        if (tool == TOOL_SELECT && selectedStructure != null) {
+        if (tool == TOOL_SELECT && selectedStructure != null
+                && selectedStructure.polygon == null) {
             drawEdgeHandles(canvas, selectedStructure);
         }
+        drawContour(canvas);
         for (PrefabInstance p : doc.prefabs) {
             drawRoute(canvas, p, p == selectedPrefab);
         }
@@ -1143,6 +1325,35 @@ public final class PlanEditorView extends View {
             drawMarker(canvas, m, m == selectedMarker);
         }
         drawMeasureLabels(canvas);
+    }
+
+    /** Contorno em andamento: linhas, pontos e o primeiro em destaque. */
+    private void drawContour(Canvas canvas) {
+        if (tool != TOOL_POINTS || contour.isEmpty()) {
+            return;
+        }
+        stroke.setColor(0xFFE0C060);
+        stroke.setStrokeWidth(3f);
+        for (int i = 0; i + 1 < contour.size(); i++) {
+            float[] a = contour.get(i);
+            float[] b = contour.get(i + 1);
+            canvas.drawLine(toPxX(a[0]), toPxY(a[1]),
+                    toPxX(b[0]), toPxY(b[1]), stroke);
+        }
+        for (int i = 0; i < contour.size(); i++) {
+            float[] p = contour.get(i);
+            fill.setColor(i == 0 ? 0xFF39B54A : 0xFFE0C060);
+            canvas.drawCircle(toPxX(p[0]), toPxY(p[1]),
+                    i == 0 ? 13f : 9f, fill);
+        }
+        // cota do próximo trecho
+        if (!contour.isEmpty()) {
+            float[] last = contour.get(contour.size() - 1);
+            canvas.drawText(meters((float) Math.hypot(curX - last[0],
+                            curZ - last[1])),
+                    toPxX((last[0] + curX) / 2f) + 10f,
+                    toPxY((last[1] + curZ) / 2f) - 10f, measurePaint);
+        }
     }
 
     /** Alças no meio das arestas: puxe para esticar até alinhar. */
@@ -1367,6 +1578,32 @@ public final class PlanEditorView extends View {
 
     private void drawStructure(Canvas canvas, StructureObject s,
                                boolean selected, boolean translucent) {
+        if (s.polygon != null) {
+            android.graphics.Path path = new android.graphics.Path();
+            float[] p = s.polygon;
+            path.moveTo(toPxX(p[0]), toPxY(p[1]));
+            for (int i = 1; i < p.length / 2; i++) {
+                path.lineTo(toPxX(p[i * 2]), toPxY(p[i * 2 + 1]));
+            }
+            path.close();
+            fill.setColor(Color.argb(translucent ? 70 : 255,
+                    (int) (s.color[0] * 255f), (int) (s.color[1] * 255f),
+                    (int) (s.color[2] * 255f)));
+            canvas.drawPath(path, fill);
+            stroke.setColor(selected ? 0xFFFFFFFF
+                    : translucent ? 0x998FA9C9 : 0x66000000);
+            stroke.setStrokeWidth(selected ? 4f : 1.5f);
+            canvas.drawPath(path, stroke);
+            if (selected && tool == TOOL_SELECT) {
+                // alças nos vértices: puxe para remodelar
+                for (int i = 0; i < p.length / 2; i++) {
+                    fill.setColor(0xFFFFFFFF);
+                    canvas.drawCircle(toPxX(p[i * 2]),
+                            toPxY(p[i * 2 + 1]), 9f, fill);
+                }
+            }
+            return;
+        }
         float l = toPxX(s.transform.x - s.half[0]);
         float t = toPxY(s.transform.z - s.half[2]);
         float r = toPxX(s.transform.x + s.half[0]);
@@ -1431,7 +1668,8 @@ public final class PlanEditorView extends View {
         stroke.setColor(0xFFE0C060);
         stroke.setStrokeWidth(3f);
         if (tool == TOOL_SPAWN || tool == TOOL_EXIT
-                || tool == TOOL_PREFAB || tool == TOOL_OPENING) {
+                || tool == TOOL_PREFAB || tool == TOOL_OPENING
+                || tool == TOOL_POINTS) {
             canvas.drawCircle(toPxX(curX), toPxY(curZ), 14f, stroke);
             return;
         }
