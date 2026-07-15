@@ -168,6 +168,34 @@
       "category": "objetos",
       "behavior": "static",
       "properties": []
+    },
+    {
+      "id": "stairs.small",
+      "name": "Escada pequena (sobe 1 m)",
+      "category": "circulação",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "stairs.floor",
+      "name": "Escada de andar (sobe 3 m)",
+      "category": "circulação",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "ramp.short",
+      "name": "Rampa curta (sobe 1 m)",
+      "category": "circulação",
+      "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "ramp.floor",
+      "name": "Rampa de andar (sobe 3 m)",
+      "category": "circulação",
+      "behavior": "static",
+      "properties": []
     }
   ]
 }

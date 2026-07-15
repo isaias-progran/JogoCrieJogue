@@ -18,6 +18,7 @@ public final class PrefabMeshFactory {
     private static final float[] CLOTH = {0.85f, 0.85f, 0.88f};
     private static final float[] GLOW = {1.9f, 1.75f, 1.25f};
     private static final float[] CERAMIC = {0.90f, 0.92f, 0.95f};
+    private static final float[] CONCRETE = {0.52f, 0.53f, 0.56f};
     private static final float[] TERRACOTA = {0.65f, 0.35f, 0.22f};
     private static final float[] LEAF = {0.25f, 0.50f, 0.28f};
     private static final float[] LEAF_LIGHT = {0.35f, 0.62f, 0.33f};
@@ -147,9 +148,36 @@ public final class PrefabMeshFactory {
                         box(0, 0.52f, 0, 0.03f, 0.24f, 0.03f, WOOD_DARK),
                         box(0, 1.02f, 0, 0.22f, 0.30f, 0.22f, LEAF),
                         box(0, 1.40f, 0, 0.14f, 0.13f, 0.14f, LEAF_LIGHT)};
+            case "stairs.small":
+                return stairs(4, 0.25f, 0.30f, 0.60f, CONCRETE);
+            case "stairs.floor":
+                return stairs(12, 0.25f, 0.30f, 0.60f, CONCRETE);
+            case "ramp.short":
+                return stairs(10, 0.10f, 0.24f, 0.60f, METAL);
+            case "ramp.floor":
+                return stairs(30, 0.10f, 0.20f, 0.60f, METAL);
             default:
                 return null;
         }
+    }
+
+    /**
+     * Escada/rampa: degraus em colunas cheias, subindo da FRENTE (-Z,
+     * onde a seta da planta aponta) para trás. O jogador sobe andando:
+     * cada espelho fica abaixo do STEP de 0,35 m do Player. A rampa é
+     * uma escada de espelhos baixos (colisão é só AABB).
+     */
+    private static float[][] stairs(int steps, float riser, float tread,
+                                    float halfWidth, float[] color) {
+        float[][] parts = new float[steps][];
+        float halfLen = steps * tread / 2f;
+        for (int i = 0; i < steps; i++) {
+            float height = (i + 1) * riser;
+            parts[i] = box(0, height / 2f,
+                    -halfLen + tread * (i + 0.5f),
+                    halfWidth, height / 2f, tread / 2f, color);
+        }
+        return parts;
     }
 
     /** Caixas de colisão; vazio = atravessável (lâmpada de teto). */
@@ -189,9 +217,23 @@ public final class PrefabMeshFactory {
                 return new float[][]{{0, 0.25f, 0, 0.12f, 0.25f, 0.12f}};
             case "prop.plant.tall":
                 return new float[][]{{0, 0.50f, 0, 0.15f, 0.50f, 0.15f}};
+            case "stairs.small":
+            case "stairs.floor":
+            case "ramp.short":
+            case "ramp.floor":
+                // cada degrau colide: é isso que permite subir andando
+                return withoutColors(parts(id));
             default:
                 return null;
         }
+    }
+
+    private static float[][] withoutColors(float[][] parts) {
+        float[][] out = new float[parts.length][6];
+        for (int i = 0; i < parts.length; i++) {
+            System.arraycopy(parts[i], 0, out[i], 0, 6);
+        }
+        return out;
     }
 
     /** Meia-pegada {hx, hz} no plano (ícone da planta). */

@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.9.1 (versionCode 15) — ESCADAS E RAMPAS (subir andares).**
+  - 4 peças de circulação geradas por código (`PrefabMeshFactory.stairs`):
+    escada pequena 1m (4 degraus de 0,25), escada de andar 3m (12
+    degraus), rampa curta 1m e rampa de andar 3m (espelhos de 0,10).
+    Sobem da FRENTE (-Z, seta da planta) para trás; degraus em colunas
+    cheias; CADA degrau é um collider — subir = andar (STEP do Player
+    é 0,35). Rampa é escada de espelho baixo (colisão só tem AABB).
+  - `StairsTest`: caminha com a colisão REAL (moveHorizontal/moveVertical,
+    raio 0,35/altura 1,75) e confere que chega a 1m/3m nas 4 peças.
+  - ANDAR DE CIMA: usar TETO (block; é pisável) ou BLOCO alto como laje
+    e encostar a escada de andar; GIRAR aponta a subida.
 - **v0.9.0 (versionCode 14) — SKYBOX com sol, lua e estrelas.**
   - `engine/Sky`: cubo desenhado por dentro, shader próprio — gradiente
     horizonte→zênite (horizonte = cor da neblina do mapa, transição
