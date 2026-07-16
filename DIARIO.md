@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.4 (versionCode 49) — AiGeometry: tijolos separados das receitas.**
+  - Primeiro passo da modularização do AiScenarioBuilder (1607→1439
+    linhas): os 16 utilitários de estrutura/vão/peça/material/cor
+    (block, wall, opening, windowOpening, diagonalWall, prefab, hazard,
+    rowPosition, isUnderground e as paletas ground/wall/building) e as
+    constantes CONCRETE/DARK/LIGHT viraram `ai/AiGeometry` (202 linhas,
+    sem decisão de planta). Movimentação mecânica com chamadas
+    qualificadas; `test-core.sh` ganhou o arquivo novo na lista.
+  - Refactor puro: suíte idêntica com 607 verificações. Iteração 4 do
+    loop noturno; próximas: extrair receitas de cidade/temas e depois as
+    de praça/pátio/campus para arquivos próprios.
 - **v0.22.3 (versionCode 48) — mobília pela finalidade da zone.**
   - `furnishStory` diferencia mais kinds: loja (estantes, balcão e
     armário), parque/praça/pátio (plantas e cadeiras), apartamento/torre

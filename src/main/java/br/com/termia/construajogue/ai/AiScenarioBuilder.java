@@ -15,9 +15,6 @@ import java.util.Random;
 /** Converte o plano seguro da IA em operações normais do editor. */
 public final class AiScenarioBuilder {
 
-    private static final float[] CONCRETE = {0.46f, 0.49f, 0.54f};
-    private static final float[] DARK = {0.23f, 0.26f, 0.31f};
-    private static final float[] LIGHT = {0.68f, 0.70f, 0.73f};
 
     private AiScenarioBuilder() {
     }
@@ -57,9 +54,9 @@ public final class AiScenarioBuilder {
         configureEnvironment(doc, plan, profile);
 
         float half = profile.halfSize();
-        block(doc, StructureObject.ROLE_FLOOR, groundMaterial(plan),
-                0f, -0.15f, 0f, half, 0.15f, half, groundColor(plan));
-        perimeter(doc, half, wallMaterial(plan), wallColor(plan));
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, AiGeometry.groundMaterial(plan),
+                0f, -0.15f, 0f, half, 0.15f, half, AiGeometry.groundColor(plan));
+        perimeter(doc, half, AiGeometry.wallMaterial(plan), AiGeometry.wallColor(plan));
 
         buildTopology(doc, plan, profile, random, sector);
 
@@ -69,22 +66,22 @@ public final class AiScenarioBuilder {
                     : half);
         }
         if (plan.hasFeature("streetlights")
-                && !isUnderground(plan)) {
+                && !AiGeometry.isUnderground(plan)) {
             streetLights(doc, half, profile.rows() * 2);
         }
         // Em campanha os perigos alternam entre setores em vez de clonar.
         if (plan.hasFeature("water")
                 && (totalSectors == 1 || sector % 2 == 0)) {
-            hazard(doc, "water", isUnderground(plan)
+            AiGeometry.hazard(doc, "water", AiGeometry.isUnderground(plan)
                     ? -2.25f : -half + 3.2f, -half * 0.25f);
         }
         if (plan.hasFeature("lava")
                 && (totalSectors == 1 || sector % 2 == 1)) {
-            hazard(doc, "lava", isUnderground(plan)
+            AiGeometry.hazard(doc, "lava", AiGeometry.isUnderground(plan)
                     ? 2.25f : half - 3.2f, -half * 0.35f);
         }
         if (plan.hasFeature("second_floor")
-                && !isUnderground(plan) && !isFocalLayout(plan)) {
+                && !AiGeometry.isUnderground(plan) && !isFocalLayout(plan)) {
             observationDeck(doc, half, plan);
         }
 
@@ -106,7 +103,7 @@ public final class AiScenarioBuilder {
     private static void configureEnvironment(MapDocument doc,
                                              AiScenarioPlan plan,
                                              AiScenarioProfile profile) {
-        if (isUnderground(plan)) {
+        if (AiGeometry.isUnderground(plan)) {
             doc.sky = "none";
             doc.soundscape = "tunnel";
             doc.ambient = 0.13f;
@@ -133,64 +130,16 @@ public final class AiScenarioBuilder {
                 : "medium".equals(profile.sectorSize()) ? 56f : 42f;
     }
 
-    private static String groundMaterial(AiScenarioPlan plan) {
-        if (isUnderground(plan)) return "metal";
-        if ("city".equals(plan.setting)) return "asphalt";
-        if ("laboratory".equals(plan.setting)) return "checker";
-        if ("industrial".equals(plan.setting)
-                || "tunnel".equals(plan.setting)) return "metal";
-        return "plain";
-    }
 
-    private static float[] groundColor(AiScenarioPlan plan) {
-        if (isUnderground(plan)) {
-            return new float[]{0.20f, 0.23f, 0.25f};
-        }
-        if ("city".equals(plan.setting)) {
-            return new float[]{0.20f, 0.22f, 0.25f};
-        }
-        if ("laboratory".equals(plan.setting)) {
-            return new float[]{0.42f, 0.46f, 0.52f};
-        }
-        if ("tunnel".equals(plan.setting)) {
-            return new float[]{0.20f, 0.23f, 0.25f};
-        }
-        return new float[]{0.31f, 0.34f, 0.38f};
-    }
 
-    private static String wallMaterial(AiScenarioPlan plan) {
-        if (isUnderground(plan)) return "metal";
-        if ("industrial".equals(plan.setting)
-                || "laboratory".equals(plan.setting)
-                || "tunnel".equals(plan.setting)) return "metal";
-        if ("city".equals(plan.setting)
-                || "ruins".equals(plan.setting)) return "brick";
-        return "plain";
-    }
 
-    private static float[] wallColor(AiScenarioPlan plan) {
-        if (isUnderground(plan)) {
-            return new float[]{0.32f, 0.35f, 0.38f};
-        }
-        if ("laboratory".equals(plan.setting)) return LIGHT;
-        if ("fortress".equals(plan.setting)) {
-            return new float[]{0.36f, 0.38f, 0.42f};
-        }
-        if ("ruins".equals(plan.setting)) {
-            return new float[]{0.45f, 0.38f, 0.31f};
-        }
-        if ("tunnel".equals(plan.setting)) {
-            return new float[]{0.32f, 0.35f, 0.38f};
-        }
-        return CONCRETE;
-    }
 
     private static void perimeter(MapDocument doc, float half,
                                   String material, float[] color) {
-        wall(doc, 0f, 1.5f, -half, half, 0.15f, material, color, false);
-        wall(doc, 0f, 1.5f, half, half, 0.15f, material, color, false);
-        wall(doc, -half, 1.5f, 0f, 0.15f, half, material, color, false);
-        wall(doc, half, 1.5f, 0f, 0.15f, half, material, color, false);
+        AiGeometry.wall(doc, 0f, 1.5f, -half, half, 0.15f, material, color, false);
+        AiGeometry.wall(doc, 0f, 1.5f, half, half, 0.15f, material, color, false);
+        AiGeometry.wall(doc, -half, 1.5f, 0f, 0.15f, half, material, color, false);
+        AiGeometry.wall(doc, half, 1.5f, 0f, 0.15f, half, material, color, false);
     }
 
     /** A implantação vem do plano; o tema passa a definir só acabamento. */
@@ -198,7 +147,7 @@ public final class AiScenarioBuilder {
                                       AiScenarioProfile profile,
                                       Random random, int sector) {
         AiScenarioPlan.Zone zone = plan.zoneAt(sector);
-        if (isUnderground(plan) || "tunnel".equals(zone.kind)) {
+        if (AiGeometry.isUnderground(plan) || "tunnel".equals(zone.kind)) {
             buildTunnel(doc, plan, profile, random);
             return;
         }
@@ -281,9 +230,9 @@ public final class AiScenarioBuilder {
         float hx = houseHalfX(plan, profile);
         float hz = houseHalfZ(plan, profile);
         int floors = effectiveFloors(plan);
-        String material = buildingMaterial(plan, zone);
-        float[] color = buildingColor(plan, zone);
-        String floorMaterial = buildingFloorMaterial(zone);
+        String material = AiGeometry.buildingMaterial(plan, zone);
+        float[] color = AiGeometry.buildingColor(plan, zone);
+        String floorMaterial = AiGeometry.buildingFloorMaterial(zone);
         float[] floorColor = "wood".equals(floorMaterial)
                 ? new float[]{0.48f, 0.35f, 0.24f}
                 : "checker".equals(floorMaterial)
@@ -293,7 +242,7 @@ public final class AiScenarioBuilder {
                 && !plan.hasFeature("stairs") ? "ramp.floor" : "stairs.floor";
         float accessLength = "ramp.floor".equals(accessId) ? 6f : 3.6f;
 
-        block(doc, StructureObject.ROLE_FLOOR, floorMaterial,
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, floorMaterial,
                 0f, 0.025f, 0f, hx - 0.18f, 0.025f, hz - 0.18f,
                 floorColor);
         for (int level = 0; level < floors; level++) {
@@ -307,7 +256,7 @@ public final class AiScenarioBuilder {
             addStoryPartitions(doc, plan, material, color, baseY, hx, hz,
                     level);
             if (level + 1 < floors) {
-                PrefabInstance access = prefab(doc, accessId,
+                PrefabInstance access = AiGeometry.prefab(doc, accessId,
                         0f, baseY, 1f);
                 access.transform.yaw = 180f;
             }
@@ -327,18 +276,18 @@ public final class AiScenarioBuilder {
                                       float baseY, float hx, float hz,
                                       int level) {
         float y = baseY + 1.5f;
-        StructureObject front = wall(doc, 0f, y, hz, hx, 0.15f,
+        StructureObject front = AiGeometry.wall(doc, 0f, y, hz, hx, 0.15f,
                 material, color, false);
-        StructureObject back = wall(doc, 0f, y, -hz, hx, 0.15f,
+        StructureObject back = AiGeometry.wall(doc, 0f, y, -hz, hx, 0.15f,
                 material, color, false);
-        StructureObject left = wall(doc, -hx, y, 0f, 0.15f, hz,
+        StructureObject left = AiGeometry.wall(doc, -hx, y, 0f, 0.15f, hz,
                 material, color, false);
-        StructureObject right = wall(doc, hx, y, 0f, 0.15f, hz,
+        StructureObject right = AiGeometry.wall(doc, hx, y, 0f, 0.15f, hz,
                 material, color, false);
         if (level == 0) {
-            front.openings.add(opening(0f, 1.5f, 2.2f));
+            front.openings.add(AiGeometry.opening(0f, 1.5f, 2.2f));
             if (plan.hasFeature("automatic_doors")) {
-                PrefabInstance door = prefab(doc, "door.auto",
+                PrefabInstance door = AiGeometry.prefab(doc, "door.auto",
                         0f, baseY + 1.05f, hz);
                 door.properties.put("halfX", 0.72f);
                 door.properties.put("halfY", 1.05f);
@@ -347,16 +296,16 @@ public final class AiScenarioBuilder {
         }
         if (plan.hasFeature("windows")) {
             float frontOffset = hx * 0.56f;
-            front.openings.add(windowOpening(-frontOffset, 1.2f));
-            front.openings.add(windowOpening(frontOffset, 1.2f));
+            front.openings.add(AiGeometry.windowOpening(-frontOffset, 1.2f));
+            front.openings.add(AiGeometry.windowOpening(frontOffset, 1.2f));
             float backOffset = hx * 0.43f;
-            back.openings.add(windowOpening(-backOffset, 1.35f));
-            back.openings.add(windowOpening(backOffset, 1.35f));
+            back.openings.add(AiGeometry.windowOpening(-backOffset, 1.35f));
+            back.openings.add(AiGeometry.windowOpening(backOffset, 1.35f));
             float sideOffset = hz * 0.42f;
-            left.openings.add(windowOpening(-sideOffset, 1.25f));
-            left.openings.add(windowOpening(sideOffset, 1.25f));
-            right.openings.add(windowOpening(-sideOffset, 1.25f));
-            right.openings.add(windowOpening(sideOffset, 1.25f));
+            left.openings.add(AiGeometry.windowOpening(-sideOffset, 1.25f));
+            left.openings.add(AiGeometry.windowOpening(sideOffset, 1.25f));
+            right.openings.add(AiGeometry.windowOpening(-sideOffset, 1.25f));
+            right.openings.add(AiGeometry.windowOpening(sideOffset, 1.25f));
         }
     }
 
@@ -372,27 +321,27 @@ public final class AiScenarioBuilder {
         float y = baseY + 1.5f;
         if ("corridor_rooms".equals(pattern)) {
             for (int side = -1; side <= 1; side += 2) {
-                StructureObject partition = wall(doc, side * 1.6f, y, 0f,
+                StructureObject partition = AiGeometry.wall(doc, side * 1.6f, y, 0f,
                         0.12f, hz - 0.32f, material, color, false);
                 float offset = hz * 0.38f;
-                partition.openings.add(opening(-offset, 1.15f, 2.15f));
-                partition.openings.add(opening(offset, 1.15f, 2.15f));
+                partition.openings.add(AiGeometry.opening(-offset, 1.15f, 2.15f));
+                partition.openings.add(AiGeometry.opening(offset, 1.15f, 2.15f));
             }
         } else if ("central_hall".equals(pattern)) {
             float offset = Math.min(hz * 0.34f, 3f);
             for (int side = -1; side <= 1; side += 2) {
-                StructureObject partition = wall(doc, 0f, y, side * offset,
+                StructureObject partition = AiGeometry.wall(doc, 0f, y, side * offset,
                         hx - 0.32f, 0.12f, material, color, true);
-                partition.openings.add(opening(0f, 1.55f, 2.15f));
+                partition.openings.add(AiGeometry.opening(0f, 1.55f, 2.15f));
             }
         } else if ("split_rooms".equals(pattern)) {
-            StructureObject partition = wall(doc, 0f, y, -hz * 0.28f,
+            StructureObject partition = AiGeometry.wall(doc, 0f, y, -hz * 0.28f,
                     hx - 0.32f, 0.12f, material, color, true);
-            partition.openings.add(opening(hx * 0.34f, 1.35f, 2.15f));
+            partition.openings.add(AiGeometry.opening(hx * 0.34f, 1.35f, 2.15f));
         } else if (!"open_plan".equals(pattern)) {
-            StructureObject partition = wall(doc, -2f, y, 0f,
+            StructureObject partition = AiGeometry.wall(doc, -2f, y, 0f,
                     0.12f, hz - 0.32f, material, color, false);
-            partition.openings.add(opening(0f, 1.3f, 2.15f));
+            partition.openings.add(AiGeometry.opening(0f, 1.3f, 2.15f));
         }
     }
 
@@ -403,14 +352,14 @@ public final class AiScenarioBuilder {
         float sideHalfX = (hx - openingHalfX) * 0.5f;
         float sideX = (hx + openingHalfX) * 0.5f;
         float slabY = baseY - 0.15f;
-        block(doc, StructureObject.ROLE_FLOOR, material,
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, material,
                 -sideX, slabY, 0f, sideHalfX, 0.15f, hz - 0.18f, color);
-        block(doc, StructureObject.ROLE_FLOOR, material,
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, material,
                 sideX, slabY, 0f, sideHalfX, 0.15f, hz - 0.18f, color);
         float highEdge = 1f - accessLength * 0.5f;
         float rearHalfZ = (highEdge + hz - 0.18f) * 0.5f;
         float rearZ = -hz + 0.18f + rearHalfZ;
-        block(doc, StructureObject.ROLE_FLOOR, material,
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, material,
                 0f, slabY, rearZ, openingHalfX, 0.15f, rearHalfZ, color);
     }
 
@@ -426,29 +375,29 @@ public final class AiScenarioBuilder {
         if (plan.hasFeature("rooftop")) {
             upperFloor(doc, floorMaterial, floorColor, floors * 3.3f,
                     hx, hz, accessLength);
-            PrefabInstance access = prefab(doc, accessId,
+            PrefabInstance access = AiGeometry.prefab(doc, accessId,
                     0f, topBase, 1f);
             access.transform.yaw = 180f;
             float parapetY = floors * 3.3f + 0.38f;
-            block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
+            AiGeometry.block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
                     0f, parapetY, hz, hx, 0.38f, 0.12f, wallColor);
-            block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
+            AiGeometry.block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
                     0f, parapetY, -hz, hx, 0.38f, 0.12f, wallColor);
-            block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
+            AiGeometry.block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
                     -hx, parapetY, 0f, 0.12f, 0.38f, hz, wallColor);
-            block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
+            AiGeometry.block(doc, StructureObject.ROLE_BLOCK, wallMaterial,
                     hx, parapetY, 0f, 0.12f, 0.38f, hz, wallColor);
-            prefab(doc, "pickup.special", hx * 0.45f,
+            AiGeometry.prefab(doc, "pickup.special", hx * 0.45f,
                     floors * 3.3f + 0.5f, -hz * 0.45f);
         } else if ("partial".equals(plan.roofStyle)) {
-            block(doc, StructureObject.ROLE_CEILING, wallMaterial,
+            AiGeometry.block(doc, StructureObject.ROLE_CEILING, wallMaterial,
                     -hx * 0.55f, roofY, 0f, hx * 0.45f, 0.15f, hz,
                     wallColor);
-            block(doc, StructureObject.ROLE_CEILING, wallMaterial,
+            AiGeometry.block(doc, StructureObject.ROLE_CEILING, wallMaterial,
                     hx * 0.55f, roofY, 0f, hx * 0.45f, 0.15f, hz,
                     wallColor);
         } else if (!"open".equals(plan.roofStyle)) {
-            block(doc, StructureObject.ROLE_CEILING, wallMaterial,
+            AiGeometry.block(doc, StructureObject.ROLE_CEILING, wallMaterial,
                     0f, roofY, 0f, hx, 0.15f, hz, wallColor);
         }
     }
@@ -460,52 +409,52 @@ public final class AiScenarioBuilder {
         float z = Math.min(3.2f, hz * 0.48f);
         if ("laboratory".equals(kind) || "warehouse".equals(kind)
                 || "station".equals(kind)) {
-            prefab(doc, "furniture.workbench", -x, baseY, -z);
-            prefab(doc, "furniture.shelf", x, baseY, -z);
-            prefab(doc, level == 0 ? "obstacle.barrel"
+            AiGeometry.prefab(doc, "furniture.workbench", -x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.shelf", x, baseY, -z);
+            AiGeometry.prefab(doc, level == 0 ? "obstacle.barrel"
                     : "furniture.cabinet", x, baseY, z);
         } else if ("shop".equals(kind)) {
-            prefab(doc, "furniture.shelf", -x, baseY, -z);
-            prefab(doc, "furniture.shelf", x, baseY, -z);
-            prefab(doc, "furniture.table", 0f, baseY, z * 0.5f);
-            prefab(doc, "furniture.cabinet", -x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.shelf", -x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.shelf", x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.table", 0f, baseY, z * 0.5f);
+            AiGeometry.prefab(doc, "furniture.cabinet", -x, baseY, z);
         } else if ("park".equals(kind) || "plaza".equals(kind)
                 || "courtyard".equals(kind)) {
-            prefab(doc, "prop.plant.tall", -x, baseY, -z);
-            prefab(doc, "prop.plant.tall", x, baseY, z);
-            prefab(doc, "furniture.chair", -x * 0.5f, baseY, z);
-            prefab(doc, "furniture.chair", x * 0.5f, baseY, -z);
+            AiGeometry.prefab(doc, "prop.plant.tall", -x, baseY, -z);
+            AiGeometry.prefab(doc, "prop.plant.tall", x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.chair", -x * 0.5f, baseY, z);
+            AiGeometry.prefab(doc, "furniture.chair", x * 0.5f, baseY, -z);
         } else if (("apartment".equals(kind) || "tower".equals(kind))
                 && level == 0) {
-            PrefabInstance sofa = prefab(doc, "furniture.sofa",
+            PrefabInstance sofa = AiGeometry.prefab(doc, "furniture.sofa",
                     -x, baseY, -z);
             sofa.transform.yaw = 90f;
-            prefab(doc, "prop.tv", -x, baseY, z);
-            prefab(doc, "furniture.table", x, baseY, -z);
-            prefab(doc, "prop.plant.small", x, baseY, z);
+            AiGeometry.prefab(doc, "prop.tv", -x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.table", x, baseY, -z);
+            AiGeometry.prefab(doc, "prop.plant.small", x, baseY, z);
         } else if (("apartment".equals(kind) || "tower".equals(kind))
                 && level == 1) {
-            prefab(doc, "furniture.bed", -x, baseY, -z);
-            prefab(doc, "furniture.wardrobe", x, baseY, -z);
-            prefab(doc, "prop.mirror.round", x, baseY, z);
-            prefab(doc, "furniture.sink.bath", -x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.bed", -x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.wardrobe", x, baseY, -z);
+            AiGeometry.prefab(doc, "prop.mirror.round", x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.sink.bath", -x, baseY, z);
         } else if (level == 0) {
-            PrefabInstance sofa = prefab(doc, "furniture.sofa",
+            PrefabInstance sofa = AiGeometry.prefab(doc, "furniture.sofa",
                     -x, baseY, -z);
             sofa.transform.yaw = 90f;
-            prefab(doc, "furniture.table", x, baseY, -z);
-            prefab(doc, "furniture.sink.kitchen", -x, baseY, z);
-            prefab(doc, "prop.plant.tall", x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.table", x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.sink.kitchen", -x, baseY, z);
+            AiGeometry.prefab(doc, "prop.plant.tall", x, baseY, z);
         } else if (level == 1) {
-            prefab(doc, "furniture.bed", -x, baseY, -z);
-            prefab(doc, "furniture.wardrobe", x, baseY, -z);
-            prefab(doc, "furniture.toilet", x, baseY, z);
-            prefab(doc, "furniture.sink.bath", -x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.bed", -x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.wardrobe", x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.toilet", x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.sink.bath", -x, baseY, z);
         } else {
-            prefab(doc, "furniture.workbench", -x, baseY, -z);
-            prefab(doc, "furniture.shelf", x, baseY, -z);
-            prefab(doc, "furniture.chair", -x, baseY, z);
-            prefab(doc, "prop.plant.small", x, baseY, z);
+            AiGeometry.prefab(doc, "furniture.workbench", -x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.shelf", x, baseY, -z);
+            AiGeometry.prefab(doc, "furniture.chair", -x, baseY, z);
+            AiGeometry.prefab(doc, "prop.plant.small", x, baseY, z);
         }
     }
 
@@ -513,7 +462,7 @@ public final class AiScenarioBuilder {
                                      float baseY, float hx, float hz) {
         float x = Math.min(2.6f, hx * 0.42f);
         for (int side = -1; side <= 1; side += 2) {
-            PrefabInstance lamp = prefab(doc, "prop.lamp.ceiling",
+            PrefabInstance lamp = AiGeometry.prefab(doc, "prop.lamp.ceiling",
                     side * x, baseY + 3f, -hz * 0.12f);
             lamp.properties.put("lightR", level == 0 ? 1f : 0.78f);
             lamp.properties.put("lightG", level == 0 ? 0.78f : 0.86f);
@@ -528,7 +477,7 @@ public final class AiScenarioBuilder {
         float half = profile.halfSize();
         float span = Math.min(half * 0.46f, half - 5.2f);
         float room = Math.min(4.1f, half * 0.24f);
-        block(doc, StructureObject.ROLE_FLOOR, "checker",
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                 0f, 0.025f, 0f, Math.min(5f, half * 0.3f), 0.025f,
                 Math.min(5f, half * 0.3f),
                 new float[]{0.48f, 0.46f, 0.42f});
@@ -545,8 +494,8 @@ public final class AiScenarioBuilder {
         if ("loop".equals(plan.route)) {
             plazaChamfers(doc, plan, Math.min(4.6f, half * 0.28f));
         }
-        prefab(doc, "prop.plant.tall", -1.8f, 0f, 0f);
-        prefab(doc, "prop.plant.tall", 1.8f, 0f, 0f);
+        AiGeometry.prefab(doc, "prop.plant.tall", -1.8f, 0f, 0f);
+        AiGeometry.prefab(doc, "prop.plant.tall", 1.8f, 0f, 0f);
     }
 
     private static void buildCampus(MapDocument doc, AiScenarioPlan plan,
@@ -562,7 +511,7 @@ public final class AiScenarioBuilder {
             int row = i / 2;
             float x = side * half * (scattered
                     ? 0.34f + random.nextFloat() * 0.20f : 0.46f);
-            float z = rowPosition(row, rows, half, 5.2f, 7.5f);
+            float z = AiGeometry.rowPosition(row, rows, half, 5.2f, 7.5f);
             if (scattered) z += (random.nextFloat() - 0.5f) * 4f;
             addDetachedBuilding(doc, plan, plan.zoneAt(i), x, z,
                     hx * (0.82f + random.nextFloat() * 0.18f),
@@ -575,11 +524,11 @@ public final class AiScenarioBuilder {
                                  AiScenarioProfile profile, Random random) {
         float half = profile.halfSize();
         float span = Math.min(half - 5.5f, half * 0.56f);
-        block(doc, StructureObject.ROLE_FLOOR, "checker",
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                 0f, 0.025f, 0f, 5.2f, 0.025f, 5.2f,
                 new float[]{0.40f, 0.43f, 0.48f});
-        block(doc, StructureObject.ROLE_BLOCK, "metal",
-                0f, 0.65f, 0f, 0.8f, 0.65f, 0.8f, DARK);
+        AiGeometry.block(doc, StructureObject.ROLE_BLOCK, "metal",
+                0f, 0.65f, 0f, 0.8f, 0.65f, 0.8f, AiGeometry.DARK);
         boolean diagonalWings = "loop".equals(plan.route);
         int wings = "branching".equals(plan.route) ? 6 : 4;
         if (!diagonalWings) {
@@ -594,20 +543,20 @@ public final class AiScenarioBuilder {
                     i % 2 == 0 ? 3.4f : 4.4f,
                     i % 2 == 0 ? 4.4f : 3.4f, i);
         }
-        prefab(doc, "pickup.special", 0f, 1.8f, 0f);
+        AiGeometry.prefab(doc, "pickup.special", 0f, 1.8f, 0f);
     }
 
     /** Cantos chanfrados da praça em paredes diagonais (KIND_POLY). */
     private static void plazaChamfers(MapDocument doc, AiScenarioPlan plan,
                                       float radius) {
         if (radius < 2.4f) return;
-        String material = wallMaterial(plan);
-        float[] color = wallColor(plan);
+        String material = AiGeometry.wallMaterial(plan);
+        float[] color = AiGeometry.wallColor(plan);
         float near = radius * 0.42f;
-        diagonalWall(doc, near, radius, radius, near, material, color);
-        diagonalWall(doc, -near, radius, -radius, near, material, color);
-        diagonalWall(doc, near, -radius, radius, -near, material, color);
-        diagonalWall(doc, -near, -radius, -radius, -near, material, color);
+        AiGeometry.diagonalWall(doc, near, radius, radius, near, material, color);
+        AiGeometry.diagonalWall(doc, -near, radius, -radius, near, material, color);
+        AiGeometry.diagonalWall(doc, near, -radius, radius, -near, material, color);
+        AiGeometry.diagonalWall(doc, -near, -radius, -radius, -near, material, color);
     }
 
     private static void buildMaze(MapDocument doc, AiScenarioPlan plan,
@@ -616,18 +565,18 @@ public final class AiScenarioBuilder {
         int rows = Math.min(7, Math.max(4, plan.roomCount / 2 + 2));
         float length = half - 2.2f;
         for (int i = 0; i < rows; i++) {
-            float z = rowPosition(i, rows, half, 4.5f, 6.8f);
-            StructureObject cross = wall(doc, 0f, 1.5f, z,
-                    length, 0.13f, wallMaterial(plan), wallColor(plan), true);
+            float z = AiGeometry.rowPosition(i, rows, half, 4.5f, 6.8f);
+            StructureObject cross = AiGeometry.wall(doc, 0f, 1.5f, z,
+                    length, 0.13f, AiGeometry.wallMaterial(plan), AiGeometry.wallColor(plan), true);
             float offset = (i & 1) == 0 ? -length * 0.62f
                     : length * 0.62f;
-            cross.openings.add(opening(offset, 3f, 2.35f));
+            cross.openings.add(AiGeometry.opening(offset, 3f, 2.35f));
             if (i + 1 < rows && i % 2 == 0) {
                 float branchX = (i % 4 == 0 ? -1f : 1f) * half * 0.28f;
-                wall(doc, branchX, 1.5f,
+                AiGeometry.wall(doc, branchX, 1.5f,
                         z + (half * 1.4f / rows),
-                        0.13f, half * 0.18f, wallMaterial(plan),
-                        wallColor(plan), false);
+                        0.13f, half * 0.18f, AiGeometry.wallMaterial(plan),
+                        AiGeometry.wallColor(plan), false);
             }
         }
     }
@@ -639,19 +588,19 @@ public final class AiScenarioBuilder {
         int chambers = Math.min(6, Math.max(3, plan.roomCount / 2));
         float length = half - 2.3f;
         for (int i = 0; i < chambers; i++) {
-            float z = rowPosition(i, chambers, half, 5.4f, 7.4f);
-            StructureObject cross = wall(doc, 0f, 1.5f, z,
-                    length, 0.15f, wallMaterial(plan), wallColor(plan), true);
+            float z = AiGeometry.rowPosition(i, chambers, half, 5.4f, 7.4f);
+            StructureObject cross = AiGeometry.wall(doc, 0f, 1.5f, z,
+                    length, 0.15f, AiGeometry.wallMaterial(plan), AiGeometry.wallColor(plan), true);
             float doorX = (i % 3 - 1) * Math.min(3.2f, half * 0.18f);
-            cross.openings.add(opening(doorX, 2.4f, 2.3f));
-            prefab(doc, (i & 1) == 0 ? "obstacle.crate.small"
+            cross.openings.add(AiGeometry.opening(doorX, 2.4f, 2.3f));
+            AiGeometry.prefab(doc, (i & 1) == 0 ? "obstacle.crate.small"
                     : "obstacle.barrel", -doorX, 0f,
                     z + Math.min(3.3f, half * 0.15f));
         }
         if ("laboratory".equals(plan.setting)
                 || "industrial".equals(plan.setting)) {
-            block(doc, StructureObject.ROLE_CEILING, "metal",
-                    0f, 3.15f, 0f, half - 0.4f, 0.15f, half - 0.4f, DARK);
+            AiGeometry.block(doc, StructureObject.ROLE_CEILING, "metal",
+                    0f, 3.15f, 0f, half - 0.4f, 0.15f, half - 0.4f, AiGeometry.DARK);
         }
     }
 
@@ -660,40 +609,40 @@ public final class AiScenarioBuilder {
                                             AiScenarioPlan.Zone zone,
                                             float cx, float cz,
                                             float hx, float hz, int index) {
-        String material = buildingMaterial(plan, zone);
-        float[] color = buildingColor(plan, zone);
-        String floorMaterial = buildingFloorMaterial(zone);
+        String material = AiGeometry.buildingMaterial(plan, zone);
+        float[] color = AiGeometry.buildingColor(plan, zone);
+        String floorMaterial = AiGeometry.buildingFloorMaterial(zone);
         float frontZ = cz >= 0f ? cz - hz : cz + hz;
         float backZ = cz >= 0f ? cz + hz : cz - hz;
-        StructureObject front = wall(doc, cx, 1.5f, frontZ,
+        StructureObject front = AiGeometry.wall(doc, cx, 1.5f, frontZ,
                 hx, 0.14f, material, color, true);
-        front.openings.add(opening(0f, 1.35f, 2.2f));
-        wall(doc, cx, 1.5f, backZ, hx, 0.14f,
+        front.openings.add(AiGeometry.opening(0f, 1.35f, 2.2f));
+        AiGeometry.wall(doc, cx, 1.5f, backZ, hx, 0.14f,
                 material, color, false);
-        wall(doc, cx - hx, 1.5f, cz, 0.14f, hz,
+        AiGeometry.wall(doc, cx - hx, 1.5f, cz, 0.14f, hz,
                 material, color, false);
-        wall(doc, cx + hx, 1.5f, cz, 0.14f, hz,
+        AiGeometry.wall(doc, cx + hx, 1.5f, cz, 0.14f, hz,
                 material, color, false);
-        block(doc, StructureObject.ROLE_FLOOR, floorMaterial,
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, floorMaterial,
                 cx, 0.025f, cz, hx - 0.14f, 0.025f, hz - 0.14f,
                 new float[]{0.43f, 0.39f, 0.34f});
         if (!"open".equals(plan.roofStyle)) {
-            block(doc, StructureObject.ROLE_CEILING, material,
-                    cx, 3.15f, cz, hx, 0.15f, hz, DARK);
+            AiGeometry.block(doc, StructureObject.ROLE_CEILING, material,
+                    cx, 3.15f, cz, hx, 0.15f, hz, AiGeometry.DARK);
         }
         if (plan.hasFeature("automatic_doors") && (index & 1) == 0) {
-            PrefabInstance door = prefab(doc, "door.auto",
+            PrefabInstance door = AiGeometry.prefab(doc, "door.auto",
                     cx, 1.05f, frontZ);
             door.properties.put("halfX", 0.64f);
             door.properties.put("halfY", 1.05f);
             door.properties.put("halfZ", 0.08f);
         }
         if (plan.hasFeature("furniture")) {
-            prefab(doc, "house".equals(zone.kind) ? "furniture.table"
+            AiGeometry.prefab(doc, "house".equals(zone.kind) ? "furniture.table"
                     : "furniture.workbench", cx, 0f, cz);
         }
         if (plan.hasFeature("indoor_lights")) {
-            PrefabInstance lamp = prefab(doc, "prop.lamp.ceiling",
+            PrefabInstance lamp = AiGeometry.prefab(doc, "prop.lamp.ceiling",
                     cx, 3f, cz);
             lamp.properties.put("lightR", 0.90f);
             lamp.properties.put("lightG", 0.78f);
@@ -709,27 +658,27 @@ public final class AiScenarioBuilder {
         float[] color = new float[]{0.28f, 0.31f, 0.36f};
         if ("loop".equals(plan.route)) {
             float span = Math.min(half * 0.38f, 9f);
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     -span, 0.015f, 0f, 0.75f, 0.015f, span, color);
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     span, 0.015f, 0f, 0.75f, 0.015f, span, color);
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     0f, 0.015f, -span, span, 0.015f, 0.75f, color);
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     0f, 0.015f, span, span, 0.015f, 0.75f, color);
         } else if ("branching".equals(plan.route)) {
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     0f, 0.015f, 0f, 0.85f, 0.015f, reach, color);
             float z = -Math.min(half * 0.26f, 7f);
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     0f, 0.015f, z, Math.min(half * 0.48f, 11f),
                     0.015f, 0.72f, color);
             z = Math.min(half * 0.20f, 5f);
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     0f, 0.015f, z, Math.min(half * 0.36f, 8f),
                     0.015f, 0.72f, color);
         } else if ("direct".equals(plan.route)) {
-            block(doc, StructureObject.ROLE_FLOOR, "checker",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
                     0f, 0.015f, 0f, 0.9f, 0.015f, reach, color);
         }
     }
@@ -737,26 +686,21 @@ public final class AiScenarioBuilder {
     private static void diagonalLandmarks(MapDocument doc,
                                           AiScenarioPlan plan, float half) {
         float reach = Math.min(half * 0.38f, 9f);
-        diagonalWall(doc, -reach, -reach * 0.55f,
-                -reach * 0.28f, -reach, wallMaterial(plan), wallColor(plan));
-        diagonalWall(doc, reach, reach * 0.55f,
-                reach * 0.28f, reach, wallMaterial(plan), wallColor(plan));
+        AiGeometry.diagonalWall(doc, -reach, -reach * 0.55f,
+                -reach * 0.28f, -reach, AiGeometry.wallMaterial(plan), AiGeometry.wallColor(plan));
+        AiGeometry.diagonalWall(doc, reach, reach * 0.55f,
+                reach * 0.28f, reach, AiGeometry.wallMaterial(plan), AiGeometry.wallColor(plan));
     }
 
     private static void bridge(MapDocument doc, AiScenarioPlan plan,
                                float half) {
         float z = -Math.min(half * 0.24f, 7f);
-        block(doc, StructureObject.ROLE_FLOOR, "metal",
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "metal",
                 0f, 0.85f, z, 2.1f, 0.15f, 3.2f,
                 new float[]{0.36f, 0.40f, 0.46f});
-        PrefabInstance front = prefab(doc, "ramp.short", 0f, 0f, z + 4.3f);
+        PrefabInstance front = AiGeometry.prefab(doc, "ramp.short", 0f, 0f, z + 4.3f);
         front.transform.yaw = 180f;
-        prefab(doc, "ramp.short", 0f, 0f, z - 4.3f);
-    }
-
-    private static boolean isUnderground(AiScenarioPlan plan) {
-        return "tunnel".equals(plan.setting)
-                || "underground".equals(plan.layout);
+        AiGeometry.prefab(doc, "ramp.short", 0f, 0f, z - 4.3f);
     }
 
     private static boolean isFocalLayout(AiScenarioPlan plan) {
@@ -794,35 +738,8 @@ public final class AiScenarioBuilder {
         return Math.min(profile.halfSize() - 3.5f, base);
     }
 
-    private static String buildingMaterial(AiScenarioPlan plan,
-                                           AiScenarioPlan.Zone zone) {
-        if ("laboratory".equals(zone.kind) || "warehouse".equals(zone.kind)
-                || "station".equals(zone.kind)) return "metal";
-        if ("house".equals(zone.kind) || "apartment".equals(zone.kind)
-                || "shop".equals(zone.kind) || "ruins".equals(zone.kind)) {
-            return "brick";
-        }
-        return wallMaterial(plan);
-    }
 
-    private static float[] buildingColor(AiScenarioPlan plan,
-                                         AiScenarioPlan.Zone zone) {
-        if ("house".equals(zone.kind) || "shop".equals(zone.kind)) {
-            return new float[]{0.64f, 0.52f, 0.40f};
-        }
-        if ("laboratory".equals(zone.kind)) return LIGHT;
-        if ("warehouse".equals(zone.kind) || "station".equals(zone.kind)) {
-            return new float[]{0.39f, 0.43f, 0.48f};
-        }
-        return wallColor(plan);
-    }
 
-    private static String buildingFloorMaterial(AiScenarioPlan.Zone zone) {
-        if ("house".equals(zone.kind) || "apartment".equals(zone.kind)
-                || "shop".equals(zone.kind)) return "wood";
-        if ("laboratory".equals(zone.kind)) return "checker";
-        return "metal";
-    }
 
     /** A rota escolhe a malha viária: reta, avenidas gêmeas ou cruzamentos. */
     private static void buildCity(MapDocument doc, AiScenarioPlan plan,
@@ -887,7 +804,7 @@ public final class AiScenarioBuilder {
         for (int approach = 0; approach < 2; approach++) {
             float z = (approach == 0 ? -1f : 1f) * (roadHalf + 1.2f);
             for (int stripe = -1; stripe <= 1; stripe++) {
-                block(doc, StructureObject.ROLE_FLOOR, "plain",
+                AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
                         stripe * 1.1f, 0.02f, z, 0.38f, 0.02f, 0.55f,
                         white);
             }
@@ -902,7 +819,7 @@ public final class AiScenarioBuilder {
             float sx = corner % 2 == 0 ? -edge : edge;
             float sz = corner < 2 ? -edge : edge;
             float height = 6.5f + random.nextFloat() * 3.5f;
-            block(doc, StructureObject.ROLE_BLOCK, "metal",
+            AiGeometry.block(doc, StructureObject.ROLE_BLOCK, "metal",
                     sx, height / 2f, sz, 2.4f, height / 2f, 2.4f,
                     new float[]{0.16f, 0.19f, 0.24f});
         }
@@ -919,7 +836,7 @@ public final class AiScenarioBuilder {
         float crossA = -Math.min(half * 0.26f, 7f);
         float crossB = Math.min(half * 0.20f, 5f);
         for (int row = 0; row < rows; row++) {
-            float z = rowPosition(row, rows, half, 6.2f, 7.2f);
+            float z = AiGeometry.rowPosition(row, rows, half, 6.2f, 7.2f);
             if (row > 0 && row + 1 < rows) {
                 z += (random.nextFloat() - 0.5f) * 1.4f;
             }
@@ -961,7 +878,7 @@ public final class AiScenarioBuilder {
         float roadHalf = 3.2f;
         float span = Math.min(half * 0.45f, roomX * 2f + roadHalf * 2.4f);
         for (int row = 0; row < rows; row++) {
-            float z = rowPosition(row, rows, half, 6.2f, 7.2f);
+            float z = AiGeometry.rowPosition(row, rows, half, 6.2f, 7.2f);
             if (row > 0 && row + 1 < rows) {
                 z += (random.nextFloat() - 0.5f) * 1.4f;
             }
@@ -989,7 +906,7 @@ public final class AiScenarioBuilder {
         int dashes = Math.max(4, (int) (reach / 4f));
         for (int i = 0; i < dashes; i++) {
             float z = -reach + (2f * reach) * i / (dashes - 1f);
-            block(doc, StructureObject.ROLE_FLOOR, "plain",
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
                     0f, 0.02f, z, 0.12f, 0.02f, 1.1f,
                     new float[]{0.92f, 0.90f, 0.78f});
         }
@@ -1010,7 +927,7 @@ public final class AiScenarioBuilder {
         boolean crossGap = "branching".equals(plan.route);
         float spineHx = Math.min(2.6f, hx * 0.4f);
         for (int i = 0; i < bays; i++) {
-            float z = rowPosition(i, bays, half, 7f, 8f);
+            float z = AiGeometry.rowPosition(i, bays, half, 7f, 8f);
             if (crossGap && Math.abs(z) < hz + 1.6f) {
                 z = z >= 0f ? hz + 1.6f : -(hz + 1.6f);
             }
@@ -1027,8 +944,8 @@ public final class AiScenarioBuilder {
         // (a espinha do loop já ocupa o centro; não empilhar caixote nela).
         int crates = spine ? 0 : profile.rows();
         for (int i = 0; i < crates; i++) {
-            float z = rowPosition(i, crates, half, 5f, 7f);
-            PrefabInstance crate = prefab(doc,
+            float z = AiGeometry.rowPosition(i, crates, half, 5f, 7f);
+            PrefabInstance crate = AiGeometry.prefab(doc,
                     (i & 1) == 0 ? "obstacle.crate.large"
                             : "obstacle.crate.small",
                     (i & 1) == 0 ? -2.35f : 2.35f, 0f, z);
@@ -1043,12 +960,12 @@ public final class AiScenarioBuilder {
         int checkpoints = Math.max(1, profile.rows() - 1);
         float half = profile.halfSize();
         for (int i = 0; i < checkpoints; i++) {
-            float z = rowPosition(i, checkpoints, half, 10f, 11f);
-            StructureObject partition = wall(doc, 0f, 1.5f, z,
-                    3.25f, 0.12f, "metal", LIGHT, true);
-            partition.openings.add(opening(0f, 2.35f, 2.25f));
+            float z = AiGeometry.rowPosition(i, checkpoints, half, 10f, 11f);
+            StructureObject partition = AiGeometry.wall(doc, 0f, 1.5f, z,
+                    3.25f, 0.12f, "metal", AiGeometry.LIGHT, true);
+            partition.openings.add(AiGeometry.opening(0f, 2.35f, 2.25f));
             if (plan.hasFeature("automatic_doors")) {
-                PrefabInstance door = prefab(doc, "door.auto", 0f, 1.05f, z);
+                PrefabInstance door = AiGeometry.prefab(doc, "door.auto", 0f, 1.05f, z);
                 door.properties.put("halfX", 1.10f);
                 door.properties.put("halfY", 1.05f);
                 door.properties.put("halfZ", 0.08f);
@@ -1062,26 +979,26 @@ public final class AiScenarioBuilder {
         float half = profile.halfSize();
         float innerX = Math.min(half - 4.5f, half * 0.46f);
         float length = half - 3.2f;
-        StructureObject left = wall(doc, -innerX, 1.5f, 0f,
-                0.18f, length, "plain", wallColor(plan), false);
-        StructureObject right = wall(doc, innerX, 1.5f, 0f,
-                0.18f, length, "plain", wallColor(plan), false);
+        StructureObject left = AiGeometry.wall(doc, -innerX, 1.5f, 0f,
+                0.18f, length, "plain", AiGeometry.wallColor(plan), false);
+        StructureObject right = AiGeometry.wall(doc, innerX, 1.5f, 0f,
+                0.18f, length, "plain", AiGeometry.wallColor(plan), false);
         int sideDoors = Math.max(2, profile.rows() - 1);
         for (int i = 0; i < sideDoors; i++) {
-            float offset = rowPosition(i, sideDoors, half, 7f, 8f);
-            left.openings.add(opening(offset, 2.1f, 2.25f));
-            right.openings.add(opening(offset, 2.1f, 2.25f));
+            float offset = AiGeometry.rowPosition(i, sideDoors, half, 7f, 8f);
+            left.openings.add(AiGeometry.opening(offset, 2.1f, 2.25f));
+            right.openings.add(AiGeometry.opening(offset, 2.1f, 2.25f));
         }
         for (int side = -1; side <= 1; side += 2) {
             float z = side * half * 0.43f;
-            StructureObject cross = wall(doc, 0f, 1.5f, z,
-                    innerX, 0.18f, "plain", wallColor(plan), true);
+            StructureObject cross = AiGeometry.wall(doc, 0f, 1.5f, z,
+                    innerX, 0.18f, "plain", AiGeometry.wallColor(plan), true);
             if ("loop".equals(plan.route)) {
                 // Duas portas afastadas: dá para rondar a muralha em anel.
-                cross.openings.add(opening(-innerX * 0.55f, 2.2f, 2.3f));
-                cross.openings.add(opening(innerX * 0.55f, 2.2f, 2.3f));
+                cross.openings.add(AiGeometry.opening(-innerX * 0.55f, 2.2f, 2.3f));
+                cross.openings.add(AiGeometry.opening(innerX * 0.55f, 2.2f, 2.3f));
             } else {
-                cross.openings.add(opening(0f, 3f, 2.4f));
+                cross.openings.add(AiGeometry.opening(0f, 3f, 2.4f));
             }
         }
         if ("branching".equals(plan.route)) {
@@ -1090,10 +1007,10 @@ public final class AiScenarioBuilder {
             float bz = half * 0.55f;
             for (int ix = -1; ix <= 1; ix += 2) {
                 for (int iz = -1; iz <= 1; iz += 2) {
-                    diagonalWall(doc, ix * bx, iz * bz,
+                    AiGeometry.diagonalWall(doc, ix * bx, iz * bz,
                             ix * bx * 0.45f, iz * Math.min(half - 1.6f,
                                     bz * 1.28f),
-                            "plain", wallColor(plan));
+                            "plain", AiGeometry.wallColor(plan));
                 }
             }
         }
@@ -1101,11 +1018,11 @@ public final class AiScenarioBuilder {
             for (int iz = -1; iz <= 1; iz += 2) {
                 float x = ix * (innerX - 2.1f);
                 float z = iz * half * 0.62f;
-                block(doc, StructureObject.ROLE_BLOCK, "plain",
+                AiGeometry.block(doc, StructureObject.ROLE_BLOCK, "plain",
                         x, 1.8f, z, 1.8f, 1.8f, 1.8f,
                         new float[]{0.31f, 0.33f, 0.36f});
-                block(doc, StructureObject.ROLE_CEILING, "plain",
-                        x, 3.75f, z, 2.05f, 0.15f, 2.05f, DARK);
+                AiGeometry.block(doc, StructureObject.ROLE_CEILING, "plain",
+                        x, 3.75f, z, 2.05f, 0.15f, 2.05f, AiGeometry.DARK);
             }
         }
     }
@@ -1133,15 +1050,15 @@ public final class AiScenarioBuilder {
                         * Math.max(1f, half * 0.34f));
             }
             if (i % 3 == 0) {
-                wall(doc, x, 1.5f, z, 2.2f, 0.15f,
-                        "brick", wallColor(plan), false);
+                AiGeometry.wall(doc, x, 1.5f, z, 2.2f, 0.15f,
+                        "brick", AiGeometry.wallColor(plan), false);
             } else {
-                wall(doc, x, 1.5f, z, 0.15f, 1.7f,
-                        "brick", wallColor(plan), false);
+                AiGeometry.wall(doc, x, 1.5f, z, 0.15f, 1.7f,
+                        "brick", AiGeometry.wallColor(plan), false);
             }
             if (i % 4 == 1) {
-                block(doc, StructureObject.ROLE_CEILING, "plain",
-                        x, 3.15f, z, 1.4f, 0.15f, 1.2f, DARK);
+                AiGeometry.block(doc, StructureObject.ROLE_CEILING, "plain",
+                        x, 3.15f, z, 1.4f, 0.15f, 1.2f, AiGeometry.DARK);
             }
         }
     }
@@ -1152,34 +1069,34 @@ public final class AiScenarioBuilder {
                                     Random random) {
         float half = profile.halfSize();
         float corridor = Math.min(5.2f, half * 0.42f);
-        block(doc, StructureObject.ROLE_CEILING, "metal",
+        AiGeometry.block(doc, StructureObject.ROLE_CEILING, "metal",
                 0f, 3.15f, 0f, half, 0.15f, half,
                 new float[]{0.25f, 0.28f, 0.30f});
 
-        StructureObject left = wall(doc, -corridor, 1.5f, 0f,
-                0.15f, half - 1f, "metal", wallColor(plan), false);
-        StructureObject right = wall(doc, corridor, 1.5f, 0f,
-                0.15f, half - 1f, "metal", wallColor(plan), false);
+        StructureObject left = AiGeometry.wall(doc, -corridor, 1.5f, 0f,
+                0.15f, half - 1f, "metal", AiGeometry.wallColor(plan), false);
+        StructureObject right = AiGeometry.wall(doc, corridor, 1.5f, 0f,
+                0.15f, half - 1f, "metal", AiGeometry.wallColor(plan), false);
         for (int i = 0; i < profile.rows(); i++) {
-            float offset = rowPosition(i, profile.rows(), half, 5.5f, 6.5f);
+            float offset = AiGeometry.rowPosition(i, profile.rows(), half, 5.5f, 6.5f);
             if ((i & 1) == 0) left.openings.add(
-                    opening(offset, 2.2f, 2.25f));
-            else right.openings.add(opening(offset, 2.2f, 2.25f));
+                    AiGeometry.opening(offset, 2.2f, 2.25f));
+            else right.openings.add(AiGeometry.opening(offset, 2.2f, 2.25f));
         }
 
         int bulkheads = Math.max(1, profile.rows() - 1);
         for (int i = 0; i < bulkheads; i++) {
-            float z = rowPosition(i, bulkheads, half, 9f, 10f);
-            StructureObject rib = wall(doc, 0f, 1.5f, z,
-                    corridor, 0.16f, "metal", DARK, true);
-            rib.openings.add(opening(0f, 3.1f, 2.4f));
+            float z = AiGeometry.rowPosition(i, bulkheads, half, 9f, 10f);
+            StructureObject rib = AiGeometry.wall(doc, 0f, 1.5f, z,
+                    corridor, 0.16f, "metal", AiGeometry.DARK, true);
+            rib.openings.add(AiGeometry.opening(0f, 3.1f, 2.4f));
         }
 
         int lights = profile.rows() * 2 + 2;
         for (int i = 0; i < lights; i++) {
             float z = -half + 3.2f + (half * 2f - 6.4f)
                     * i / Math.max(1f, lights - 1f);
-            PrefabInstance lamp = prefab(doc, "prop.lamp.ceiling",
+            PrefabInstance lamp = AiGeometry.prefab(doc, "prop.lamp.ceiling",
                     (i & 1) == 0 ? -1.65f : 1.65f, 2.92f, z);
             lamp.properties.put("lightR", 0.62f);
             lamp.properties.put("lightG", 0.78f
@@ -1188,8 +1105,8 @@ public final class AiScenarioBuilder {
             lamp.properties.put("lightRadius", 6.4f);
         }
         for (int i = 0; i < profile.rows(); i++) {
-            float z = rowPosition(i, profile.rows(), half, 6f, 7f);
-            prefab(doc, (i & 1) == 0 ? "obstacle.crate.small"
+            float z = AiGeometry.rowPosition(i, profile.rows(), half, 6f, 7f);
+            AiGeometry.prefab(doc, (i & 1) == 0 ? "obstacle.crate.small"
                             : "obstacle.crate.large",
                     (i & 1) == 0 ? -corridor - 2f : corridor + 2f,
                     0f, z);
@@ -1201,35 +1118,35 @@ public final class AiScenarioBuilder {
                                 float hx, float hz, int side,
                                 AiScenarioPlan plan, int index,
                                 Random random) {
-        String material = wallMaterial(plan);
-        float[] color = wallColor(plan);
+        String material = AiGeometry.wallMaterial(plan);
+        float[] color = AiGeometry.wallColor(plan);
         float frontX = cx - side * hx;
         float backX = cx + side * hx;
-        StructureObject front = wall(doc, frontX, 1.5f, cz,
+        StructureObject front = AiGeometry.wall(doc, frontX, 1.5f, cz,
                 0.15f, hz, material, color, true);
-        front.openings.add(opening(0f, 1.25f, 2.15f));
-        wall(doc, backX, 1.5f, cz, 0.15f, hz,
+        front.openings.add(AiGeometry.opening(0f, 1.25f, 2.15f));
+        AiGeometry.wall(doc, backX, 1.5f, cz, 0.15f, hz,
                 material, color, false);
-        wall(doc, cx, 1.5f, cz - hz, hx, 0.15f,
+        AiGeometry.wall(doc, cx, 1.5f, cz - hz, hx, 0.15f,
                 material, color, false);
-        wall(doc, cx, 1.5f, cz + hz, hx, 0.15f,
+        AiGeometry.wall(doc, cx, 1.5f, cz + hz, hx, 0.15f,
                 material, color, false);
-        block(doc, StructureObject.ROLE_FLOOR,
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR,
                 "laboratory".equals(plan.setting) ? "checker" : "wood",
                 cx, 0.025f, cz, hx - 0.15f, 0.025f, hz - 0.15f,
                 new float[]{0.42f, 0.36f, 0.30f});
-        block(doc, StructureObject.ROLE_CEILING, "plain",
-                cx, 3.15f, cz, hx, 0.15f, hz, DARK);
+        AiGeometry.block(doc, StructureObject.ROLE_CEILING, "plain",
+                cx, 3.15f, cz, hx, 0.15f, hz, AiGeometry.DARK);
 
         if (plan.hasFeature("automatic_doors") && (index & 1) == 0) {
-            PrefabInstance door = prefab(doc, "door.auto", frontX,
+            PrefabInstance door = AiGeometry.prefab(doc, "door.auto", frontX,
                     1.05f, cz);
             door.properties.put("halfX", 0.08f);
             door.properties.put("halfY", 1.05f);
             door.properties.put("halfZ", 0.60f);
         }
         if ((index & 1) == 0) {
-            PrefabInstance lamp = prefab(doc, "prop.lamp.ceiling",
+            PrefabInstance lamp = AiGeometry.prefab(doc, "prop.lamp.ceiling",
                     cx, 3f, cz);
             lamp.properties.put("lightR", 0.82f
                     + random.nextFloat() * 0.18f);
@@ -1237,7 +1154,7 @@ public final class AiScenarioBuilder {
             lamp.properties.put("lightB", 0.52f);
             lamp.properties.put("lightRadius", 5.5f);
         } else {
-            prefab(doc, "obstacle.crate.large", cx, 0f, cz);
+            AiGeometry.prefab(doc, "obstacle.crate.large", cx, 0f, cz);
         }
         if (plan.hasFeature("furniture")) {
             roomPurpose(doc, plan.zoneAt(index).kind, cx, cz, hx, hz);
@@ -1251,19 +1168,19 @@ public final class AiScenarioBuilder {
         float ox = Math.min(1.9f, hx * 0.52f);
         float oz = Math.min(1.7f, hz * 0.52f);
         if ("shop".equals(kind)) {
-            prefab(doc, "furniture.shelf", cx - ox, 0f, cz - oz);
-            prefab(doc, "furniture.table", cx + ox, 0f, cz + oz);
+            AiGeometry.prefab(doc, "furniture.shelf", cx - ox, 0f, cz - oz);
+            AiGeometry.prefab(doc, "furniture.table", cx + ox, 0f, cz + oz);
         } else if ("laboratory".equals(kind) || "warehouse".equals(kind)
                 || "station".equals(kind)) {
-            prefab(doc, "furniture.workbench", cx - ox, 0f, cz - oz);
-            prefab(doc, "obstacle.barrel", cx + ox, 0f, cz + oz);
+            AiGeometry.prefab(doc, "furniture.workbench", cx - ox, 0f, cz - oz);
+            AiGeometry.prefab(doc, "obstacle.barrel", cx + ox, 0f, cz + oz);
         } else if ("park".equals(kind) || "plaza".equals(kind)
                 || "courtyard".equals(kind)) {
-            prefab(doc, "prop.plant.tall", cx - ox, 0f, cz - oz);
-            prefab(doc, "prop.plant.small", cx + ox, 0f, cz + oz);
+            AiGeometry.prefab(doc, "prop.plant.tall", cx - ox, 0f, cz - oz);
+            AiGeometry.prefab(doc, "prop.plant.small", cx + ox, 0f, cz + oz);
         } else {
-            prefab(doc, "furniture.table", cx - ox, 0f, cz - oz);
-            prefab(doc, "furniture.chair", cx + ox, 0f, cz + oz);
+            AiGeometry.prefab(doc, "furniture.table", cx - ox, 0f, cz - oz);
+            AiGeometry.prefab(doc, "furniture.chair", cx + ox, 0f, cz + oz);
         }
     }
 
@@ -1271,21 +1188,21 @@ public final class AiScenarioBuilder {
                                          float hx, float hz, int side,
                                          int index, Random random) {
         float backX = cx + side * hx;
-        wall(doc, backX, 1.5f, cz, 0.15f, hz,
-                "metal", CONCRETE, false);
-        wall(doc, cx, 1.5f, cz - hz, hx, 0.15f,
-                "metal", CONCRETE, false);
-        wall(doc, cx, 1.5f, cz + hz, hx, 0.15f,
-                "metal", CONCRETE, false);
-        block(doc, StructureObject.ROLE_FLOOR, "metal",
+        AiGeometry.wall(doc, backX, 1.5f, cz, 0.15f, hz,
+                "metal", AiGeometry.CONCRETE, false);
+        AiGeometry.wall(doc, cx, 1.5f, cz - hz, hx, 0.15f,
+                "metal", AiGeometry.CONCRETE, false);
+        AiGeometry.wall(doc, cx, 1.5f, cz + hz, hx, 0.15f,
+                "metal", AiGeometry.CONCRETE, false);
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "metal",
                 cx, 0.025f, cz, hx, 0.025f, hz,
                 new float[]{0.30f, 0.33f, 0.36f});
-        block(doc, StructureObject.ROLE_CEILING, "metal",
-                cx, 3.15f, cz, hx, 0.15f, hz, DARK);
-        prefab(doc, (index & 1) == 0 ? "obstacle.crate.large"
+        AiGeometry.block(doc, StructureObject.ROLE_CEILING, "metal",
+                cx, 3.15f, cz, hx, 0.15f, hz, AiGeometry.DARK);
+        AiGeometry.prefab(doc, (index & 1) == 0 ? "obstacle.crate.large"
                         : "obstacle.crate.small",
                 cx, 0f, cz + (random.nextFloat() - 0.5f) * hz);
-        PrefabInstance lamp = prefab(doc, "prop.lamp.ceiling",
+        PrefabInstance lamp = AiGeometry.prefab(doc, "prop.lamp.ceiling",
                 cx, 3f, cz);
         lamp.properties.put("lightR", 0.72f);
         lamp.properties.put("lightG", 0.80f);
@@ -1296,14 +1213,14 @@ public final class AiScenarioBuilder {
     private static void terminalGate(MapDocument doc, float half) {
         float gap = 2.1f;
         float segmentHalf = (half - gap) * 0.5f;
-        wall(doc, -(half + gap) * 0.5f, 1.5f, 0f,
-                segmentHalf, 0.18f, "metal", DARK, false);
-        wall(doc, (half + gap) * 0.5f, 1.5f, 0f,
-                segmentHalf, 0.18f, "metal", DARK, false);
-        PrefabInstance terminal = prefab(doc, "terminal.wall",
+        AiGeometry.wall(doc, -(half + gap) * 0.5f, 1.5f, 0f,
+                segmentHalf, 0.18f, "metal", AiGeometry.DARK, false);
+        AiGeometry.wall(doc, (half + gap) * 0.5f, 1.5f, 0f,
+                segmentHalf, 0.18f, "metal", AiGeometry.DARK, false);
+        PrefabInstance terminal = AiGeometry.prefab(doc, "terminal.wall",
                 -2.5f, 1.4f, 3.2f);
         terminal.properties.put("order", 1f);
-        PrefabInstance gate = prefab(doc, "door.gate", 0f, 1.4f, 0f);
+        PrefabInstance gate = AiGeometry.prefab(doc, "door.gate", 0f, 1.4f, 0f);
         gate.properties.put("halfX", 2.0f);
         gate.properties.put("halfY", 1.4f);
         gate.properties.put("halfZ", 0.18f);
@@ -1312,10 +1229,10 @@ public final class AiScenarioBuilder {
 
     private static void sectorPortal(MapDocument doc, float half) {
         float z = -half + 3.8f;
-        StructureObject frame = wall(doc, 0f, 1.5f, z,
-                5.2f, 0.16f, "metal", DARK, true);
-        frame.openings.add(opening(0f, 2.35f, 2.25f));
-        PrefabInstance door = prefab(doc, "door.auto", 0f, 1.05f, z);
+        StructureObject frame = AiGeometry.wall(doc, 0f, 1.5f, z,
+                5.2f, 0.16f, "metal", AiGeometry.DARK, true);
+        frame.openings.add(AiGeometry.opening(0f, 2.35f, 2.25f));
+        PrefabInstance door = AiGeometry.prefab(doc, "door.auto", 0f, 1.05f, z);
         door.properties.put("halfX", 1.10f);
         door.properties.put("halfY", 1.05f);
         door.properties.put("halfZ", 0.08f);
@@ -1326,7 +1243,7 @@ public final class AiScenarioBuilder {
             float z = -half + 4f + (half * 2f - 8f)
                     * i / Math.max(1f, count - 1f);
             float x = (i & 1) == 0 ? -2.45f : 2.45f;
-            PrefabInstance lamp = prefab(doc, "prop.lamp.street", x, 0f, z);
+            PrefabInstance lamp = AiGeometry.prefab(doc, "prop.lamp.street", x, 0f, z);
             lamp.transform.yaw = x < 0f ? 270f : 90f;
             lamp.properties.put("lightR", 1f);
             lamp.properties.put("lightG", 0.72f);
@@ -1336,32 +1253,24 @@ public final class AiScenarioBuilder {
         }
     }
 
-    private static void hazard(MapDocument doc, String material,
-                               float x, float z) {
-        block(doc, StructureObject.ROLE_FLOOR, material,
-                x, -0.08f, z, 2.4f, 0.08f, 2.4f,
-                "lava".equals(material)
-                        ? new float[]{0.72f, 0.18f, 0.04f}
-                        : new float[]{0.10f, 0.38f, 0.66f});
-    }
 
     private static void observationDeck(MapDocument doc, float half,
                                         AiScenarioPlan plan) {
         float x = half - 5f;
         float z = half - 8f;
-        block(doc, StructureObject.ROLE_CEILING, "metal",
+        AiGeometry.block(doc, StructureObject.ROLE_CEILING, "metal",
                 x, 3.15f, z, 3f, 0.15f, 3f,
                 new float[]{0.38f, 0.42f, 0.48f});
         String accessId = plan.hasFeature("ramps")
                 && !plan.hasFeature("stairs") ? "ramp.floor" : "stairs.floor";
-        PrefabInstance stairs = prefab(doc, accessId,
+        PrefabInstance stairs = AiGeometry.prefab(doc, accessId,
                 x, 0f, z - 4.8f);
         stairs.transform.yaw = 0f;
-        prefab(doc, "pickup.special", x, 3.8f, z);
-        block(doc, StructureObject.ROLE_BLOCK, "metal",
-                x + 2.85f, 3.75f, z, 0.12f, 0.45f, 3f, DARK);
-        block(doc, StructureObject.ROLE_BLOCK, "metal",
-                x - 2.85f, 3.75f, z, 0.12f, 0.45f, 3f, DARK);
+        AiGeometry.prefab(doc, "pickup.special", x, 3.8f, z);
+        AiGeometry.block(doc, StructureObject.ROLE_BLOCK, "metal",
+                x + 2.85f, 3.75f, z, 0.12f, 0.45f, 3f, AiGeometry.DARK);
+        AiGeometry.block(doc, StructureObject.ROLE_BLOCK, "metal",
+                x - 2.85f, 3.75f, z, 0.12f, 0.45f, 3f, AiGeometry.DARK);
     }
 
     private static void addSpawnAndObjective(MapDocument doc,
@@ -1421,7 +1330,7 @@ public final class AiScenarioBuilder {
         float z = isFocalLayout(plan)
                 ? Math.min(half - 3.8f, houseHalfZ(plan, profile) + 1.35f)
                 : half - 5.4f;
-        PrefabInstance npc = prefab(doc, "npc.human",
+        PrefabInstance npc = AiGeometry.prefab(doc, "npc.human",
                 1.45f, 0f, z);
         npc.transform.yaw = 180f;
         npc.properties.put("name", plan.npcName);
@@ -1478,7 +1387,7 @@ public final class AiScenarioBuilder {
                 x = -2.1f + random.nextFloat() * 4.2f;
             }
             y += story * 3.3f;
-            PrefabInstance enemy = prefab(doc, id, x, y, z);
+            PrefabInstance enemy = AiGeometry.prefab(doc, id, x, y, z);
             if (!"enemy.turret".equals(id)) {
                 enemy.properties.put("patrolX", -x);
                 enemy.properties.put("patrolZ", Math.max(-half + 3f,
@@ -1502,12 +1411,12 @@ public final class AiScenarioBuilder {
                             * Math.min(3f, hx * 0.50f);
                     float z = ((i / 2) % 2 == 0 ? -1f : 1f)
                             * Math.min(3.1f, hz * 0.48f);
-                    prefab(doc, "pickup.token", x,
+                    AiGeometry.prefab(doc, "pickup.token", x,
                             story * 3.3f + 0.5f, z);
                 } else {
                     float z = -half + 3.5f + (half * 2f - 7f)
                             * i / Math.max(1f, count - 1f);
-                    prefab(doc, "pickup.token",
+                    AiGeometry.prefab(doc, "pickup.token",
                             (i & 1) == 0 ? -1.2f : 1.2f, 0.5f, z);
                 }
             }
@@ -1515,93 +1424,16 @@ public final class AiScenarioBuilder {
         if (plan.hasFeature("supplies")) {
             float front = isFocalLayout(plan)
                     ? houseHalfZ(plan, profile) - 1.4f : half - 6.5f;
-            prefab(doc, "pickup.health", -1.3f, 0.5f, front);
-            prefab(doc, "pickup.ammo", 1.3f, 0.5f,
+            AiGeometry.prefab(doc, "pickup.health", -1.3f, 0.5f, front);
+            AiGeometry.prefab(doc, "pickup.ammo", 1.3f, 0.5f,
                     isFocalLayout(plan) ? -front : half - 8f);
         }
     }
 
-    private static float rowPosition(int index, int count, float half,
-                                     float frontMargin, float backMargin) {
-        float first = -half + frontMargin;
-        float last = half - backMargin;
-        return count <= 1 ? 0f
-                : first + (last - first) * index / (count - 1f);
-    }
 
-    private static StructureObject wall(MapDocument doc, float x, float y,
-                                        float z, float hx, float hz,
-                                        String material, float[] color,
-                                        boolean roadFacing) {
-        return block(doc, StructureObject.ROLE_WALL, material,
-                x, y, z, hx, 1.5f, hz, color);
-    }
 
-    private static StructureObject block(MapDocument doc, String role,
-                                         String material, float x, float y,
-                                         float z, float hx, float hy,
-                                         float hz, float[] color) {
-        StructureObject value = new StructureObject(Ids.create(),
-                StructureObject.KIND_BLOCK);
-        value.role = role;
-        value.material = material;
-        value.transform.x = x;
-        value.transform.y = y;
-        value.transform.z = z;
-        value.half = new float[]{hx, hy, hz};
-        value.color = color.clone();
-        doc.structures.add(value);
-        return value;
-    }
 
-    private static WallOpening opening(float offset, float width,
-                                       float height) {
-        WallOpening opening = new WallOpening(Ids.create(), WallOpening.DOOR);
-        opening.offset = offset;
-        opening.width = width;
-        opening.height = height;
-        return opening;
-    }
 
-    private static WallOpening windowOpening(float offset, float width) {
-        WallOpening opening = new WallOpening(Ids.create(),
-                WallOpening.WINDOW);
-        opening.offset = offset;
-        opening.width = width;
-        opening.height = 1.05f;
-        opening.sill = 1.05f;
-        return opening;
-    }
 
-    private static StructureObject diagonalWall(MapDocument doc,
-                                                float ax, float az,
-                                                float bx, float bz,
-                                                String material,
-                                                float[] color) {
-        float length = (float) Math.hypot(bx - ax, bz - az);
-        float nx = -(bz - az) / length * 0.15f;
-        float nz = (bx - ax) / length * 0.15f;
-        StructureObject value = new StructureObject(Ids.create(),
-                StructureObject.KIND_POLY);
-        value.role = StructureObject.ROLE_WALL;
-        value.material = material;
-        value.transform.y = 1.5f;
-        value.half = new float[]{0f, 1.5f, 0f};
-        value.polygon = new float[]{ax + nx, az + nz, bx + nx, bz + nz,
-                bx - nx, bz - nz, ax - nx, az - nz};
-        value.color = color.clone();
-        value.syncPolyBounds();
-        doc.structures.add(value);
-        return value;
-    }
 
-    private static PrefabInstance prefab(MapDocument doc, String prefabId,
-                                         float x, float y, float z) {
-        PrefabInstance value = new PrefabInstance(Ids.create(), prefabId);
-        value.transform.x = x;
-        value.transform.y = y;
-        value.transform.z = z;
-        doc.prefabs.add(value);
-        return value;
-    }
 }
