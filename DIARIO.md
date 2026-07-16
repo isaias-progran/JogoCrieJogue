@@ -8,6 +8,31 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.25.0 (versionCode 59) — modo LIVRE: a IA desenha o mapa inteiro.**
+  - Pedido do usuário após diagnóstico da cidade vazia: mesmo com o plano
+    perfeito, o modo guiado cobre ~9% do chão (teto de 8 prédios no
+    schema, receitas ancoradas no centro) e confina inimigos/itens na
+    faixa x=±2,1 m. Em vez de expandir o schema, o usuário decidiu
+    liberar: "IA trabalhando livre, se ela errar removemos".
+  - Novo `ai/AiFreeMapScript`: roteiro de comandos, um por linha (nome,
+    ceu, som, ambiente, neblina, objetivo, piso, teto, parede [diagonal
+    vira poly], vao na última parede, bloco, peca do catálogo, prop,
+    texto de NPC, patrulha, inicio, saida). Linha inválida vira AVISO
+    (mostrado na prévia), nunca código; coordenadas/cores/medidas presas
+    à grade ±48 e 0..1; redes de segurança: spawn/saída automáticos com
+    aviso, portas completam halfX/Y/Z, portão liga sozinho ao terminal.
+  - `AiOpenAiClient.buildFreeMapRequest`: instrução SÓ técnica (formato +
+    catálogo + regras mínimas + "preencha a área toda"), pedido do
+    jogador passa direto, sem schema; saída maior (16k/20k/10k/6k tokens
+    por modelo). MapValidator + LevelCompiler continuam sendo o portão
+    antes de salvar — mapa quebrado é recusado com a mensagem do
+    validador.
+  - UI: spinner "Modo de criação" no diálogo GERAR — Guiado (padrão) ou
+    Livre (experimental); prévia própria com contagens e avisos. Modo
+    livre gera 1 mapa único (sem setores). Suíte com 668 verificações
+    (35 novas em AiFreeMapTest). Validar no aparelho: gerar "cidade
+    cheia" no Livre com Terra e comparar com o Guiado; se falhar muito,
+    remover a opção é só tirar o spinner.
 - **v0.24.0 (versionCode 58) — arsenal: metralhadora, escopeta e rifle.**
   - `WeaponSpec` (pistola 12/0,32s/dano 1; metralhadora 30/0,11s/1;
     escopeta 6/0,85s/3 — derruba drone num tiro; rifle 5/1,05s/4 —

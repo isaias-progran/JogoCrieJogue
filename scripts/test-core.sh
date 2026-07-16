@@ -50,6 +50,7 @@ javac -d "$OUT" -encoding UTF-8 \
     "$SRC"/ai/AiPlaceRecipes.java \
     "$SRC"/ai/AiFocalRecipes.java \
     "$SRC"/ai/AiOpenAiClient.java \
+    "$SRC"/ai/AiFreeMapScript.java \
     "$SRC"/ai/NpcPersonality.java \
     "$SRC"/ai/NpcConversationMemory.java \
     "$SRC"/ai/AiRequestGate.java \
@@ -82,7 +83,7 @@ for TESTE in JsonTest MapJsonTest PrefabCatalogTest MapValidatorTest \
         LevelCompilerTest WallOpeningTest StairsTest PolygonTest \
         MapShareQrTest EditorToolsTest GameplayRulesTest \
         StoryLevelsTest VerticalEnemyTest ElaborateMapTest CityMapTest \
-        AiScenarioTest; do
+        AiScenarioTest AiFreeMapTest; do
     java -cp "$OUT" "br.com.termia.construajogue.$TESTE"
 done
 echo "testes do núcleo OK"

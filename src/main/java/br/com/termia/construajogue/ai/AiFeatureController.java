@@ -167,9 +167,25 @@ public final class AiFeatureController {
             return;
         }
         LinearLayout form = column();
-        form.addView(text("A IA escolhe planta, rota, cômodos, objetivo, "
-                + "dificuldade e NPC. O jogo monta tudo apenas com peças "
-                + "conhecidas e mostra uma prévia antes de salvar."));
+        TextView modeLabel = text("Modo de criação");
+        modeLabel.setPadding(0, 0, 0, 2);
+        form.addView(modeLabel);
+        Spinner mode = new Spinner(activity);
+        ArrayAdapter<String> modes = new ArrayAdapter<>(activity,
+                android.R.layout.simple_spinner_item, new String[]{
+                "Guiado — plano seguro (recomendado)",
+                "Livre — a IA desenha tudo (experimental)"});
+        modes.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
+        mode.setAdapter(modes);
+        mode.setSelection(0);
+        form.addView(mode);
+        form.addView(text("Guiado: a IA escolhe planta, rota, cômodos, "
+                + "objetivo e NPC; o jogo monta com receitas prontas. "
+                + "Livre: a IA desenha cada parede, peça e inimigo com "
+                + "coordenadas próprias — mais criativo, gasta mais tokens "
+                + "e pode falhar; o validador recusa mapa quebrado antes "
+                + "de salvar."));
         EditText idea = new EditText(activity);
         idea.setHint("Ex.: cidade noturna abandonada, grande, com portão, "
                 + "água, moradores e drones protegendo energia");
@@ -221,10 +237,16 @@ public final class AiFeatureController {
         AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle("Criar cenário com IA")
                 .setView(scrollable(form))
-                .setPositiveButton("GERAR", (ignored, which) ->
+                .setPositiveButton("GERAR", (ignored, which) -> {
+                    if (mode.getSelectedItemPosition() == 1) {
+                        generateFreeScenario(idea.getText().toString(),
+                                model.getSelectedItemPosition());
+                    } else {
                         generateScenario(idea.getText().toString(),
                                 profile.getSelectedItemPosition(),
-                                model.getSelectedItemPosition()))
+                                model.getSelectedItemPosition());
+                    }
+                })
                 .setNegativeButton("Cancelar", null)
                 .create();
         dialog.show();
@@ -302,6 +324,107 @@ public final class AiFeatureController {
                 });
             }
         });
+    }
+
+    /** Modo LIVRE: a IA escreve o roteiro; validador/compilador filtram. */
+    private void generateFreeScenario(String idea, int modelIndex) {
+        final String key;
+        final PrefabCatalog catalog;
+        final List<String> prefabIds = new ArrayList<>();
+        final String scenarioModel = AiOpenAiClient.scenarioModelAt(modelIndex);
+        final String scenarioModelLabel =
+                AiOpenAiClient.scenarioModelLabelAt(modelIndex);
+        try {
+            gate.acquire();
+            key = keys.get();
+            if (key == null) throw new IllegalStateException("chave ausente");
+            catalog = listener.aiCatalog();
+            for (br.com.termia.construajogue.prefab.PrefabDefinition
+                    definition : catalog.all()) {
+                prefabIds.add(definition.id);
+            }
+            // Valida o texto antes de abrir a conexão.
+            AiOpenAiClient.buildFreeMapRequest(idea, scenarioModel,
+                    prefabIds);
+        } catch (Exception failure) {
+            toast(message(failure));
+            return;
+        }
+        AtomicBoolean cancelled = new AtomicBoolean();
+        AlertDialog progress = busy("IA desenhando o mapa (modo livre)…",
+                () -> {
+                    cancelled.set(true);
+                    Future<?> request = activeRequest;
+                    if (request != null) request.cancel(true);
+                });
+        activeRequest = executor.submit(() -> {
+            try {
+                String script = client.generateFreeMapScript(key, idea,
+                        scenarioModel, prefabIds);
+                AiFreeMapScript.Result parsed =
+                        AiFreeMapScript.parse(script, catalog);
+                List<ValidationIssue> issues =
+                        MapValidator.validate(parsed.document, catalog);
+                if (MapValidator.hasError(issues)) {
+                    throw new IOException("o desenho da IA foi recusado "
+                            + "pelo validador: " + firstError(issues)
+                            + "\n\nTente gerar de novo ou mude o pedido.");
+                }
+                LevelCompiler.compile(parsed.document, catalog);
+                activity.runOnUiThread(() -> {
+                    if (cancelled.get() || activity.isFinishing()
+                            || activity.isDestroyed()) return;
+                    progress.dismiss();
+                    previewFreeMap(parsed, scenarioModelLabel);
+                });
+            } catch (Exception failure) {
+                activity.runOnUiThread(() -> {
+                    if (cancelled.get() || activity.isFinishing()
+                            || activity.isDestroyed()) return;
+                    progress.dismiss();
+                    showError("Não consegui desenhar o mapa livre", failure);
+                });
+            }
+        });
+    }
+
+    private void previewFreeMap(AiFreeMapScript.Result parsed,
+                                String modelLabel) {
+        MapDocument document = parsed.document;
+        StringBuilder details = new StringBuilder();
+        details.append("Mapa desenhado livremente pela IA.\n")
+                .append("Modelo: ").append(modelLabel).append('\n')
+                .append(document.structures.size()).append(" estruturas · ")
+                .append(document.prefabs.size()).append(" peças\n")
+                .append("Objetivo: ").append(document.objective.type);
+        if (!parsed.warnings.isEmpty()) {
+            details.append("\n\nAvisos (").append(parsed.warnings.size())
+                    .append("):");
+            int shown = 0;
+            for (String warning : parsed.warnings) {
+                if (shown++ >= 8) {
+                    details.append("\n…");
+                    break;
+                }
+                details.append("\n• ").append(warning);
+            }
+        }
+        details.append("\n\nNada foi salvo ainda.");
+        new AlertDialog.Builder(activity)
+                .setTitle(document.name)
+                .setMessage(details.toString())
+                .setPositiveButton("SALVAR E CONSTRUIR", (dialog, which) -> {
+                    try {
+                        store.save(document);
+                        List<MapDocument> documents = new ArrayList<>();
+                        documents.add(document);
+                        listener.onAiScenarioSaved(documents);
+                    } catch (IOException failure) {
+                        showError("Não consegui salvar", failure);
+                    }
+                })
+                .setNegativeButton("Descartar", null)
+                .show();
     }
 
     private void previewScenario(AiScenarioPlan plan,

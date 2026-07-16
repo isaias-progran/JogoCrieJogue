@@ -44,6 +44,10 @@ public final class AiOpenAiClient {
     private static final int[] SCENARIO_OUTPUT_TOKENS = {
             5000, 7000, 3500, 2200
     };
+    /** Modo livre escreve o mapa inteiro: precisa de muito mais saída. */
+    private static final int[] FREE_OUTPUT_TOKENS = {
+            16000, 20000, 10000, 6000
+    };
     private static final String ENDPOINT =
             "https://api.openai.com/v1/responses";
     private static final int MAX_RESPONSE_BYTES = 256 * 1024;
@@ -76,6 +80,97 @@ public final class AiOpenAiClient {
         if (reply.length() > 800) reply = reply.substring(0, 800);
         if (reply.isEmpty()) throw new IOException("a IA não respondeu");
         return reply;
+    }
+
+    /** Modo LIVRE: a IA desenha o mapa inteiro num roteiro de comandos. */
+    public String generateFreeMapScript(String apiKey, String idea,
+                                        String model,
+                                        List<String> prefabIds)
+            throws IOException {
+        String response = post(apiKey,
+                buildFreeMapRequest(idea, model, prefabIds));
+        return extractOutputText(response);
+    }
+
+    public static String buildFreeMapRequest(String idea, String model,
+                                             List<String> prefabIds) {
+        String prompt = clean(idea, 1000);
+        if (prompt.length() < 3) {
+            throw new IllegalArgumentException("descreva melhor o cenário");
+        }
+        int modelIndex = scenarioModelIndex(model);
+        StringBuilder pieces = new StringBuilder();
+        for (String id : prefabIds) {
+            if (pieces.length() > 0) pieces.append(' ');
+            pieces.append(id);
+        }
+        Map<String, Object> root = new TreeMap<>();
+        root.put("model", SCENARIO_MODELS[modelIndex]);
+        root.put("instructions", "Você é o arquiteto de mapas de um FPS "
+                + "low-poly com liberdade criativa total. Desenhe o mapa "
+                + "que o jogador pediu escrevendo um ROTEIRO DE COMANDOS, "
+                + "um comando por linha, sem markdown, sem explicações e "
+                + "sem texto fora dos comandos.\n\n"
+                + "MUNDO: metros, Y para cima, chão em y=0, área útil de "
+                + "-44 a +44 em X e Z. Jogador tem 1,75 m, sobe degraus de "
+                + "até 0,35 m; use as peças stairs.floor/ramp.floor para "
+                + "subir 3 m (elas sobem da frente -Z para trás; yaw gira). "
+                + "Feche o mapa com paredes de perímetro.\n\n"
+                + "COMANDOS:\n"
+                + "nome <título do mapa>\n"
+                + "ceu day|dusk|night|none\n"
+                + "som outdoor|tunnel|industrial|auto\n"
+                + "ambiente <0.05-1>\n"
+                + "neblina <r> <g> <b> <alcance 10-160>\n"
+                + "objetivo reach_exit [tempo] | collect <fichas> [tempo] | "
+                + "eliminate_all [tempo] | survive <segundos>\n"
+                + "piso <x> <z> <hx> <hz> <mat> <r> <g> <b> [ytopo]\n"
+                + "teto <x> <z> <hx> <hz> <ybase> <mat> <r> <g> <b>  "
+                + "(laje pisável: dá para andar por cima)\n"
+                + "parede <x1> <z1> <x2> <z2> <altura> <mat> <r> <g> <b> "
+                + "[ybase]  (diagonal é permitida, mas não aceita vão)\n"
+                + "vao porta|janela|portal [offset] [largura] [altura] "
+                + "[peitoril]  (recorta a ÚLTIMA parede reta; offset anda "
+                + "ao longo dela a partir do centro)\n"
+                + "bloco <x> <ycentro> <z> <hx> <hy> <hz> <mat> <r> <g> "
+                + "<b>\n"
+                + "peca <id> <x> <y> <z> [yaw]\n"
+                + "prop <chave> <valor>  (na última peça: order, "
+                + "halfX/halfY/halfZ, lightR/lightG/lightB/lightRadius/"
+                + "lightOffsetY)\n"
+                + "texto name|role|greeting|background <valor>  (na última "
+                + "peça npc.human)\n"
+                + "patrulha <x> <z>  (o último inimigo ronda até lá)\n"
+                + "inicio <x> <z> [y] [yaw]\n"
+                + "saida <x> <z> [y]\n\n"
+                + "hx/hy/hz são MEIA-medida (bloco 2x2 tem hx=1). "
+                + "Materiais: plain brick wood checker metal water lava "
+                + "asphalt. Cores r g b entre 0 e 1.\n"
+                + "PEÇAS: " + pieces + "\n"
+                + "Inimigos ficam no ar/chão pela altura y (drone voa "
+                + "~1.8; mutante 0.85; turret 0.55). terminal.wall e "
+                + "door.gate se ligam sozinhos na ordem em que aparecem; "
+                + "em door.gate ajuste halfX/halfY/halfZ.\n\n"
+                + "REGRAS MÍNIMAS: exatamente um inicio em local livre "
+                + "sobre um piso; uma saida alcançável a pé se o objetivo "
+                + "for reach_exit; todo interior precisa de porta ou "
+                + "portal; nada de estruturas flutuando sem apoio visual.\n"
+                + "CAPRICHE NA DENSIDADE: preencha a área toda como um "
+                + "lugar real e vivo — quarteirões, interiores mobiliados, "
+                + "luzes, inimigos e itens espalhados pelo mapa inteiro, "
+                + "não só no centro. Mapas grandes têm 120 a 300 linhas.");
+        root.put("input", "PEDIDO DO JOGADOR:\n" + prompt);
+        root.put("max_output_tokens", FREE_OUTPUT_TOKENS[modelIndex]);
+        if (!SCENARIO_REASONING[modelIndex].isEmpty()) {
+            Map<String, Object> reasoning = new TreeMap<>();
+            reasoning.put("effort", SCENARIO_REASONING[modelIndex]);
+            root.put("reasoning", reasoning);
+        }
+        root.put("store", false);
+        Map<String, Object> text = new TreeMap<>();
+        text.put("verbosity", "low");
+        root.put("text", text);
+        return Json.write(root);
     }
 
     public static String buildScenarioRequest(String idea) {
