@@ -57,10 +57,11 @@ public final class EditorHost extends FrameLayout
 
     final Activity activity;
     private final MapStore store;
-    private final PrefabCatalog catalog;
+    final PrefabCatalog catalog;
     private final Listener listener;
     private final UndoHistory history = new UndoHistory();
-    private final EditorForms forms = new EditorForms(this);
+    final EditorForms forms = new EditorForms(this);
+    private final EditorPickers pickers = new EditorPickers(this);
     final PlanEditorView plan;
     final TextView status;
     private final TextView counts;
@@ -184,7 +185,7 @@ public final class EditorHost extends FrameLayout
         select.setTag(PlanEditorView.TOOL_SELECT);
         toolButtons.add(select);
         addWeighted(row2, select);
-        Button paintButton = action("PINTAR", this::choosePaint);
+        Button paintButton = action("PINTAR", pickers::choosePaint);
         paintButton.setTag(PlanEditorView.TOOL_PAINT);
         paintButton.setTextColor(0xFFC98FD9);
         toolButtons.add(paintButton);
@@ -192,7 +193,7 @@ public final class EditorHost extends FrameLayout
         rotateButton = action("GIRAR", () -> plan.rotateSelected());
         rotateButton.setTextColor(0xFFA0D9C9);
         addWeighted(row2, rotateButton);
-        heightButton = action("MEDIDAS", this::editMeasures);
+        heightButton = action("MEDIDAS", pickers::editMeasures);
         heightButton.setTextColor(0xFF9CC9E4);
         addWeighted(row2, heightButton);
         deleteButton = action("EXCLUIR", () -> plan.deleteSelected());
@@ -239,15 +240,15 @@ public final class EditorHost extends FrameLayout
         addPanelTool(panel, "Bloco", PlanEditorView.TOOL_BLOCK);
         panel.addView(panelItem("Desenho por pontos…", () -> {
             hidePanel();
-            chooseContour();
+            pickers.chooseContour();
         }, PlanEditorView.TOOL_POINTS));
         panel.addView(panelItem("Vão…", () -> {
             hidePanel();
-            chooseOpening();
+            pickers.chooseOpening();
         }, PlanEditorView.TOOL_OPENING));
         panel.addView(panelItem("Peça…", () -> {
             hidePanel();
-            choosePrefab();
+            pickers.choosePrefab();
         }, PlanEditorView.TOOL_PREFAB));
         addPanelTool(panel, "Início", PlanEditorView.TOOL_SPAWN);
         addPanelTool(panel, "Saída", PlanEditorView.TOOL_EXIT);
@@ -300,7 +301,7 @@ public final class EditorHost extends FrameLayout
         }, null));
         panel.addView(panelItem("Objetos…", () -> {
             hidePanel();
-            showObjectList();
+            pickers.showObjectList();
         }, null));
         scroll.addView(panel, new ScrollView.LayoutParams(
                 ScrollView.LayoutParams.MATCH_PARENT,
@@ -363,7 +364,7 @@ public final class EditorHost extends FrameLayout
         return button;
     }
 
-    private void selectTool(int tool) {
+    void selectTool(int tool) {
         plan.setTool(tool);
         for (Button button : toolButtons) {
             boolean active = (int) button.getTag() == tool;
@@ -567,26 +568,6 @@ public final class EditorHost extends FrameLayout
         return String.format(Locale.US, "%.2f m", value).replace('.', ',');
     }
 
-    private void showObjectList() {
-        int count = plan.objectCount();
-        if (count == 0) {
-            Toast.makeText(activity, "O mapa ainda está vazio",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String[] labels = new String[count];
-        for (int i = 0; i < count; i++) {
-            labels[i] = plan.objectLabel(i);
-        }
-        new AlertDialog.Builder(activity)
-                .setTitle("Objetos do mapa")
-                .setItems(labels, (dialog, which) -> {
-                    selectTool(PlanEditorView.TOOL_SELECT);
-                    plan.selectObject(which);
-                })
-                .setNegativeButton("Fechar", null)
-                .show();
-    }
 
     /** Abre a prévia no próprio editor; a planta continua intacta atrás. */
     private void showPreview3d() {
@@ -769,139 +750,9 @@ public final class EditorHost extends FrameLayout
 
 
     /** Cores da paleta (nome + RGB 0..1). */
-    private static final Object[][] PALETTE = {
-            {"Branco", new float[]{0.92f, 0.92f, 0.95f}},
-            {"Cinza claro", new float[]{0.65f, 0.66f, 0.70f}},
-            {"Cinza", new float[]{0.45f, 0.47f, 0.52f}},
-            {"Grafite", new float[]{0.24f, 0.26f, 0.30f}},
-            {"Tijolo", new float[]{0.62f, 0.32f, 0.22f}},
-            {"Madeira", new float[]{0.55f, 0.40f, 0.25f}},
-            {"Areia", new float[]{0.80f, 0.72f, 0.55f}},
-            {"Verde", new float[]{0.30f, 0.55f, 0.35f}},
-            {"Azul", new float[]{0.30f, 0.45f, 0.65f}},
-            {"Ciano", new float[]{0.35f, 0.65f, 0.70f}},
-            {"Roxo", new float[]{0.50f, 0.35f, 0.65f}},
-            {"Amarelo", new float[]{0.85f, 0.75f, 0.30f}},
-            {"Vermelho", new float[]{0.70f, 0.25f, 0.25f}},
-    };
 
-    /** Paleta + modo balde (paredes ligadas pintadas de uma vez). */
-    private void choosePaint() {
-        LinearLayout box = new LinearLayout(activity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(40, 16, 40, 8);
-        final CheckBox bucket = new CheckBox(activity);
-        bucket.setText("Balde: pintar todas as paredes ligadas "
-                + "(o lado voltado para o toque)");
-        bucket.setTextSize(13f);
 
-        GridLayout grid = new GridLayout(activity);
-        grid.setColumnCount(4);
-        final AlertDialog dialog = new AlertDialog.Builder(activity)
-                .setTitle("Escolha a cor")
-                .setView(box)
-                .setNegativeButton("Cancelar", null)
-                .create();
-        for (Object[] entry : PALETTE) {
-            final float[] rgb = (float[]) entry[1];
-            Button swatch = new Button(activity);
-            swatch.setText((String) entry[0]);
-            swatch.setTextSize(11f);
-            float glow = rgb[0] + rgb[1] + rgb[2];
-            swatch.setTextColor(glow > 1.6f ? 0xFF10151B : 0xFFEEEEEE);
-            swatch.setBackgroundColor(Color.rgb((int) (rgb[0] * 255f),
-                    (int) (rgb[1] * 255f), (int) (rgb[2] * 255f)));
-            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-            params.width = 200;
-            params.setMargins(8, 8, 8, 8);
-            swatch.setLayoutParams(params);
-            swatch.setOnClickListener(v -> {
-                plan.setActivePaint(rgb, bucket.isChecked());
-                selectTool(PlanEditorView.TOOL_PAINT);
-                dialog.dismiss();
-            });
-            grid.addView(swatch);
-        }
-        box.addView(grid);
-        Button custom = new Button(activity);
-        custom.setText("COR PERSONALIZADA…");
-        custom.setAllCaps(false);
-        custom.setOnClickListener(v -> {
-            boolean useBucket = bucket.isChecked();
-            dialog.dismiss();
-            showCustomColor(useBucket);
-        });
-        box.addView(custom);
-        box.addView(bucket);
-        dialog.show();
-    }
 
-    /** Seletor RGB sem dependências externas, com prévia em tempo real. */
-    private void showCustomColor(boolean bucket) {
-        LinearLayout form = new LinearLayout(activity);
-        form.setOrientation(LinearLayout.VERTICAL);
-        form.setPadding(48, 20, 48, 8);
-        final int[] rgb = {128, 128, 128};
-        TextView preview = new TextView(activity);
-        preview.setText("PRÉVIA");
-        preview.setTextColor(Color.WHITE);
-        preview.setGravity(Gravity.CENTER);
-        preview.setBackgroundColor(Color.rgb(rgb[0], rgb[1], rgb[2]));
-        form.addView(preview, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 88));
-        String[] names = {"Vermelho", "Verde", "Azul"};
-        for (int i = 0; i < 3; i++) {
-            final int channel = i;
-            TextView label = new TextView(activity);
-            label.setText(names[i] + ": " + rgb[i]);
-            label.setTextColor(0xFFDDE7EE);
-            form.addView(label);
-            SeekBar slider = new SeekBar(activity);
-            slider.setMax(255);
-            slider.setProgress(rgb[i]);
-            slider.setOnSeekBarChangeListener(
-                    new SeekBar.OnSeekBarChangeListener() {
-                        @Override
-                        public void onProgressChanged(SeekBar bar, int value,
-                                                      boolean fromUser) {
-                            rgb[channel] = value;
-                            label.setText(names[channel] + ": " + value);
-                            preview.setBackgroundColor(Color.rgb(
-                                    rgb[0], rgb[1], rgb[2]));
-                        }
-
-                        @Override public void onStartTrackingTouch(SeekBar b) {}
-                        @Override public void onStopTrackingTouch(SeekBar b) {}
-                    });
-            form.addView(slider);
-        }
-        new AlertDialog.Builder(activity)
-                .setTitle("Cor personalizada")
-                .setView(form)
-                .setPositiveButton("Usar", (dialog, which) -> {
-                    plan.setActivePaint(new float[]{rgb[0] / 255f,
-                            rgb[1] / 255f, rgb[2] / 255f}, bucket);
-                    selectTool(PlanEditorView.TOOL_PAINT);
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
-
-    /** Contorno livre: escolhe o papel e arma a ferramenta de pontos. */
-    private void chooseContour() {
-        final String[] roles = {StructureObject.ROLE_FLOOR,
-                StructureObject.ROLE_CEILING, StructureObject.ROLE_WALL};
-        new AlertDialog.Builder(activity)
-                .setTitle("Desenho por pontos")
-                .setItems(new String[]{"Piso (contorno livre)",
-                        "Teto (contorno livre)",
-                        "Paredes (linha de pontos, aceita diagonal)"},
-                        (dialog, which) -> {
-                    plan.startContour(roles[which]);
-                    selectTool(PlanEditorView.TOOL_POINTS);
-                })
-                .show();
-    }
 
     // ---- PlanEditorView.Host: contorno fechado ----
 
@@ -922,137 +773,9 @@ public final class EditorHost extends FrameLayout
                 .show();
     }
 
-    /** Tipo de vão para recortar na parede tocada. */
-    private void chooseOpening() {
-        final String[] types = {WallOpening.DOOR, WallOpening.PORTAL,
-                WallOpening.WINDOW, "window_bath"};
-        String[] labels = {"Porta (1,0 × 2,1 m)",
-                "Portal livre (até o teto da parede)",
-                "Janela (1,2 × 1,2 m, peitoril 0,9 m)",
-                "Janela de banheiro (0,6 × 0,6 m, peitoril 1,5 m)"};
-        new AlertDialog.Builder(activity)
-                .setTitle("Vão na parede")
-                .setItems(labels, (dialog, which) -> {
-                    plan.setActiveOpening(types[which]);
-                    selectTool(PlanEditorView.TOOL_OPENING);
-                })
-                .show();
-    }
 
-    /** Navegador do catálogo: escolher arma a ferramenta PEÇA. */
-    private void choosePrefab() {
-        final List<PrefabDefinition> defs = catalog.all();
-        String[] labels = new String[defs.size()];
-        for (int i = 0; i < defs.size(); i++) {
-            labels[i] = defs.get(i).name;
-        }
-        new AlertDialog.Builder(activity)
-                .setTitle("Escolha a peça")
-                .setItems(labels, (dialog, which) -> {
-                    plan.setActivePrefab(defs.get(which));
-                    selectTool(PlanEditorView.TOOL_PREFAB);
-                })
-                .show();
-    }
 
-    /**
-     * Diálogo MEDIDAS: campos numéricos reais conforme a seleção.
-     * Parede: comprimento/altura/espessura. Demais estruturas:
-     * largura/profundidade + altura (sentido do papel). Vão:
-     * largura/altura/peitoril. Peça: distância do chão.
-     */
-    private void editMeasures() {
-        final StructureObject s = plan.selectedStructure();
-        final WallOpening o = plan.selectedOpening();
-        if (s == null && o == null && plan.selectedPrefab() == null) {
-            return;
-        }
-        LinearLayout form = new LinearLayout(activity);
-        form.setOrientation(LinearLayout.VERTICAL);
-        form.setPadding(48, 16, 48, 0);
-        final List<EditText> fields = new ArrayList<>();
-        String title;
 
-        if (o != null) {
-            title = "Medidas do vão";
-            fields.add(forms.field(form, "Largura (m)", o.width));
-            fields.add(forms.field(form, "Altura (m)", o.height));
-            if (WallOpening.WINDOW.equals(o.type)) {
-                fields.add(forms.field(form, "Peitoril (m)", o.sill));
-            }
-        } else if (s != null) {
-            boolean wall = StructureObject.ROLE_WALL
-                    .equals(StructureRoles.roleOf(s));
-            title = "Medidas — " + StructureRoles.name(s);
-            if (wall) {
-                fields.add(forms.field(form, "Comprimento (m)",
-                        WallGeometry.halfLength(s) * 2f));
-                fields.add(forms.field(form, "Altura (m)",
-                        StructureRoles.heightValue(s)));
-                fields.add(forms.field(form, "Espessura (m)",
-                        WallGeometry.thickness(s)));
-            } else {
-                fields.add(forms.field(form, "Largura (m)", s.half[0] * 2f));
-                fields.add(forms.field(form, "Profundidade (m)",
-                        s.half[2] * 2f));
-                fields.add(forms.field(form, StructureRoles.heightLabel(s),
-                        StructureRoles.heightValue(s)));
-            }
-        } else {
-            title = "Medidas da peça";
-            fields.add(forms.field(form, "Distância do chão (m)",
-                    plan.selectedPrefab().transform.y
-                            - plan.activeBaseY()));
-        }
-
-        new AlertDialog.Builder(activity)
-                .setTitle(title)
-                .setView(form)
-                .setPositiveButton("Aplicar",
-                        (dialog, which) -> applyMeasures(s, o, fields))
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
-
-    private void applyMeasures(StructureObject s, WallOpening o,
-                               List<EditText> fields) {
-        final float[] v = new float[fields.size()];
-        for (int i = 0; i < fields.size(); i++) {
-            try {
-                v[i] = Float.parseFloat(fields.get(i).getText()
-                        .toString().replace(',', '.'));
-            } catch (NumberFormatException bad) {
-                Toast.makeText(activity, "Número inválido",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
-        if (o != null) {
-            plan.mutateSelected(() -> {
-                o.width = clamp(v[0], 0.3f, 20f);
-                o.height = clamp(v[1], 0.3f, 10f);
-                if (v.length > 2) {
-                    o.sill = clamp(v[2], 0f, 5f);
-                }
-            });
-        } else if (s != null) {
-            boolean wall = StructureObject.ROLE_WALL
-                    .equals(StructureRoles.roleOf(s));
-            plan.mutateSelected(() -> {
-                if (wall) {
-                    WallGeometry.resize(s, clamp(v[0], 0.3f, 64f),
-                            clamp(v[2], 0.05f, 2f));
-                    StructureRoles.applyHeight(s, v[1]);
-                } else {
-                    s.half[0] = clamp(v[0], 0.1f, 64f) / 2f;
-                    s.half[2] = clamp(v[1], 0.1f, 64f) / 2f;
-                    StructureRoles.applyHeight(s, v[2]);
-                }
-            });
-        } else {
-            plan.applySelectedHeight(v[0]);
-        }
-    }
 
     static float clamp(float v, float lo, float hi) {
         return Math.max(lo, Math.min(hi, v));

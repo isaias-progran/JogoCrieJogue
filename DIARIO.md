@@ -8,6 +8,16 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.8 (versionCode 53) — seletores do editor em EditorPickers.**
+  - Segunda leva: paleta de pintura (com a tabela PALETTE), cor livre,
+    contorno, vão, peça, lista de objetos e MEDIDAS viraram
+    `editor/EditorPickers` (338 linhas). EditorHost caiu para 891 linhas
+    (era 1391 no início da noite); nele ficam barra, painel, undo/redo,
+    salvamento, teste, prévia 3D e configuração de lógica.
+  - Prova por compilação + suíte intacta (607); os seletores pedem a
+    mesma conferência visual dos formulários. Iteração 8 do loop
+    noturno; próxima: contratos de teste extras ou pequenos acabamentos
+    — os alvos grandes da fila acabaram.
 - **v0.22.7 (versionCode 52) — formulários do editor em EditorForms.**
   - Primeira leva da quebra do EditorHost (1391→1168 linhas): andar
     ativo, objetivo, material, céu (com a tabela SKIES) e os campos
