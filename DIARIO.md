@@ -8,6 +8,16 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.25.3 (versionCode 62) — instrução do livre afinada pelo aparelho.**
+  - VALIDADO NO APARELHO (v0.25.2): o modo livre construiu bem e o
+    usuário achou "até melhor que os mapas pré-programados". Falhas
+    relatadas: cômodos sem porta, poucos inimigos/lógica rala e paredes
+    com textura repetida. As três viraram blocos explícitos na
+    instrução: PORTAS (recortar a entrada logo após fechar cada sala),
+    JOGABILIDADE (12-24 inimigos misturados guardando itens/saída,
+    progressão leve→disputado→defendido) e VARIEDADE VISUAL (material e
+    tom por prédio, piso interno ≠ rua). Suíte com 688 verificações.
+  - Instrução só muda GERAÇÕES NOVAS; mapa salvo continua igual.
 - **v0.25.2 (versionCode 61) — modo livre não perde a geração por erro bobo.**
   - Teste real (print): streaming OK, mas o validador recusou "o início
     está dentro de uma estrutura" — a IA gastou a geração inteira e o

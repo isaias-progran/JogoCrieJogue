@@ -55,6 +55,12 @@ public final class AiFreeMapTest {
         Check.that(request.contains("\"stream\":true")
                         || request.contains("\"stream\": true"),
                 "modo livre pede streaming para mostrar progresso");
+        Check.that(request.contains("CADA cômodo fechado"),
+                "instrução cobra porta em todo cômodo");
+        Check.that(request.contains("12 a 24 inimigos"),
+                "instrução cobra combate povoado");
+        Check.that(request.contains("NÃO repita o mesmo material"),
+                "instrução cobra variedade de textura nas paredes");
         boolean rejected = false;
         try {
             AiOpenAiClient.buildFreeMapRequest("ab", "gpt-5.6-terra", ids);

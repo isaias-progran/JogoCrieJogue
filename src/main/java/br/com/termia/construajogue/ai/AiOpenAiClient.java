@@ -166,12 +166,29 @@ public final class AiOpenAiClient {
                 + "em door.gate ajuste halfX/halfY/halfZ.\n\n"
                 + "REGRAS MÍNIMAS: exatamente um inicio em local livre "
                 + "sobre um piso; uma saida alcançável a pé se o objetivo "
-                + "for reach_exit; todo interior precisa de porta ou "
-                + "portal; nada de estruturas flutuando sem apoio visual.\n"
+                + "for reach_exit; nada de estruturas flutuando sem apoio "
+                + "visual. PORTAS: CADA cômodo fechado precisa do seu 'vao "
+                + "porta' ou 'vao portal' — depois de fechar as quatro "
+                + "paredes de uma sala, recorte a entrada imediatamente, "
+                + "antes de passar ao próximo cômodo; confira mentalmente "
+                + "que dá para entrar em todos.\n"
+                + "JOGABILIDADE: povoe o combate — mapa grande pede 12 a "
+                + "24 inimigos de tipos misturados, guardando itens, "
+                + "cruzamentos, interiores e a saída, com patrulha na "
+                + "maioria; monte uma progressão (começo leve, meio "
+                + "disputado, final bem defendido, chefe ou torreta perto "
+                + "do objetivo) e recompense a exploração com kits, "
+                + "munição e armas escondidos ONDE há perigo.\n"
+                + "VARIEDADE VISUAL: NÃO repita o mesmo material e a mesma "
+                + "cor em todas as paredes — cada prédio tem identidade "
+                + "própria (mercado de brick claro, oficina de metal "
+                + "escuro, casa de wood, muro de plain…), com tons r g b "
+                + "diferentes entre vizinhos; pisos internos diferentes do "
+                + "asfalto da rua.\n"
                 + "CAPRICHE NA DENSIDADE: preencha a área toda como um "
                 + "lugar real e vivo — quarteirões, interiores mobiliados, "
                 + "luzes, inimigos e itens espalhados pelo mapa inteiro, "
-                + "não só no centro. Mapas grandes têm 120 a 300 linhas.");
+                + "não só no centro. Mapas grandes têm 150 a 300 linhas.");
         root.put("input", "PEDIDO DO JOGADOR:\n" + prompt);
         root.put("stream", true);
         root.put("max_output_tokens", FREE_OUTPUT_TOKENS[modelIndex]);
