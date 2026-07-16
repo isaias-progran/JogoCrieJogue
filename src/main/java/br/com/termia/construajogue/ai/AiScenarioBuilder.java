@@ -152,6 +152,20 @@ public final class AiScenarioBuilder {
             return;
         }
         String layout = layoutForZone(plan.layout, zone);
+        String theme = plan.setting;
+        if (sector > 0) {
+            // Cada setor é um cenário: o kind da zone comanda a planta e o
+            // tema do distrito; só o 1º setor segue o layout global à risca.
+            String district = kindLayout(zone.kind);
+            if (district != null) layout = district;
+            theme = themeForKind(zone.kind, plan.setting);
+            boolean repeated = layout.equals(
+                    layoutForZone(plan.layout, plan.zoneAt(0)))
+                    && theme.equals(plan.setting);
+            if (repeated) {
+                layout = rotatedLayout(layout, sector);
+            }
+        }
         if (sector >= plan.zones.size()) {
             layout = rotatedLayout(layout, sector / plan.zones.size());
         }
@@ -171,7 +185,8 @@ public final class AiScenarioBuilder {
         } else if ("linear".equals(layout)) {
             AiPlaceRecipes.buildLinear(doc, plan, profile, random);
         } else {
-            AiCityRecipes.buildThemedStreet(doc, plan, profile, random);
+            AiCityRecipes.buildThemedStreet(doc, plan, profile, random,
+                    theme);
         }
         if (!isFocalLayout(plan)) {
             routeAccent(doc, plan, profile.halfSize());
@@ -188,6 +203,32 @@ public final class AiScenarioBuilder {
                                         AiScenarioPlan.Zone zone) {
         if ("tunnel".equals(zone.kind)) return "underground";
         return requested;
+    }
+
+    /** Planta natural de cada kind de zone; null = segue o layout global. */
+    private static String kindLayout(String kind) {
+        if ("house".equals(kind) || "apartment".equals(kind)
+                || "tower".equals(kind)) return "single_building";
+        if ("courtyard".equals(kind) || "park".equals(kind)) {
+            return "courtyard";
+        }
+        if ("plaza".equals(kind)) return "hub";
+        if ("shop".equals(kind) || "station".equals(kind)
+                || "warehouse".equals(kind) || "laboratory".equals(kind)
+                || "fortress".equals(kind) || "ruins".equals(kind)) {
+            return "street";
+        }
+        return null;
+    }
+
+    /** Tema do distrito: galpão vira indústria mesmo em campanha de cidade. */
+    private static String themeForKind(String kind, String setting) {
+        if ("warehouse".equals(kind)) return "industrial";
+        if ("laboratory".equals(kind)) return "laboratory";
+        if ("fortress".equals(kind)) return "fortress";
+        if ("ruins".equals(kind)) return "ruins";
+        if ("shop".equals(kind) || "station".equals(kind)) return "city";
+        return setting;
     }
 
     /**

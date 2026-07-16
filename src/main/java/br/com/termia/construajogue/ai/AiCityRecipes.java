@@ -19,14 +19,14 @@ final class AiCityRecipes {
     static void buildThemedStreet(MapDocument doc,
                                           AiScenarioPlan plan,
                                           AiScenarioProfile profile,
-                                          Random random) {
-        if ("industrial".equals(plan.setting)) {
+                                          Random random, String theme) {
+        if ("industrial".equals(theme)) {
             AiThemeRecipes.buildIndustrial(doc, plan, profile, random);
-        } else if ("laboratory".equals(plan.setting)) {
+        } else if ("laboratory".equals(theme)) {
             AiThemeRecipes.buildLaboratory(doc, plan, profile, random);
-        } else if ("fortress".equals(plan.setting)) {
+        } else if ("fortress".equals(theme)) {
             AiThemeRecipes.buildFortress(doc, plan, profile, random);
-        } else if ("ruins".equals(plan.setting)) {
+        } else if ("ruins".equals(theme)) {
             AiThemeRecipes.buildRuins(doc, plan, profile, random);
         } else {
             buildCity(doc, plan, profile, random);

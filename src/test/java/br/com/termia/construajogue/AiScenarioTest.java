@@ -431,6 +431,42 @@ public final class AiScenarioTest {
         Check.that(openingCount(branchLinear) > openingCount(directLinear),
                 "linear com branching abre caminhos paralelos");
 
+        AiScenarioPlan districts = AiScenarioPlan.parse(validPlan().replace(
+                "\"zones\":[{\"kind\":\"shop\",\"size\":\"medium\","
+                        + "\"floors\":1,\"purpose\":\"exploration\"},"
+                        + "{\"kind\":\"station\",\"size\":\"large\","
+                        + "\"floors\":1,\"purpose\":\"exit\"}]",
+                "\"zones\":[{\"kind\":\"shop\",\"size\":\"medium\","
+                        + "\"floors\":1,\"purpose\":\"start\"},"
+                        + "{\"kind\":\"warehouse\",\"size\":\"large\","
+                        + "\"floors\":1,\"purpose\":\"combat\"},"
+                        + "{\"kind\":\"plaza\",\"size\":\"medium\","
+                        + "\"floors\":1,\"purpose\":\"exploration\"},"
+                        + "{\"kind\":\"tower\",\"size\":\"large\","
+                        + "\"floors\":3,\"purpose\":\"exit\"}]"));
+        Check.equal(districts.zones.size(), 4,
+                "plano de distritos tem uma zone por setor");
+        List<MapDocument> quarters =
+                AiScenarioBuilder.buildSeries(districts, s23);
+        for (int a = 0; a < quarters.size(); a++) {
+            List<ValidationIssue> districtIssues =
+                    MapValidator.validate(quarters.get(a), catalog);
+            Check.that(!MapValidator.hasError(districtIssues),
+                    "distrito " + (a + 1) + " válido: " + districtIssues);
+            for (int b = a + 1; b < quarters.size(); b++) {
+                Check.that(!geometry(quarters.get(a))
+                                .equals(geometry(quarters.get(b))),
+                        "distritos " + (a + 1) + " e " + (b + 1)
+                                + " têm arquiteturas diferentes");
+            }
+        }
+        boolean towerRises = false;
+        for (StructureObject s : quarters.get(3).structures) {
+            if (s.transform.y > 4f) towerRises = true;
+        }
+        Check.that(towerRises,
+                "zone tower ergue andares mesmo em campanha térrea");
+
         AiScenarioPlan tunnelPlan = AiScenarioPlan.parse(validPlan().replace(
                 "\"setting\":\"city\"", "\"setting\":\"tunnel\""));
         MapDocument tunnel = AiScenarioBuilder.build(tunnelPlan);

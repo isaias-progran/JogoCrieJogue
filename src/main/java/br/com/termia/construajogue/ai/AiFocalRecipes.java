@@ -22,7 +22,10 @@ final class AiFocalRecipes {
                                            AiScenarioPlan.Zone zone) {
         float hx = houseHalfX(plan, profile);
         float hz = houseHalfZ(plan, profile);
-        int floors = effectiveFloors(plan);
+        // A zone do setor manda nos andares: torre de 3 numa campanha de
+        // cidade térrea sobe mesmo assim.
+        int floors = Math.min(3,
+                Math.max(effectiveFloors(plan), zone.floors));
         String material = AiGeometry.buildingMaterial(plan, zone);
         float[] color = AiGeometry.buildingColor(plan, zone);
         String floorMaterial = AiGeometry.buildingFloorMaterial(zone);

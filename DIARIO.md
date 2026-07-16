@@ -8,6 +8,23 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.23.0 (versionCode 55) — o kind da zone comanda a planta do setor.**
+  - Feedback real do aparelho (v0.22.9): 4 setores com arquitetura
+    idêntica, mudando só cores. Causa: a instrução nova faz o modelo
+    mandar 1 zone POR setor, então a rotação de planta (que só agia
+    quando as zones acabavam) nunca disparava — todos os setores usavam
+    o layout global, e a zone só trocava material/cor/mobília.
+  - Agora, do 2º setor em diante, o kind da zone escolhe planta e tema:
+    house/apartment/tower → prédio focal (com os ANDARES da própria
+    zone, mesmo em campanha térrea), courtyard/park → pátio, plaza →
+    praça, warehouse → rua industrial, laboratory/fortress/ruins → seus
+    temas, shop/station → rua urbana. Zone repetindo o desenho do 1º
+    setor rotaciona como antes. O 1º setor segue o layout global.
+  - `buildThemedStreet` ganhou o parâmetro de tema (o setor de galpões
+    ergue indústria mesmo com setting city). Suíte com 621 verificações
+    (12 novas: 4 distritos válidos, 6 pares de arquiteturas distintas e
+    torre subindo). Conferir no aparelho com o mesmo prompt de mundo
+    enorme: loja/galpões/praça/torre devem sair visivelmente diferentes.
 
 ### Resumo do loop noturno (v0.22.1 → v0.22.9, 9 iterações autônomas)
 Todas as oito receitas de planta respondem à rota (cidade, praça, pátio,
