@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import br.com.termia.construajogue.compiler.MapValidator;
 import br.com.termia.construajogue.compiler.ValidationIssue;
+import br.com.termia.construajogue.game.GameResult;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.ObjectiveSpec;
 import br.com.termia.construajogue.map.PrefabInstance;
@@ -738,11 +739,23 @@ public final class EditorHost extends FrameLayout
         setFieldVisible(duration, ObjectiveSpec.SURVIVE.equals(type));
         EditText limit = field(form, "Tempo-limite (s; 0 = sem limite)",
                 current.timeLimitSeconds);
+        boolean survive = ObjectiveSpec.SURVIVE.equals(type);
         EditText two = field(form, "Meta para 2 estrelas (s; 0 = desligada)",
                 current.twoStarSeconds);
+        setFieldVisible(two, !survive);
         EditText three = field(form,
                 "Meta para 3 estrelas (s; 0 = desligada)",
                 current.threeStarSeconds);
+        setFieldVisible(three, !survive);
+        if (survive) {
+            TextView note = new TextView(activity);
+            note.setText("Estrelas: terminar com vida "
+                    + GameResult.SURVIVE_TWO_STAR_HEALTH + "+ vale 2, "
+                    + GameResult.SURVIVE_THREE_STAR_HEALTH + "+ vale 3");
+            note.setTextSize(13f);
+            note.setTextColor(0xFF8FA3B0);
+            form.addView(note);
+        }
         new AlertDialog.Builder(activity)
                 .setTitle(label)
                 .setView(form)
@@ -755,8 +768,10 @@ public final class EditorHost extends FrameLayout
                         next.durationSeconds = ObjectiveSpec.SURVIVE.equals(type)
                                 ? Math.max(0f, parse(duration)) : 0f;
                         next.timeLimitSeconds = Math.max(0f, parse(limit));
-                        next.twoStarSeconds = Math.max(0f, parse(two));
-                        next.threeStarSeconds = Math.max(0f, parse(three));
+                        next.twoStarSeconds = survive
+                                ? 0f : Math.max(0f, parse(two));
+                        next.threeStarSeconds = survive
+                                ? 0f : Math.max(0f, parse(three));
                         beforeChange();
                         doc.objective = next;
                         afterChange();

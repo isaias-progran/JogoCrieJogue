@@ -71,7 +71,10 @@ nunca são salvos.
 - `objective.type`: `reach_exit`, `eliminate_all`, `collect` ou `survive`.
   `target` vale para fichas; `durationSeconds` para sobreviver;
   `timeLimitSeconds` é opcional para qualquer tipo. Metas de estrelas são
-  opcionais.
+  opcionais. `twoStarSeconds`/`threeStarSeconds` valem para tempo; em
+  `survive` o tempo decorrido é sempre a própria duração, então as estrelas
+  vêm da vida restante (40+ vale 2, 80+ vale 3) e as metas de tempo são
+  ignoradas.
 - `environment.sky`: `none`, `day`, `dusk` ou `night`.
 - `environment.soundscape`: campo opcional `auto`, `outdoor`, `tunnel` ou
   `industrial`. Ausente/`auto` preserva o ambiente externo dos mapas antigos.

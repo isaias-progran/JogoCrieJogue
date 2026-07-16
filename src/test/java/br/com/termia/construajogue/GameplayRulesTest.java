@@ -61,6 +61,22 @@ public final class GameplayRulesTest {
         check(new GameResult("id", "mapa", 80f, 2, 1, 0, 100,
                 stars).stars == 1, "uma estrela");
 
+        ObjectiveSpec surviveStars = new ObjectiveSpec();
+        surviveStars.type = ObjectiveSpec.SURVIVE;
+        surviveStars.durationSeconds = 30f;
+        surviveStars.twoStarSeconds = 60f;
+        surviveStars.threeStarSeconds = 30f;
+        check(new GameResult("id", "mapa", 30f, 2, 1, 0, 100,
+                surviveStars).stars == 3,
+                "sobreviver ileso vale três estrelas");
+        check(new GameResult("id", "mapa", 30f, 2, 1, 0,
+                GameResult.SURVIVE_THREE_STAR_HEALTH - 1,
+                surviveStars).stars == 2, "vida média vale duas estrelas");
+        check(new GameResult("id", "mapa", 30f, 2, 1, 0,
+                GameResult.SURVIVE_TWO_STAR_HEALTH - 1,
+                surviveStars).stars == 1,
+                "quase morrer vale uma estrela mesmo dentro da meta de tempo");
+
         Weapon weapon = new Weapon();
         weapon.reset();
         weapon.addSpecial(2);

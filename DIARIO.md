@@ -7,7 +7,26 @@ App Android (builder TermIa, Java puro, sem Gradle/androidx) que une:
 Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → voltar.
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
-## Estado atual — 2026-07-15
+## Estado atual — 2026-07-16
+- **v0.21.2 (versionCode 43) — estrelas do survive medem a vida restante.**
+  - No objetivo sobreviver as metas `twoStarSeconds`/`threeStarSeconds` eram
+    constantes (o tempo decorrido é sempre a própria duração): todo mapa
+    survive dava sempre a mesma quantidade de estrelas, e os gerados por IA
+    ficavam eternamente em 1 porque o construtor já pulava as metas de tempo.
+    Agora `GameResult` dá 2 estrelas ao terminar com vida 40+ e 3 com 80+;
+    os demais objetivos seguem medindo tempo, sem mudança.
+  - O formulário de objetivo esconde as metas de tempo no survive (e as zera
+    ao aplicar), mostrando a regra por vida no lugar. `docs/FORMATO-MAPA.md`
+    documenta a semântica. Sem mudança de schema: os campos continuam os
+    mesmos e mapas antigos não precisam de migração.
+  - Removidas as pastas vazias `core/`, `physics/` e `render/` (resíduo da
+    ESTRUTURA planejada; `Shader/Mesh/Boxes` moram em `engine/` de
+    propósito). Suíte com 590 verificações (3 novas de estrela do survive);
+    APK assinado v2/v3 com 329.152 bytes nesta build.
+  - NOTA DE HISTÓRICO: o trabalho v0.14.0→v0.21.1 entrou no git num único
+    commit (938784f) porque os estados intermediários não existiam mais em
+    lugar nenhum; o detalhe por versão está nas entradas abaixo. Remoto:
+    github.com/isaias-progran/JogoCrieJogue.
 - **v0.21.1 (versionCode 42) — NPC brasileiro casual e voz por personalidade.**
   - A conversa agora separa identidade, personalidade, regras e exemplos no
     prompt. O NPC responde em uma ou duas frases de português brasileiro

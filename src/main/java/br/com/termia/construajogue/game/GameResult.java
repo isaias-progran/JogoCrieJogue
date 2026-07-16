@@ -23,15 +23,28 @@ public final class GameResult {
         this.hits = hits;
         this.kills = kills;
         this.health = health;
-        stars = starsFor(seconds, spec);
+        stars = starsFor(seconds, health, spec);
     }
 
     public float accuracy() {
         return shots == 0 ? 1f : (float) hits / shots;
     }
 
-    private static int starsFor(float seconds, ObjectiveSpec value) {
+    /**
+     * No survive o tempo decorrido é sempre durationSeconds (metas de
+     * tempo virariam constantes); a vida restante é o que mede a partida.
+     */
+    public static final int SURVIVE_TWO_STAR_HEALTH = 40;
+    public static final int SURVIVE_THREE_STAR_HEALTH = 80;
+
+    private static int starsFor(float seconds, int health,
+                                ObjectiveSpec value) {
         ObjectiveSpec spec = value == null ? new ObjectiveSpec() : value;
+        if (ObjectiveSpec.SURVIVE.equals(spec.type)) {
+            if (health >= SURVIVE_THREE_STAR_HEALTH) return 3;
+            if (health >= SURVIVE_TWO_STAR_HEALTH) return 2;
+            return 1;
+        }
         int stars = 1;
         if (spec.twoStarSeconds > 0f && seconds <= spec.twoStarSeconds) {
             stars = 2;
