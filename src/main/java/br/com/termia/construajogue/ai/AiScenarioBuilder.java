@@ -979,16 +979,30 @@ public final class AiScenarioBuilder {
                 : "large".equals(profile.sectorSize()) ? 7.0f
                 : "medium".equals(profile.sectorSize()) ? 5.4f : 4.1f;
         float hz = "compact".equals(profile.sectorSize()) ? 3.0f : 4.2f;
+        // loop abre dois corredores com espinha central; branching deixa
+        // uma travessa livre no meio do galpão.
+        boolean spine = "loop".equals(plan.route) && half >= 24f;
+        boolean crossGap = "branching".equals(plan.route);
+        float spineHx = Math.min(2.6f, hx * 0.4f);
         for (int i = 0; i < bays; i++) {
             float z = rowPosition(i, bays, half, 7f, 8f);
+            if (crossGap && Math.abs(z) < hz + 1.6f) {
+                z = z >= 0f ? hz + 1.6f : -(hz + 1.6f);
+            }
             addIndustrialBay(doc, -(3.8f + hx), z, hx, hz, -1,
                     i * 2, random);
             addIndustrialBay(doc, 3.8f + hx, z, hx, hz, 1,
                     i * 2 + 1, random);
+            if (spine && i + 1 < bays) {
+                addIndustrialBay(doc, 0f, z + hz + 1.4f, spineHx, hz * 0.7f,
+                        (i & 1) == 0 ? -1 : 1, bays * 2 + i, random);
+            }
         }
-        // Obstáculos centrais alternados mudam o ritmo sem fechar a rota.
-        for (int i = 0; i < profile.rows(); i++) {
-            float z = rowPosition(i, profile.rows(), half, 5f, 7f);
+        // Obstáculos centrais alternados mudam o ritmo sem fechar a rota
+        // (a espinha do loop já ocupa o centro; não empilhar caixote nela).
+        int crates = spine ? 0 : profile.rows();
+        for (int i = 0; i < crates; i++) {
+            float z = rowPosition(i, crates, half, 5f, 7f);
             PrefabInstance crate = prefab(doc,
                     (i & 1) == 0 ? "obstacle.crate.large"
                             : "obstacle.crate.small",
@@ -1037,7 +1051,26 @@ public final class AiScenarioBuilder {
             float z = side * half * 0.43f;
             StructureObject cross = wall(doc, 0f, 1.5f, z,
                     innerX, 0.18f, "plain", wallColor(plan), true);
-            cross.openings.add(opening(0f, 3f, 2.4f));
+            if ("loop".equals(plan.route)) {
+                // Duas portas afastadas: dá para rondar a muralha em anel.
+                cross.openings.add(opening(-innerX * 0.55f, 2.2f, 2.3f));
+                cross.openings.add(opening(innerX * 0.55f, 2.2f, 2.3f));
+            } else {
+                cross.openings.add(opening(0f, 3f, 2.4f));
+            }
+        }
+        if ("branching".equals(plan.route)) {
+            // Bastiões chanfrados nos cantos, em paredes diagonais reais.
+            float bx = innerX * 0.94f;
+            float bz = half * 0.55f;
+            for (int ix = -1; ix <= 1; ix += 2) {
+                for (int iz = -1; iz <= 1; iz += 2) {
+                    diagonalWall(doc, ix * bx, iz * bz,
+                            ix * bx * 0.45f, iz * Math.min(half - 1.6f,
+                                    bz * 1.28f),
+                            "plain", wallColor(plan));
+                }
+            }
         }
         for (int ix = -1; ix <= 1; ix += 2) {
             for (int iz = -1; iz <= 1; iz += 2) {
@@ -1056,13 +1089,24 @@ public final class AiScenarioBuilder {
                                    AiScenarioProfile profile, Random random) {
         float half = profile.halfSize();
         int pieces = profile.rows() * 4 + 2;
+        boolean ring = "loop".equals(plan.route);
         for (int i = 0; i < pieces; i++) {
-            int side = (i & 1) == 0 ? -1 : 1;
-            float z = -half + 4.5f + (half * 2f - 9f)
-                    * i / Math.max(1f, pieces - 1f);
-            z += (random.nextFloat() - 0.5f) * 1.8f;
-            float x = side * (4.5f + random.nextFloat()
-                    * Math.max(1f, half * 0.34f));
+            float x;
+            float z;
+            if (ring) {
+                // Destroços em elipse: a ruína circunda um vazio central.
+                double angle = i * (Math.PI * 2.0 / pieces);
+                float radius = half * (0.48f + random.nextFloat() * 0.14f);
+                x = (float) Math.cos(angle) * radius;
+                z = (float) Math.sin(angle) * radius * 0.82f;
+            } else {
+                int side = (i & 1) == 0 ? -1 : 1;
+                z = -half + 4.5f + (half * 2f - 9f)
+                        * i / Math.max(1f, pieces - 1f);
+                z += (random.nextFloat() - 0.5f) * 1.8f;
+                x = side * (4.5f + random.nextFloat()
+                        * Math.max(1f, half * 0.34f));
+            }
             if (i % 3 == 0) {
                 wall(doc, x, 1.5f, z, 2.2f, 0.15f,
                         "brick", wallColor(plan), false);

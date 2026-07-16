@@ -351,6 +351,45 @@ public final class AiScenarioTest {
         Check.that(!geometry(directYard).equals(geometry(branchYard)),
                 "rota branching desalinha as alas do pátio");
 
+        MapDocument directWorks = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"setting\":\"city\"",
+                                "\"setting\":\"industrial\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"direct\"")));
+        MapDocument loopWorks = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"setting\":\"city\"",
+                                "\"setting\":\"industrial\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"loop\"")));
+        Check.that(!geometry(directWorks).equals(geometry(loopWorks)),
+                "indústria com loop ganha espinha central de galpões");
+        MapDocument bastionFort = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"setting\":\"city\"",
+                                "\"setting\":\"fortress\"")));
+        int bastions = 0;
+        for (StructureObject s : bastionFort.structures) {
+            if (StructureObject.KIND_POLY.equals(s.kind)) bastions++;
+        }
+        Check.that(bastions >= 4,
+                "fortaleza branching ergue bastiões diagonais");
+        MapDocument lineRuins = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"setting\":\"city\"",
+                                "\"setting\":\"ruins\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"direct\"")));
+        MapDocument ringRuins = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"setting\":\"city\"",
+                                "\"setting\":\"ruins\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"loop\"")));
+        Check.that(!geometry(lineRuins).equals(geometry(ringRuins)),
+                "ruínas com loop circundam um vazio central");
+
         AiScenarioPlan tunnelPlan = AiScenarioPlan.parse(validPlan().replace(
                 "\"setting\":\"city\"", "\"setting\":\"tunnel\""));
         MapDocument tunnel = AiScenarioBuilder.build(tunnelPlan);

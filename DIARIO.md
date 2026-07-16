@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.2 (versionCode 47) — indústria, fortaleza e ruínas pela rota.**
+  - `industrial`: `loop` ergue uma espinha central de galpões criando dois
+    corredores paralelos (caixotes centrais saem para não colidir);
+    `branching` deixa uma travessa livre no meio do galpão.
+  - `fortress`: `loop` põe duas portas afastadas em cada muralha
+    transversal — dá para rondar em anel; `branching` ergue bastiões
+    chanfrados nos quatro cantos em paredes diagonais (KIND_POLY).
+  - `ruins`: `loop` arruma os destroços em elipse ao redor de um vazio
+    central, no lugar das duas fileiras.
+  - Todas as seis receitas temáticas agora respondem à rota. Suíte com
+    604 verificações (3 novas). Iteração 2 do loop noturno.
 - **v0.22.1 (versionCode 46) — praça e pátio também obedecem à rota.**
   - `hub`: rota `direct` = quatro alas cardeais com cantos da praça
     chanfrados em paredes diagonais reais (KIND_POLY, primeira vez que o
