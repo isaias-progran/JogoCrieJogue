@@ -1,5 +1,6 @@
 package br.com.termia.construajogue.ai;
 
+import br.com.termia.construajogue.engine.Collision;
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.ObjectiveSpec;
@@ -7,6 +8,7 @@ import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
+import br.com.termia.construajogue.runtime.LegacyLevelLoader;
 import br.com.termia.construajogue.util.Ids;
 
 import java.util.ArrayList;
@@ -143,6 +145,11 @@ public final class AiFreeMapScript {
             doc.markers.add(exit);
             warn(result, "faltou 'saida'; criada no ponto mais distante");
         }
+        // A IA erra coordenada: marcador dentro de parede é empurrado
+        // para o espaço livre mais próximo em vez de perder a geração.
+        nudgeFree(doc, doc.firstMarker(LogicMarker.PLAYER_SPAWN),
+                "início", result);
+        nudgeFree(doc, doc.firstMarker(LogicMarker.EXIT), "saída", result);
         // Portas precisam das três meias-medidas; completa o que faltou.
         for (PrefabInstance door : doc.prefabs) {
             boolean gate = "door.gate".equals(door.prefabId);
@@ -165,6 +172,45 @@ public final class AiFreeMapScript {
                 }
             }
         }
+    }
+
+    /** Mesma checagem do MapValidator: cilindro do jogador × blocos. */
+    private static boolean standsFree(MapDocument doc, float x, float y,
+                                      float z) {
+        float[] pos = {x, y, z};
+        float[] bounds = new float[6];
+        for (StructureObject s : doc.structures) {
+            if (s.half == null
+                    || !StructureObject.KIND_BLOCK.equals(s.kind)) continue;
+            LegacyLevelLoader.toBounds(s.transform.x, s.transform.y,
+                    s.transform.z, s.half[0], s.half[1], s.half[2], bounds);
+            if (Collision.overlaps(pos, 0.35f, 1.75f, bounds)) return false;
+        }
+        return true;
+    }
+
+    private static void nudgeFree(MapDocument doc, LogicMarker marker,
+                                  String label, Result result) {
+        if (marker == null
+                || standsFree(doc, marker.x, marker.y, marker.z)) return;
+        for (float radius = 0.6f; radius <= 16f; radius += 0.6f) {
+            for (int step = 0; step < 16; step++) {
+                double angle = Math.PI * 2.0 * step / 16.0;
+                float x = clamp(marker.x
+                        + (float) (Math.cos(angle) * radius), -GRID, GRID);
+                float z = clamp(marker.z
+                        + (float) (Math.sin(angle) * radius), -GRID, GRID);
+                if (standsFree(doc, x, marker.y, z)) {
+                    marker.x = x;
+                    marker.z = z;
+                    warn(result, label + " estava dentro de uma estrutura; "
+                            + "movido para lugar livre próximo");
+                    return;
+                }
+            }
+        }
+        warn(result, label + " está dentro de estrutura sem espaço livre "
+                + "por perto; o validador pode recusar");
     }
 
     private static void fillProperty(PrefabInstance prefab, String name,
@@ -311,6 +357,28 @@ public final class AiFreeMapScript {
         }
         if (parts.length > 5) {
             value.sill = clamp(number(parts[5]), 0f, 2.5f);
+        }
+        // Prende o vão às medidas reais da parede (regras do validador).
+        float halfLength = Math.max(wall.half[0], wall.half[2]);
+        float wallHeight = wall.half[1] * 2f;
+        value.width = Math.min(value.width,
+                Math.max(0.5f, halfLength * 2f - 0.2f));
+        float limit = halfLength - value.width / 2f - 0.02f;
+        if (limit < 0f) {
+            throw new IllegalArgumentException("vão maior que a parede");
+        }
+        value.offset = clamp(value.offset, -limit, limit);
+        value.sill = Math.min(value.sill,
+                Math.max(0f, wallHeight - value.height));
+        value.height = Math.min(value.height, wallHeight - value.sill);
+        for (WallOpening existing : wall.openings) {
+            if (value.offset - value.width / 2f
+                    < existing.offset + existing.width / 2f
+                    && value.offset + value.width / 2f
+                    > existing.offset - existing.width / 2f) {
+                throw new IllegalArgumentException(
+                        "vão sobreposto a outro na mesma parede");
+            }
         }
         wall.openings.add(value);
     }

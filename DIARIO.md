@@ -8,6 +8,19 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.25.2 (versionCode 61) — modo livre não perde a geração por erro bobo.**
+  - Teste real (print): streaming OK, mas o validador recusou "o início
+    está dentro de uma estrutura" — a IA gastou a geração inteira e o
+    mapa foi jogado fora por 1 coordenada. Redes novas no parser:
+    início/saída dentro de bloco são EMPURRADOS para o espaço livre mais
+    próximo (espiral 16 direções até 16 m, mesma checagem
+    Collision.overlaps do validador, com aviso na prévia); vão é preso
+    ao comprimento/altura reais da parede e vão sobreposto vira aviso em
+    vez de erro fatal. Suíte com 685 verificações (11 novas, incluindo a
+    reprodução exata do erro do aparelho).
+  - Ainda pode falhar por: >1 'inicio' não (marker substitui), ids ok…
+    se aparecer recusa nova do validador, capturar o print e criar rede
+    equivalente.
 - **v0.25.1 (versionCode 60) — streaming: dá para VER a IA trabalhando.**
   - Teste real do usuário: modo livre estourou o timeout (120 s fixos do
     cliente para uma geração de minutos). Timeouts agora por rota:

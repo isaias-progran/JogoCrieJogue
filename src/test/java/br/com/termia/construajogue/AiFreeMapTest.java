@@ -192,6 +192,41 @@ public final class AiFreeMapTest {
         Check.that(bare.warnings.size() >= 2,
                 "redes de segurança geram avisos");
 
+        // Erro real do aparelho (v0.25.1): início dentro de estrutura.
+        AiFreeMapScript.Result stuck = AiFreeMapScript.parse(String.join(
+                "\n",
+                "piso 0 0 20 20 plain 0.4 0.4 0.4",
+                "bloco 5 1.5 5 2 1.5 2 metal 0.4 0.4 0.4",
+                "inicio 5 5",
+                "saida 5 5"), catalog);
+        LogicMarker moved = stuck.document.firstMarker(
+                LogicMarker.PLAYER_SPAWN);
+        List<ValidationIssue> stuckIssues = MapValidator.validate(
+                stuck.document, catalog);
+        Check.that(!MapValidator.hasError(stuckIssues),
+                "início dentro de bloco é empurrado e o mapa passa: "
+                        + stuckIssues);
+        Check.that(Math.hypot(moved.x - 5f, moved.z - 5f) > 1.9f,
+                "início movido para fora do bloco");
+
+        AiFreeMapScript.Result clampedOpening = AiFreeMapScript.parse(
+                String.join("\n",
+                        "piso 0 0 20 20 plain 0.4 0.4 0.4",
+                        "parede -3 0 3 0 3 brick 0.5 0.4 0.3",
+                        "vao porta 10",
+                        "vao porta 10",
+                        "inicio 0 5",
+                        "saida 0 -5"), catalog);
+        StructureObject small = clampedOpening.document.structures.get(1);
+        Check.equal(small.openings.size(), 1,
+                "vão sobreposto é recusado com aviso");
+        Check.that(Math.abs(small.openings.get(0).offset)
+                        + small.openings.get(0).width / 2f <= 3f,
+                "vão preso ao comprimento da parede");
+        Check.that(!MapValidator.hasError(MapValidator.validate(
+                        clampedOpening.document, catalog)),
+                "parede com vão preso passa no validador");
+
         boolean emptyRejected = false;
         try {
             AiFreeMapScript.parse("   \n  ", catalog);
