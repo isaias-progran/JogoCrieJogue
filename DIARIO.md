@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.1 (versionCode 46) — praça e pátio também obedecem à rota.**
+  - `hub`: rota `direct` = quatro alas cardeais com cantos da praça
+    chanfrados em paredes diagonais reais (KIND_POLY, primeira vez que o
+    construtor da IA usa poly fora dos marcos); `branching` = seis alas;
+    `loop` = anel de alas na diagonal (sem chanfros para não bloquear).
+  - `courtyard`: `branching` desalinha as alas alternadamente; `loop`
+    cerca o jardim central com as diagonais chanfradas.
+  - Suíte com 601 verificações (3 novas). Trabalho do loop noturno
+    autônomo autorizado pelo usuário; próximas iterações seguem as
+    prioridades: demais receitas (industrial/fortaleza/ruínas/campus),
+    mobiliar por finalidade da zone, modularizar AiScenarioBuilder.
 - **v0.22.0 (versionCode 45) — setores distintos e malha viária pela rota.**
   - Campanhas multi-setor saíam clones: o modelo não sabia da divisão e
     mandava 1–2 zones, `zoneAt` repetia por floorMod e o construtor aplicava

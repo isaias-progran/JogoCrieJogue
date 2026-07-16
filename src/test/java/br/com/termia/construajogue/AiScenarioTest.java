@@ -318,6 +318,39 @@ public final class AiScenarioTest {
         }
         Check.that(dashes >= 4, "cidade ganha faixa central tracejada");
 
+        MapDocument directHub = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"hub\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"direct\"")));
+        MapDocument loopHub = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"hub\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"loop\"")));
+        Check.that(!geometry(directHub).equals(geometry(loopHub)),
+                "rota muda a praça: alas cardeais versus anel diagonal");
+        int hubPolys = 0;
+        for (StructureObject s : directHub.structures) {
+            if (StructureObject.KIND_POLY.equals(s.kind)) hubPolys++;
+        }
+        Check.that(hubPolys >= 4,
+                "praça ganha cantos chanfrados em paredes diagonais");
+        MapDocument directYard = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"courtyard\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"direct\"")));
+        MapDocument branchYard = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"courtyard\"")));
+        Check.that(!geometry(directYard).equals(geometry(branchYard)),
+                "rota branching desalinha as alas do pátio");
+
         AiScenarioPlan tunnelPlan = AiScenarioPlan.parse(validPlan().replace(
                 "\"setting\":\"city\"", "\"setting\":\"tunnel\""));
         MapDocument tunnel = AiScenarioBuilder.build(tunnelPlan);

@@ -508,11 +508,17 @@ public final class AiScenarioBuilder {
                 Math.min(5f, half * 0.3f),
                 new float[]{0.48f, 0.46f, 0.42f});
         int count = Math.min(4, Math.max(2, plan.buildingCount));
+        // branching desalinha as alas; loop cerca o jardim com diagonais.
+        float stagger = "branching".equals(plan.route) ? span * 0.30f : 0f;
         float[] xs = {-span, span, -span, span};
         float[] zs = {-span, -span, span, span};
         for (int i = 0; i < count; i++) {
-            addDetachedBuilding(doc, plan, plan.zoneAt(i), xs[i], zs[i],
+            float cz = zs[i] + (i % 2 == 0 ? stagger : -stagger);
+            addDetachedBuilding(doc, plan, plan.zoneAt(i), xs[i], cz,
                     room, room * (0.78f + random.nextFloat() * 0.12f), i);
+        }
+        if ("loop".equals(plan.route)) {
+            plazaChamfers(doc, plan, Math.min(4.6f, half * 0.28f));
         }
         prefab(doc, "prop.plant.tall", -1.8f, 0f, 0f);
         prefab(doc, "prop.plant.tall", 1.8f, 0f, 0f);
@@ -539,6 +545,7 @@ public final class AiScenarioBuilder {
         }
     }
 
+    /** A rota muda a praça: alas cardeais, seis alas ou anel diagonal. */
     private static void buildHub(MapDocument doc, AiScenarioPlan plan,
                                  AiScenarioProfile profile, Random random) {
         float half = profile.halfSize();
@@ -548,14 +555,34 @@ public final class AiScenarioBuilder {
                 new float[]{0.40f, 0.43f, 0.48f});
         block(doc, StructureObject.ROLE_BLOCK, "metal",
                 0f, 0.65f, 0f, 0.8f, 0.65f, 0.8f, DARK);
-        float[] xs = {-span, span, 0f, 0f};
-        float[] zs = {0f, 0f, -span, span};
-        for (int i = 0; i < 4; i++) {
-            addDetachedBuilding(doc, plan, plan.zoneAt(i), xs[i], zs[i],
-                    i < 2 ? 3.4f : 4.4f,
-                    i < 2 ? 4.4f : 3.4f, i);
+        boolean diagonalWings = "loop".equals(plan.route);
+        int wings = "branching".equals(plan.route) ? 6 : 4;
+        if (!diagonalWings) {
+            plazaChamfers(doc, plan, Math.min(6.6f, span - 5.4f));
+        }
+        for (int i = 0; i < wings; i++) {
+            double angle = i * (Math.PI * 2.0 / wings)
+                    + (diagonalWings ? Math.PI / 4.0 : 0.0);
+            float cx = (float) Math.cos(angle) * span;
+            float cz = (float) Math.sin(angle) * span;
+            addDetachedBuilding(doc, plan, plan.zoneAt(i), cx, cz,
+                    i % 2 == 0 ? 3.4f : 4.4f,
+                    i % 2 == 0 ? 4.4f : 3.4f, i);
         }
         prefab(doc, "pickup.special", 0f, 1.8f, 0f);
+    }
+
+    /** Cantos chanfrados da praça em paredes diagonais (KIND_POLY). */
+    private static void plazaChamfers(MapDocument doc, AiScenarioPlan plan,
+                                      float radius) {
+        if (radius < 2.4f) return;
+        String material = wallMaterial(plan);
+        float[] color = wallColor(plan);
+        float near = radius * 0.42f;
+        diagonalWall(doc, near, radius, radius, near, material, color);
+        diagonalWall(doc, -near, radius, -radius, near, material, color);
+        diagonalWall(doc, near, -radius, radius, -near, material, color);
+        diagonalWall(doc, -near, -radius, -radius, -near, material, color);
     }
 
     private static void buildMaze(MapDocument doc, AiScenarioPlan plan,
