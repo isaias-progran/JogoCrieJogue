@@ -8,6 +8,7 @@ import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
+import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
 import br.com.termia.construajogue.util.Ids;
 
@@ -57,6 +58,7 @@ public final class AiFreeMapScript {
         Result result = new Result(doc);
         StructureObject lastWall = null;
         PrefabInstance lastPrefab = null;
+        PrefabDefinition lastDef = null;
         String[] lines = script.split("\n");
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
@@ -93,13 +95,16 @@ public final class AiFreeMapScript {
                 } else if ("peca".equals(command)) {
                     PrefabInstance placed =
                             prefab(doc, parts, catalog, result);
-                    if (placed != null) lastPrefab = placed;
+                    if (placed != null) {
+                        lastPrefab = placed;
+                        lastDef = catalog.find(placed.prefabId);
+                    }
                 } else if ("prop".equals(command)) {
-                    numericProp(lastPrefab, parts, result);
+                    numericProp(lastPrefab, lastDef, parts);
                 } else if ("texto".equals(command)) {
-                    textProp(lastPrefab, parts, line, result);
+                    textProp(lastPrefab, lastDef, parts, line);
                 } else if ("patrulha".equals(command)) {
-                    patrol(lastPrefab, parts, result);
+                    patrol(lastPrefab, lastDef, parts);
                 } else if ("inicio".equals(command)) {
                     marker(doc, LogicMarker.PLAYER_SPAWN, parts);
                 } else if ("saida".equals(command)) {
@@ -117,6 +122,174 @@ public final class AiFreeMapScript {
         return result;
     }
 
+    /**
+     * Resgate: quando o validador recusa o mapa, remove/conserta o que
+     * quebrou a regra em vez de perder a geração inteira. Devolve o
+     * número de consertos; cada um vira um aviso na prévia.
+     */
+    public static int salvage(MapDocument doc, PrefabCatalog catalog,
+                              List<String> warnings) {
+        int fixes = 0;
+        int enemies = 0;
+        int tokens = 0;
+        List<PrefabInstance> keep = new ArrayList<>();
+        for (PrefabInstance p : doc.prefabs) {
+            PrefabDefinition def = catalog.find(p.prefabId);
+            if (def == null) {
+                warn(warnings, "resgate: peça desconhecida removida");
+                fixes++;
+                continue;
+            }
+            if (p.scale <= 0f) {
+                p.scale = 1f;
+                fixes++;
+            }
+            List<String> drop = new ArrayList<>();
+            for (java.util.Map.Entry<String, Object> entry
+                    : p.properties.entrySet()) {
+                String key = entry.getKey();
+                Object value = entry.getValue();
+                boolean text = "controllerId".equals(key)
+                        || (PrefabDefinition.BEHAVIOR_NPC_HUMAN
+                        .equals(def.behavior) && TEXT_PROPS.contains(key));
+                boolean bad = !def.allowsProperty(key)
+                        || (text && (!(value instanceof String)
+                        || ((String) value).trim().isEmpty()))
+                        || (!text && !(value instanceof Number))
+                        || (value instanceof Number && !isFinite(
+                        ((Number) value).floatValue()));
+                if (bad) drop.add(key);
+            }
+            for (String key : drop) {
+                p.properties.remove(key);
+                warn(warnings, "resgate: " + def.name + " perdeu '"
+                        + key + "' não permitido");
+                fixes++;
+            }
+            if (isEnemyBehavior(def.behavior)) enemies++;
+            if (PrefabDefinition.BEHAVIOR_PICKUP_TOKEN
+                    .equals(def.behavior)) tokens++;
+            keep.add(p);
+        }
+        if (keep.size() != doc.prefabs.size()) {
+            doc.prefabs.clear();
+            doc.prefabs.addAll(keep);
+        }
+        List<StructureObject> solid = new ArrayList<>();
+        for (StructureObject s : doc.structures) {
+            if (StructureObject.KIND_BLOCK.equals(s.kind) && (s.half == null
+                    || s.half[0] <= 0f || s.half[1] <= 0f
+                    || s.half[2] <= 0f)) {
+                warn(warnings, "resgate: estrutura sem volume removida");
+                fixes++;
+                continue;
+            }
+            fixes += salvageOpenings(s, warnings);
+            solid.add(s);
+        }
+        if (solid.size() != doc.structures.size()) {
+            doc.structures.clear();
+            doc.structures.addAll(solid);
+        }
+        fixes += salvageObjective(doc, enemies, tokens, warnings);
+        LogicMarker spawn = doc.firstMarker(LogicMarker.PLAYER_SPAWN);
+        if (spawn != null
+                && !standsFree(doc, spawn.x, spawn.y, spawn.z)) {
+            Result carrier = new Result(doc);
+            nudgeFree(doc, spawn, "início", carrier);
+            warnings.addAll(carrier.warnings);
+            fixes++;
+        }
+        return fixes;
+    }
+
+    private static int salvageOpenings(StructureObject s,
+                                       List<String> warnings) {
+        if (s.openings.isEmpty() || s.half == null) return 0;
+        float halfLength = Math.max(s.half[0], s.half[2]);
+        float wallHeight = s.half[1] * 2f;
+        List<WallOpening> sorted = new ArrayList<>(s.openings);
+        sorted.sort((a, b) -> Float.compare(a.offset, b.offset));
+        List<WallOpening> accepted = new ArrayList<>();
+        float lastEnd = Float.NEGATIVE_INFINITY;
+        int fixes = 0;
+        for (WallOpening o : sorted) {
+            boolean fits = o.width > 0f && o.height > 0f && o.sill >= 0f
+                    && Math.abs(o.offset) + o.width / 2f <= halfLength
+                    && o.sill + o.height <= wallHeight + 0.001f
+                    && o.offset - o.width / 2f >= lastEnd;
+            if (fits) {
+                accepted.add(o);
+                lastEnd = o.offset + o.width / 2f;
+            } else {
+                warn(warnings, "resgate: vão impossível removido da parede");
+                fixes++;
+            }
+        }
+        if (fixes > 0) {
+            s.openings.clear();
+            s.openings.addAll(accepted);
+        }
+        return fixes;
+    }
+
+    private static int salvageObjective(MapDocument doc, int enemies,
+                                        int tokens, List<String> warnings) {
+        ObjectiveSpec o = doc.objective;
+        int fixes = 0;
+        if (ObjectiveSpec.ELIMINATE_ALL.equals(o.type) && enemies == 0) {
+            o.type = ObjectiveSpec.REACH_EXIT;
+            warn(warnings, "resgate: sem inimigos, objetivo virou "
+                    + "chegar à saída");
+            fixes++;
+        }
+        if (ObjectiveSpec.COLLECT.equals(o.type)) {
+            if (tokens == 0) {
+                o.type = ObjectiveSpec.REACH_EXIT;
+                warn(warnings, "resgate: sem fichas no mapa, objetivo "
+                        + "virou chegar à saída");
+                fixes++;
+            } else if (o.target <= 0 || o.target > tokens) {
+                o.target = tokens;
+                warn(warnings, "resgate: alvo de fichas ajustado para "
+                        + tokens);
+                fixes++;
+            }
+        }
+        if (ObjectiveSpec.SURVIVE.equals(o.type)) {
+            if (o.durationSeconds <= 0f) {
+                o.durationSeconds = 60f;
+                fixes++;
+            }
+            if (o.timeLimitSeconds > 0f
+                    && o.timeLimitSeconds <= o.durationSeconds) {
+                o.timeLimitSeconds = 0f;
+                fixes++;
+            }
+        }
+        if (ObjectiveSpec.REACH_EXIT.equals(o.type)
+                && doc.firstMarker(LogicMarker.EXIT) == null) {
+            Result carrier = new Result(doc);
+            autoExit(doc, carrier);
+            warnings.addAll(carrier.warnings);
+            fixes++;
+        }
+        return fixes;
+    }
+
+    private static boolean isEnemyBehavior(String behavior) {
+        return PrefabDefinition.BEHAVIOR_DRONE.equals(behavior)
+                || PrefabDefinition.BEHAVIOR_DRONE_DORMANT.equals(behavior)
+                || PrefabDefinition.BEHAVIOR_MUTANT.equals(behavior)
+                || PrefabDefinition.BEHAVIOR_TURRET.equals(behavior)
+                || PrefabDefinition.BEHAVIOR_KAMIKAZE.equals(behavior)
+                || PrefabDefinition.BEHAVIOR_BOSS.equals(behavior);
+    }
+
+    private static boolean isFinite(float value) {
+        return !Float.isNaN(value) && !Float.isInfinite(value);
+    }
+
     /** Redes de segurança: spawn, saída e ligação porta↔terminal. */
     private static void finish(MapDocument doc, Result result) {
         if (doc.firstMarker(LogicMarker.PLAYER_SPAWN) == null) {
@@ -127,23 +300,7 @@ public final class AiFreeMapScript {
         }
         if (ObjectiveSpec.REACH_EXIT.equals(doc.objective.type)
                 && doc.firstMarker(LogicMarker.EXIT) == null) {
-            LogicMarker exit = new LogicMarker(Ids.create(),
-                    LogicMarker.EXIT);
-            LogicMarker spawn = doc.firstMarker(LogicMarker.PLAYER_SPAWN);
-            float best = -1f;
-            for (StructureObject structure : doc.structures) {
-                float dx = structure.transform.x - spawn.x;
-                float dz = structure.transform.z - spawn.z;
-                float distance = dx * dx + dz * dz;
-                if (distance > best) {
-                    best = distance;
-                    exit.x = structure.transform.x;
-                    exit.z = structure.transform.z;
-                }
-            }
-            exit.radius = 1.35f;
-            doc.markers.add(exit);
-            warn(result, "faltou 'saida'; criada no ponto mais distante");
+            autoExit(doc, result);
         }
         // A IA erra coordenada: marcador dentro de parede é empurrado
         // para o espaço livre mais próximo em vez de perder a geração.
@@ -172,6 +329,29 @@ public final class AiFreeMapScript {
                 }
             }
         }
+    }
+
+    /** Sem 'saida': nasce no ponto mais distante do spawn e é empurrada. */
+    private static void autoExit(MapDocument doc, Result result) {
+        LogicMarker exit = new LogicMarker(Ids.create(), LogicMarker.EXIT);
+        LogicMarker spawn = doc.firstMarker(LogicMarker.PLAYER_SPAWN);
+        float fromX = spawn == null ? 0f : spawn.x;
+        float fromZ = spawn == null ? 0f : spawn.z;
+        float best = -1f;
+        for (StructureObject structure : doc.structures) {
+            float dx = structure.transform.x - fromX;
+            float dz = structure.transform.z - fromZ;
+            float distance = dx * dx + dz * dz;
+            if (distance > best) {
+                best = distance;
+                exit.x = structure.transform.x;
+                exit.z = structure.transform.z;
+            }
+        }
+        exit.radius = 1.35f;
+        doc.markers.add(exit);
+        warn(result, "faltou 'saida'; criada no ponto mais distante");
+        nudgeFree(doc, exit, "saída", result);
     }
 
     /** Mesma checagem do MapValidator: cilindro do jogador × blocos. */
@@ -404,26 +584,30 @@ public final class AiFreeMapScript {
         return value;
     }
 
-    private static void numericProp(PrefabInstance prefab, String[] parts,
-                                    Result result) {
-        if (prefab == null) {
+    private static void numericProp(PrefabInstance prefab,
+                                    PrefabDefinition def, String[] parts) {
+        if (prefab == null || def == null) {
             throw new IllegalArgumentException("nenhuma peça antes de prop");
         }
-        if (!NUMERIC_PROPS.contains(parts[1])) {
-            throw new IllegalArgumentException(
-                    "propriedade desconhecida: " + parts[1]);
+        if (!NUMERIC_PROPS.contains(parts[1])
+                || !def.allowsProperty(parts[1])) {
+            // Mesma regra do validador: a peça diz o que aceita.
+            throw new IllegalArgumentException(def.name
+                    + " não aceita '" + parts[1] + "'");
         }
         prefab.properties.put(parts[1], number(parts[2]));
     }
 
-    private static void textProp(PrefabInstance prefab, String[] parts,
-                                 String line, Result result) {
-        if (prefab == null) {
+    private static void textProp(PrefabInstance prefab,
+                                 PrefabDefinition def, String[] parts,
+                                 String line) {
+        if (prefab == null || def == null) {
             throw new IllegalArgumentException("nenhuma peça antes de texto");
         }
-        if (!TEXT_PROPS.contains(parts[1])) {
-            throw new IllegalArgumentException(
-                    "texto desconhecido: " + parts[1]);
+        if (!TEXT_PROPS.contains(parts[1])
+                || !def.allowsProperty(parts[1])) {
+            throw new IllegalArgumentException(def.name
+                    + " não aceita texto '" + parts[1] + "'");
         }
         int start = line.indexOf(parts[1]) + parts[1].length();
         String value = clip(line.substring(start).trim(),
@@ -434,11 +618,15 @@ public final class AiFreeMapScript {
         prefab.properties.put(parts[1], value);
     }
 
-    private static void patrol(PrefabInstance prefab, String[] parts,
-                               Result result) {
-        if (prefab == null) {
+    private static void patrol(PrefabInstance prefab, PrefabDefinition def,
+                               String[] parts) {
+        if (prefab == null || def == null) {
             throw new IllegalArgumentException(
                     "nenhuma peça antes de patrulha");
+        }
+        if (!def.allowsProperty("patrolX")) {
+            throw new IllegalArgumentException(def.name
+                    + " é fixa e não patrulha");
         }
         prefab.properties.put("patrolX", coord(number(parts[1])));
         prefab.properties.put("patrolZ", coord(number(parts[2])));
@@ -538,6 +726,10 @@ public final class AiFreeMapScript {
     }
 
     private static void warn(Result result, String message) {
-        if (result.warnings.size() < 40) result.warnings.add(message);
+        warn(result.warnings, message);
+    }
+
+    private static void warn(List<String> warnings, String message) {
+        if (warnings.size() < 40) warnings.add(message);
     }
 }

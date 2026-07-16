@@ -8,6 +8,19 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.25.4 (versionCode 63) — resgate: erro do validador não perde geração.**
+  - Print real (v0.25.3): "Torreta fixa: propriedade 'patrolX' não
+    permitida" derrubou o mapa inteiro. Duas camadas novas:
+    (1) PREVENÇÃO — prop/texto/patrulha agora consultam o
+    `allowsProperty` do catálogo (mesma regra do validador) e recusam na
+    linha, virando aviso; patrulha em peça fixa idem.
+    (2) RESGATE — `AiFreeMapScript.salvage()`: se o validador recusar o
+    mapa, remove propriedades proibidas/inválidas, vãos impossíveis e
+    estruturas sem volume, ajusta objetivo (collect sem fichas →
+    reach_exit; alvo > fichas → alvo = fichas; survive sem duração) com
+    saída automática, re-empurra o spawn, e valida DE NOVO — só desiste
+    se nem assim passar ("recusado mesmo após o resgate"). Cada conserto
+    vira aviso "resgate: …" na prévia. Suíte com 695 verificações.
 - **v0.25.3 (versionCode 62) — instrução do livre afinada pelo aparelho.**
   - VALIDADO NO APARELHO (v0.25.2): o modo livre construiu bem e o
     usuário achou "até melhor que os mapas pré-programados". Falhas

@@ -404,8 +404,19 @@ public final class AiFeatureController {
                 List<ValidationIssue> issues =
                         MapValidator.validate(parsed.document, catalog);
                 if (MapValidator.hasError(issues)) {
+                    // Alternativa antes de desistir: conserta o que o
+                    // validador recusou e tenta validar de novo.
+                    int fixes = AiFreeMapScript.salvage(parsed.document,
+                            catalog, parsed.warnings);
+                    if (fixes > 0) {
+                        issues = MapValidator.validate(parsed.document,
+                                catalog);
+                    }
+                }
+                if (MapValidator.hasError(issues)) {
                     throw new IOException("o desenho da IA foi recusado "
-                            + "pelo validador: " + firstError(issues)
+                            + "pelo validador mesmo após o resgate: "
+                            + firstError(issues)
                             + "\n\nTente gerar de novo ou mude o pedido.");
                 }
                 LevelCompiler.compile(parsed.document, catalog);

@@ -233,6 +233,46 @@ public final class AiFreeMapTest {
                         clampedOpening.document, catalog)),
                 "parede com vão preso passa no validador");
 
+        // Erro real do aparelho (v0.25.3): patrulha em torreta fixa.
+        AiFreeMapScript.Result turret = AiFreeMapScript.parse(String.join(
+                "\n",
+                "piso 0 0 15 15 plain 0.4 0.4 0.4",
+                "peca enemy.turret 4 0.55 4",
+                "patrulha -4 -4",
+                "inicio 0 -10",
+                "saida 0 10"), catalog);
+        Check.that(turret.document.prefabs.get(0)
+                        .properties.get("patrolX") == null,
+                "patrulha em torreta é recusada na hora, com aviso");
+        Check.that(!MapValidator.hasError(MapValidator.validate(
+                        turret.document, catalog)),
+                "mapa com torreta passa no validador");
+
+        // Resgate: mapa quebrado de propósito volta a ser válido.
+        AiFreeMapScript.Result broken = AiFreeMapScript.parse(String.join(
+                "\n",
+                "piso 0 0 15 15 plain 0.4 0.4 0.4",
+                "objetivo collect 9 300",
+                "peca pickup.token 3 0.5 3",
+                "peca pickup.token -3 0.5 -3",
+                "inicio 0 -10",
+                "saida 0 10"), catalog);
+        broken.document.prefabs.get(0).properties.put("patrolX", 5f);
+        Check.that(MapValidator.hasError(MapValidator.validate(
+                        broken.document, catalog)),
+                "mapa sabotado é mesmo recusado antes do resgate");
+        int fixes = AiFreeMapScript.salvage(broken.document, catalog,
+                broken.warnings);
+        Check.that(fixes >= 2,
+                "resgate conserta propriedade proibida e alvo de fichas");
+        Check.equal(broken.document.objective.target, 2,
+                "alvo de fichas ajustado ao que existe no mapa");
+        Check.that(!MapValidator.hasError(MapValidator.validate(
+                        broken.document, catalog)),
+                "mapa resgatado passa no validador");
+        Check.that(broken.warnings.toString().contains("resgate"),
+                "consertos do resgate aparecem como avisos");
+
         boolean emptyRejected = false;
         try {
             AiFreeMapScript.parse("   \n  ", catalog);
