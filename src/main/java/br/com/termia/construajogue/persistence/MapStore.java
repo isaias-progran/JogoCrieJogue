@@ -39,6 +39,7 @@ public final class MapStore {
         if (!dir.isDirectory()) {
             dir.mkdirs();
         }
+        recoverBackups();
     }
 
     public List<Entry> list() {
@@ -87,9 +88,13 @@ public final class MapStore {
         }
         if (file.exists()) {
             backup.delete();
-            file.renameTo(backup);
+            if (!file.renameTo(backup)) {
+                temp.delete();
+                throw new IOException("não consegui preparar o backup");
+            }
         }
         if (!temp.renameTo(file)) {
+            if (backup.exists()) backup.renameTo(file);
             throw new IOException("não consegui trocar " + file.getName());
         }
     }
@@ -108,8 +113,27 @@ public final class MapStore {
         return copy;
     }
 
+    public void rename(String id, String name) throws IOException {
+        MapDocument doc = load(id);
+        String clean = name == null ? "" : name.trim();
+        doc.name = clean.isEmpty() ? "Mapa sem nome" : clean;
+        save(doc);
+    }
+
     private File fileOf(String id) {
         return new File(dir, id + ".json");
+    }
+
+    /** Recupera save interrompido entre mover o atual e promover o .tmp. */
+    private void recoverBackups() {
+        File[] files = dir.listFiles((parent, name) -> name.endsWith(".bak"));
+        if (files == null) return;
+        for (File backup : files) {
+            String id = backup.getName().substring(0,
+                    backup.getName().length() - 4);
+            File primary = fileOf(id);
+            if (!primary.exists()) backup.renameTo(primary);
+        }
     }
 
     private static String readText(File file) throws IOException {

@@ -1,0 +1,1776 @@
+{
+  "environment": {
+    "ambient": 0.16,
+    "fog": [0.015, 0.025, 0.055],
+    "fogFar": 52,
+    "sky": "night"
+  },
+  "id": "exemplo-complexo-omega",
+  "markers": [
+    {
+      "id": "spawn",
+      "type": "player_spawn",
+      "x": -16,
+      "y": 0,
+      "z": 12.5
+    }
+  ],
+  "name": "Complexo Ômega — nove núcleos",
+  "objective": {
+    "target": 9,
+    "threeStarSeconds": 270,
+    "timeLimitSeconds": 600,
+    "twoStarSeconds": 420,
+    "type": "collect"
+  },
+  "prefabs": [
+    {
+      "id": "terminal-alpha",
+      "prefabId": "terminal.wall",
+      "properties": {
+        "order": 1
+      },
+      "transform": {
+        "x": -15.5,
+        "y": 1.4,
+        "z": -11.8
+      }
+    },
+    {
+      "id": "eclusa-alpha",
+      "prefabId": "door.gate",
+      "properties": {
+        "controllerId": "terminal-alpha",
+        "halfX": 0.16,
+        "halfY": 1.4,
+        "halfZ": 1.45
+      },
+      "transform": {
+        "x": -7,
+        "y": 1.4,
+        "z": -1.5
+      }
+    },
+    {
+      "id": "terminal-beta",
+      "prefabId": "terminal.wall",
+      "properties": {
+        "order": 2
+      },
+      "transform": {
+        "x": 3.2,
+        "y": 1.4,
+        "z": 11.7
+      }
+    },
+    {
+      "id": "eclusa-beta",
+      "prefabId": "door.gate",
+      "properties": {
+        "controllerId": "terminal-beta",
+        "halfX": 0.16,
+        "halfY": 1.4,
+        "halfZ": 1.45
+      },
+      "transform": {
+        "x": 7,
+        "y": 1.4,
+        "z": 3.5
+      }
+    },
+    {
+      "id": "porta-auto-aloj",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.6,
+        "halfY": 1.05,
+        "halfZ": 0.09
+      },
+      "transform": {
+        "x": -12.5,
+        "y": 1.05,
+        "z": 5
+      }
+    },
+    {
+      "id": "rampa-curta-oeste",
+      "prefabId": "ramp.short",
+      "transform": {
+        "x": -12,
+        "y": 0,
+        "yaw": 180,
+        "z": 11.2
+      }
+    },
+    {
+      "id": "porta-auto-lab",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.6,
+        "halfY": 1.05,
+        "halfZ": 0.09
+      },
+      "transform": {
+        "x": -3,
+        "y": 1.05,
+        "z": 6.5
+      }
+    },
+    {
+      "id": "rampa-telhado",
+      "prefabId": "ramp.floor",
+      "transform": {
+        "x": 5,
+        "y": 0,
+        "z": 3.5
+      }
+    },
+    {
+      "id": "porta-auto-reator",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.6,
+        "halfY": 1.05,
+        "halfZ": 0.09
+      },
+      "transform": {
+        "x": 3,
+        "y": 1.05,
+        "z": -6.5
+      }
+    },
+    {
+      "id": "escada-central",
+      "prefabId": "stairs.small",
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "yaw": 180,
+        "z": 3.6
+      }
+    },
+    {
+      "id": "escada-torre",
+      "prefabId": "stairs.floor",
+      "transform": {
+        "x": 12,
+        "y": 0,
+        "yaw": 180,
+        "z": 11.8
+      }
+    },
+    {
+      "id": "terminal-gamma",
+      "prefabId": "terminal.wall",
+      "properties": {
+        "order": 3
+      },
+      "transform": {
+        "x": 13.2,
+        "y": 4.4,
+        "z": 8
+      }
+    },
+    {
+      "id": "porta-auto-armaria",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.6,
+        "halfY": 1.05,
+        "halfZ": 0.09
+      },
+      "transform": {
+        "x": 11,
+        "y": 1.05,
+        "z": -2
+      }
+    },
+    {
+      "id": "portao-cofre",
+      "prefabId": "door.gate",
+      "properties": {
+        "controllerId": "terminal-gamma",
+        "halfX": 1.2,
+        "halfY": 1.4,
+        "halfZ": 0.16
+      },
+      "transform": {
+        "x": 13,
+        "y": 1.4,
+        "z": -6
+      }
+    },
+    {
+      "id": "nucleo-agua",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -11.5,
+        "y": 0.5,
+        "z": -10
+      }
+    },
+    {
+      "id": "nucleo-plataforma-o",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -12,
+        "y": 1.4,
+        "z": 8
+      }
+    },
+    {
+      "id": "nucleo-alojamento",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -16,
+        "y": 0.5,
+        "z": 7.2
+      }
+    },
+    {
+      "id": "nucleo-central",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 0,
+        "y": 1.4,
+        "z": 1
+      }
+    },
+    {
+      "id": "nucleo-reator",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 0,
+        "y": 0.5,
+        "z": -12.6
+      }
+    },
+    {
+      "id": "nucleo-lab",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -3.5,
+        "y": 0.5,
+        "z": 11.5
+      }
+    },
+    {
+      "id": "nucleo-telhado",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 4,
+        "y": 3.7,
+        "z": 10
+      }
+    },
+    {
+      "id": "nucleo-torre",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 11,
+        "y": 3.4,
+        "z": 8
+      }
+    },
+    {
+      "id": "nucleo-cofre",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 13,
+        "y": 0.5,
+        "z": -11.3
+      }
+    },
+    {
+      "id": "omega-drone-o",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": -15.5,
+        "patrolZ": 1.5
+      },
+      "transform": {
+        "x": -9.5,
+        "y": 1.8,
+        "z": 1.5
+      }
+    },
+    {
+      "id": "omega-mut-o",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": -9,
+        "patrolZ": -3
+      },
+      "transform": {
+        "x": -16,
+        "y": 0.85,
+        "z": -3
+      }
+    },
+    {
+      "id": "omega-kami-o",
+      "prefabId": "enemy.kamikaze",
+      "properties": {
+        "patrolX": -15,
+        "patrolZ": -6
+      },
+      "transform": {
+        "x": -10,
+        "y": 1.8,
+        "z": -6
+      }
+    },
+    {
+      "id": "omega-torreta-agua",
+      "prefabId": "enemy.turret",
+      "transform": {
+        "x": -15.5,
+        "y": 0.55,
+        "yaw": 90,
+        "z": -10
+      }
+    },
+    {
+      "id": "omega-drone-c",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": 4.5,
+        "patrolZ": 4.7
+      },
+      "transform": {
+        "x": -4.5,
+        "y": 1.8,
+        "z": 4.7
+      }
+    },
+    {
+      "id": "omega-mut-c",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": 4.5,
+        "patrolZ": -4.2
+      },
+      "transform": {
+        "x": -4.5,
+        "y": 0.85,
+        "z": -4.2
+      }
+    },
+    {
+      "id": "omega-kami-r",
+      "prefabId": "enemy.kamikaze",
+      "properties": {
+        "patrolX": 4.5,
+        "patrolZ": -9
+      },
+      "transform": {
+        "x": -4.5,
+        "y": 1.8,
+        "z": -9
+      }
+    },
+    {
+      "id": "omega-torreta-r",
+      "prefabId": "enemy.turret",
+      "transform": {
+        "x": 0,
+        "y": 0.55,
+        "z": -13
+      }
+    },
+    {
+      "id": "omega-wave-l1",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": 4.5,
+        "patrolZ": 9
+      },
+      "transform": {
+        "x": -4.5,
+        "y": 1.8,
+        "z": 9
+      }
+    },
+    {
+      "id": "omega-wave-l2",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": -4,
+        "patrolZ": 12.5
+      },
+      "transform": {
+        "x": 4,
+        "y": 2.1,
+        "z": 12.5
+      }
+    },
+    {
+      "id": "omega-mut-l",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": 0,
+        "patrolZ": 12.5
+      },
+      "transform": {
+        "x": 0,
+        "y": 0.85,
+        "z": 8
+      }
+    },
+    {
+      "id": "omega-drone-leste",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": 15.5,
+        "patrolZ": 1
+      },
+      "transform": {
+        "x": 10,
+        "y": 1.8,
+        "z": 1
+      }
+    },
+    {
+      "id": "omega-kami-leste",
+      "prefabId": "enemy.kamikaze",
+      "properties": {
+        "patrolX": 15,
+        "patrolZ": 5.5
+      },
+      "transform": {
+        "x": 9,
+        "y": 1.8,
+        "z": 5.5
+      }
+    },
+    {
+      "id": "omega-torreta-torre",
+      "prefabId": "enemy.turret",
+      "transform": {
+        "x": 12,
+        "y": 3.55,
+        "yaw": 180,
+        "z": 8.8
+      }
+    },
+    {
+      "id": "omega-torreta-armaria",
+      "prefabId": "enemy.turret",
+      "transform": {
+        "x": 16,
+        "y": 0.55,
+        "yaw": 270,
+        "z": -4
+      }
+    },
+    {
+      "id": "omega-chefe",
+      "prefabId": "enemy.boss",
+      "transform": {
+        "x": 13,
+        "y": 1.8,
+        "z": -10
+      }
+    },
+    {
+      "id": "omega-mut-cofre",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": 15.5,
+        "patrolZ": -8
+      },
+      "transform": {
+        "x": 10,
+        "y": 0.85,
+        "z": -8
+      }
+    },
+    {
+      "id": "omega-wave-cofre",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": 15.5,
+        "patrolZ": -12
+      },
+      "transform": {
+        "x": 10.5,
+        "y": 1.8,
+        "z": -12
+      }
+    },
+    {
+      "id": "vida-oeste",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": -16.5,
+        "y": 0.5,
+        "z": -1
+      }
+    },
+    {
+      "id": "vida-central",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": -5,
+        "y": 0.5,
+        "z": 3.5
+      }
+    },
+    {
+      "id": "vida-lab",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": 5,
+        "y": 0.5,
+        "z": 12.5
+      }
+    },
+    {
+      "id": "vida-cofre",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": 9.5,
+        "y": 0.5,
+        "z": -12.5
+      }
+    },
+    {
+      "id": "mun-oeste",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": -9,
+        "y": 0.5,
+        "z": -12.5
+      }
+    },
+    {
+      "id": "mun-central",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": 5,
+        "y": 0.5,
+        "z": 0
+      }
+    },
+    {
+      "id": "mun-reator",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": -5,
+        "y": 0.5,
+        "z": -12.5
+      }
+    },
+    {
+      "id": "mun-lab",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": -5,
+        "y": 0.5,
+        "z": 8
+      }
+    },
+    {
+      "id": "mun-armaria",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": 15,
+        "y": 0.5,
+        "z": -4
+      }
+    },
+    {
+      "id": "especial-agua",
+      "prefabId": "pickup.special",
+      "transform": {
+        "x": -9,
+        "y": 0.5,
+        "z": -9
+      }
+    },
+    {
+      "id": "especial-central",
+      "prefabId": "pickup.special",
+      "transform": {
+        "x": 0,
+        "y": 1.4,
+        "z": 1.8
+      }
+    },
+    {
+      "id": "especial-telhado",
+      "prefabId": "pickup.special",
+      "transform": {
+        "x": 0,
+        "y": 3.7,
+        "z": 10
+      }
+    },
+    {
+      "id": "especial-armaria",
+      "prefabId": "pickup.special",
+      "transform": {
+        "x": 10,
+        "y": 0.5,
+        "z": -4
+      }
+    },
+    {
+      "id": "luz-aloj-1",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 0.42,
+        "lightG": 0.72,
+        "lightR": 1,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": -15,
+        "y": 3.1,
+        "z": 10
+      }
+    },
+    {
+      "id": "luz-aloj-2",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.78,
+        "lightR": 0.65,
+        "lightRadius": 6
+      },
+      "transform": {
+        "x": -10,
+        "y": 3.1,
+        "z": 8
+      }
+    },
+    {
+      "id": "luz-agua",
+      "locked": true,
+      "prefabId": "prop.lamp.floor",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.65,
+        "lightR": 0.3,
+        "lightRadius": 8
+      },
+      "transform": {
+        "x": -15,
+        "y": 0,
+        "z": -8
+      }
+    },
+    {
+      "id": "luz-alpha",
+      "locked": true,
+      "prefabId": "prop.lamp.floor",
+      "properties": {
+        "lightB": 0.22,
+        "lightG": 0.55,
+        "lightR": 1,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": -9,
+        "y": 0,
+        "z": -1.5
+      }
+    },
+    {
+      "id": "luz-central",
+      "locked": true,
+      "prefabId": "prop.lamp.floor",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.75,
+        "lightR": 0.55,
+        "lightRadius": 8
+      },
+      "transform": {
+        "x": 0,
+        "y": 1,
+        "z": 1
+      }
+    },
+    {
+      "id": "luz-reator-o",
+      "locked": true,
+      "prefabId": "prop.lamp.floor",
+      "properties": {
+        "lightB": 0.08,
+        "lightG": 0.2,
+        "lightR": 1,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -5,
+        "y": 0,
+        "z": -10
+      }
+    },
+    {
+      "id": "luz-reator-l",
+      "locked": true,
+      "prefabId": "prop.lamp.floor",
+      "properties": {
+        "lightB": 0.08,
+        "lightG": 0.2,
+        "lightR": 1,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 5,
+        "y": 0,
+        "z": -10
+      }
+    },
+    {
+      "id": "luz-lab-1",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.8,
+        "lightR": 0.55,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": -3,
+        "y": 3.1,
+        "z": 10
+      }
+    },
+    {
+      "id": "luz-lab-2",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.55,
+        "lightR": 0.72,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": 3,
+        "y": 3.1,
+        "z": 12
+      }
+    },
+    {
+      "id": "luz-torre",
+      "locked": true,
+      "prefabId": "prop.lamp.floor",
+      "properties": {
+        "lightB": 0.18,
+        "lightG": 0.48,
+        "lightR": 1,
+        "lightRadius": 10
+      },
+      "transform": {
+        "x": 12,
+        "y": 3,
+        "z": 7
+      }
+    },
+    {
+      "id": "luz-armaria-1",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.55,
+        "lightR": 0.3,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": 10,
+        "y": 3.1,
+        "z": -4
+      }
+    },
+    {
+      "id": "luz-armaria-2",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.55,
+        "lightR": 0.3,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": 15,
+        "y": 3.1,
+        "z": -4
+      }
+    },
+    {
+      "id": "luz-cofre",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 0.12,
+        "lightG": 0.18,
+        "lightR": 1,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 13,
+        "y": 3.1,
+        "z": -11
+      }
+    },
+    {
+      "id": "luz-poste-omega",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.32,
+        "lightG": 0.68,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8
+      },
+      "transform": {
+        "x": 16.8,
+        "y": 0,
+        "yaw": 270,
+        "z": 12.5
+      }
+    },
+    {
+      "id": "mob-cama",
+      "prefabId": "furniture.bed",
+      "transform": {
+        "x": -16,
+        "y": 0,
+        "z": 10.5
+      }
+    },
+    {
+      "id": "mob-guarda",
+      "prefabId": "furniture.wardrobe",
+      "transform": {
+        "x": -9,
+        "y": 0,
+        "z": 11.5
+      }
+    },
+    {
+      "id": "mob-sofa",
+      "prefabId": "furniture.sofa",
+      "transform": {
+        "x": -16,
+        "y": 0,
+        "yaw": 90,
+        "z": 7.5
+      }
+    },
+    {
+      "id": "mob-tv",
+      "prefabId": "prop.tv",
+      "transform": {
+        "x": -17.6,
+        "y": 1.4,
+        "yaw": 90,
+        "z": 7.5
+      }
+    },
+    {
+      "id": "mob-mesa-o",
+      "prefabId": "furniture.table",
+      "transform": {
+        "x": -15,
+        "y": 0,
+        "z": 2.5
+      }
+    },
+    {
+      "id": "mob-cadeira-o1",
+      "prefabId": "furniture.chair",
+      "transform": {
+        "x": -15,
+        "y": 0,
+        "yaw": 180,
+        "z": 1.6
+      }
+    },
+    {
+      "id": "mob-cadeira-o2",
+      "prefabId": "furniture.chair",
+      "transform": {
+        "x": -14,
+        "y": 0,
+        "yaw": 270,
+        "z": 2.5
+      }
+    },
+    {
+      "id": "mob-pia-cozinha",
+      "prefabId": "furniture.sink.kitchen",
+      "transform": {
+        "x": -9,
+        "y": 0,
+        "z": 3.8
+      }
+    },
+    {
+      "id": "mob-prateleira-o",
+      "prefabId": "furniture.shelf",
+      "transform": {
+        "x": -17,
+        "y": 0,
+        "yaw": 90,
+        "z": -4
+      }
+    },
+    {
+      "id": "mob-bancada-r",
+      "prefabId": "furniture.workbench",
+      "transform": {
+        "x": -4.5,
+        "y": 0,
+        "z": -11.5
+      }
+    },
+    {
+      "id": "mob-armario-r",
+      "prefabId": "furniture.cabinet",
+      "transform": {
+        "x": 4.8,
+        "y": 0,
+        "z": -12
+      }
+    },
+    {
+      "id": "mob-bancada-l",
+      "prefabId": "furniture.workbench",
+      "transform": {
+        "x": -4.5,
+        "y": 0,
+        "yaw": 180,
+        "z": 9
+      }
+    },
+    {
+      "id": "mob-armario-l",
+      "prefabId": "furniture.cabinet",
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "z": 12.5
+      }
+    },
+    {
+      "id": "mob-estante-l",
+      "prefabId": "furniture.shelf",
+      "transform": {
+        "x": 5.5,
+        "y": 0,
+        "yaw": 270,
+        "z": 9
+      }
+    },
+    {
+      "id": "mob-pia-banho",
+      "prefabId": "furniture.sink.bath",
+      "transform": {
+        "x": 5.7,
+        "y": 0,
+        "yaw": 270,
+        "z": 12.5
+      }
+    },
+    {
+      "id": "mob-vaso",
+      "prefabId": "furniture.toilet",
+      "transform": {
+        "x": 5.7,
+        "y": 0,
+        "yaw": 270,
+        "z": 11.5
+      }
+    },
+    {
+      "id": "mob-espelho",
+      "prefabId": "prop.mirror.round",
+      "transform": {
+        "x": 6.6,
+        "y": 1.5,
+        "yaw": 270,
+        "z": 12.5
+      }
+    },
+    {
+      "id": "mob-planta-p",
+      "prefabId": "prop.plant.small",
+      "transform": {
+        "x": -1,
+        "y": 0,
+        "z": 8
+      }
+    },
+    {
+      "id": "mob-planta-a",
+      "prefabId": "prop.plant.tall",
+      "transform": {
+        "x": 1,
+        "y": 0,
+        "z": 8
+      }
+    },
+    {
+      "id": "mob-caixa-o1",
+      "prefabId": "obstacle.crate.large",
+      "transform": {
+        "x": -9,
+        "y": 0,
+        "z": -6
+      }
+    },
+    {
+      "id": "mob-caixa-o2",
+      "prefabId": "obstacle.crate.small",
+      "transform": {
+        "x": -9.8,
+        "y": 0,
+        "z": -6.4
+      }
+    },
+    {
+      "id": "mob-barril-o",
+      "prefabId": "obstacle.barrel",
+      "transform": {
+        "x": -10.5,
+        "y": 0,
+        "z": -5.8
+      }
+    },
+    {
+      "id": "mob-caixa-c1",
+      "prefabId": "obstacle.crate.large",
+      "transform": {
+        "x": -4,
+        "y": 0,
+        "z": 2
+      }
+    },
+    {
+      "id": "mob-caixa-c2",
+      "prefabId": "obstacle.crate.small",
+      "transform": {
+        "x": 4,
+        "y": 0,
+        "z": -2
+      }
+    },
+    {
+      "id": "mob-barril-c",
+      "prefabId": "obstacle.barrel",
+      "transform": {
+        "x": 4.8,
+        "y": 0,
+        "z": 2.5
+      }
+    },
+    {
+      "id": "mob-estante-arm",
+      "prefabId": "furniture.shelf",
+      "transform": {
+        "x": 17,
+        "y": 0,
+        "yaw": 90,
+        "z": -4
+      }
+    },
+    {
+      "id": "mob-caixa-arm1",
+      "prefabId": "obstacle.crate.large",
+      "transform": {
+        "x": 14,
+        "y": 0,
+        "z": -3.2
+      }
+    },
+    {
+      "id": "mob-caixa-arm2",
+      "prefabId": "obstacle.crate.large",
+      "transform": {
+        "x": 14.8,
+        "y": 0,
+        "z": -3.2
+      }
+    },
+    {
+      "id": "mob-barril-arm",
+      "prefabId": "obstacle.barrel",
+      "transform": {
+        "x": 9,
+        "y": 0,
+        "z": -4.8
+      }
+    }
+  ],
+  "schema": 2,
+  "structures": [
+    {
+      "color": [0.22, 0.24, 0.28],
+      "half": [18, 0.2, 14],
+      "id": "omega-base",
+      "kind": "block",
+      "locked": true,
+      "material": "checker",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.24,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.42, 0.31, 0.25],
+      "half": [5.2, 0.02, 9.1],
+      "id": "piso-hangar",
+      "kind": "block",
+      "material": "brick",
+      "role": "floor",
+      "transform": {
+        "x": -12.5,
+        "y": -0.02,
+        "z": -4.5
+      }
+    },
+    {
+      "color": [0.48, 0.34, 0.2],
+      "half": [5.2, 0.02, 4.1],
+      "id": "piso-alojamento",
+      "kind": "block",
+      "material": "wood",
+      "role": "floor",
+      "transform": {
+        "x": -12.5,
+        "y": -0.02,
+        "z": 9.5
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.45],
+      "half": [6.7, 0.02, 6.2],
+      "id": "piso-central",
+      "kind": "block",
+      "material": "metal",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.02,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.35, 0.25, 0.24],
+      "half": [6.7, 0.02, 3.5],
+      "id": "piso-reator",
+      "kind": "block",
+      "material": "brick",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.02,
+        "z": -10.2
+      }
+    },
+    {
+      "color": [0.58, 0.62, 0.68],
+      "half": [6.7, 0.02, 3.4],
+      "id": "piso-laboratorio",
+      "kind": "block",
+      "material": "checker",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.02,
+        "z": 10.3
+      }
+    },
+    {
+      "color": [0.28, 0.35, 0.44],
+      "half": [5.2, 0.02, 7.8],
+      "id": "piso-leste",
+      "kind": "block",
+      "material": "checker",
+      "role": "floor",
+      "transform": {
+        "x": 12.5,
+        "y": -0.02,
+        "z": 5.8
+      }
+    },
+    {
+      "color": [0.31, 0.34, 0.39],
+      "half": [5.2, 0.02, 3.8],
+      "id": "piso-cofre",
+      "kind": "block",
+      "material": "metal",
+      "role": "floor",
+      "transform": {
+        "x": 12.5,
+        "y": -0.02,
+        "z": -9.8
+      }
+    },
+    {
+      "color": [0.08, 0.36, 0.66],
+      "half": [3.2, 0.03, 1.8],
+      "id": "agua-tratamento",
+      "kind": "block",
+      "material": "water",
+      "role": "floor",
+      "transform": {
+        "x": -11.5,
+        "y": 0.03,
+        "z": -10
+      }
+    },
+    {
+      "color": [0.95, 0.22, 0.04],
+      "half": [2.8, 0.03, 1.45],
+      "id": "lava-reator",
+      "kind": "block",
+      "material": "lava",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.03,
+        "z": -10.2
+      }
+    },
+    {
+      "color": [0.43, 0.26, 0.22],
+      "half": [18.15, 1.5, 0.15],
+      "id": "muro-norte",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "openings": [
+        {
+          "height": 1,
+          "id": "jan-n1",
+          "offset": -12,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        },
+        {
+          "height": 1,
+          "id": "jan-n2",
+          "offset": -4,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        },
+        {
+          "height": 1,
+          "id": "jan-n3",
+          "offset": 4,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        },
+        {
+          "height": 1,
+          "id": "jan-n4",
+          "offset": 12,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": -14
+      }
+    },
+    {
+      "color": [0.43, 0.26, 0.22],
+      "half": [18.15, 1.5, 0.15],
+      "id": "muro-sul",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "openings": [
+        {
+          "height": 1,
+          "id": "jan-s1",
+          "offset": -12,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        },
+        {
+          "height": 1,
+          "id": "jan-s2",
+          "offset": -4,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        },
+        {
+          "height": 1,
+          "id": "jan-s3",
+          "offset": 4,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        },
+        {
+          "height": 1,
+          "id": "jan-s4",
+          "offset": 12,
+          "sill": 1.15,
+          "type": "window",
+          "width": 1.8
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": 14
+      }
+    },
+    {
+      "color": [0.43, 0.26, 0.22],
+      "half": [0.15, 1.5, 14.15],
+      "id": "muro-oeste",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": -18,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.43, 0.26, 0.22],
+      "half": [0.15, 1.5, 14.15],
+      "id": "muro-leste",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 18,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.18, 0.38, 0.62],
+      "color3": [0.72, 0.36, 0.12],
+      "half": [0.15, 1.5, 5.65],
+      "id": "div-a-n",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -7,
+        "y": 1.5,
+        "z": -8.5
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.18, 0.38, 0.62],
+      "color3": [0.72, 0.36, 0.12],
+      "half": [0.15, 1.5, 7.15],
+      "id": "div-a-s",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -7,
+        "y": 1.5,
+        "z": 7
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.72, 0.36, 0.12],
+      "color3": [0.18, 0.38, 0.62],
+      "half": [0.15, 1.5, 8.15],
+      "id": "div-b-n",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 7,
+        "y": 1.5,
+        "z": -6
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.72, 0.36, 0.12],
+      "color3": [0.18, 0.38, 0.62],
+      "half": [0.15, 1.5, 4.65],
+      "id": "div-b-s",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 7,
+        "y": 1.5,
+        "z": 9.5
+      }
+    },
+    {
+      "color": [0.48, 0.34, 0.22],
+      "color2": [0.68, 0.5, 0.3],
+      "color3": [0.3, 0.22, 0.16],
+      "half": [5.65, 1.5, 0.15],
+      "id": "parede-alojamento",
+      "kind": "block",
+      "material": "wood",
+      "openings": [
+        {
+          "height": 2.1,
+          "id": "porta-aloj",
+          "offset": 0,
+          "type": "door",
+          "width": 1.2
+        },
+        {
+          "height": 1.1,
+          "id": "jan-aloj-o",
+          "offset": -3,
+          "sill": 1,
+          "type": "window",
+          "width": 1.4
+        },
+        {
+          "height": 1.1,
+          "id": "jan-aloj-l",
+          "offset": 3,
+          "sill": 1,
+          "type": "window",
+          "width": 1.4
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": -12.5,
+        "y": 1.5,
+        "z": 5
+      }
+    },
+    {
+      "color": [0.38, 0.41, 0.48],
+      "half": [5.35, 0.15, 4.2],
+      "id": "teto-alojamento",
+      "kind": "block",
+      "role": "ceiling",
+      "transform": {
+        "x": -12.5,
+        "y": 3.15,
+        "z": 9.5
+      }
+    },
+    {
+      "color": [0.44, 0.3, 0.18],
+      "half": [2.5, 0.5, 2],
+      "id": "plataforma-oeste",
+      "kind": "block",
+      "material": "wood",
+      "role": "block",
+      "transform": {
+        "x": -12,
+        "y": 0.5,
+        "z": 8
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.62, 0.7, 0.78],
+      "color3": [0.18, 0.38, 0.62],
+      "half": [6.9500003, 1.5, 0.15],
+      "id": "parede-laboratorio",
+      "kind": "block",
+      "material": "metal",
+      "openings": [
+        {
+          "height": 2.1,
+          "id": "porta-lab",
+          "offset": -3,
+          "type": "door",
+          "width": 1.2
+        },
+        {
+          "height": 1.2,
+          "id": "janela-lab",
+          "offset": 1,
+          "sill": 0.9,
+          "type": "window",
+          "width": 1.8
+        },
+        {
+          "height": 3,
+          "id": "portal-rampa-lab",
+          "offset": 5,
+          "type": "portal",
+          "width": 1.4
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": 6.5
+      }
+    },
+    {
+      "color": [0.38, 0.41, 0.48],
+      "half": [6.65, 0.15, 3.6],
+      "id": "teto-laboratorio",
+      "kind": "block",
+      "role": "ceiling",
+      "transform": {
+        "x": 0,
+        "y": 3.15,
+        "z": 10.25
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.72, 0.36, 0.12],
+      "color3": [0.18, 0.38, 0.62],
+      "half": [6.9500003, 1.5, 0.15],
+      "id": "parede-reator",
+      "kind": "block",
+      "material": "metal",
+      "openings": [
+        {
+          "height": 2.1,
+          "id": "porta-reator",
+          "offset": 3,
+          "type": "door",
+          "width": 1.2
+        },
+        {
+          "height": 1,
+          "id": "janela-reator",
+          "offset": 0,
+          "sill": 1.1,
+          "type": "window",
+          "width": 1.8
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": -6.5
+      }
+    },
+    {
+      "color": [0.43, 0.26, 0.22],
+      "color2": [0.72, 0.24, 0.12],
+      "color3": [0.16, 0.3, 0.55],
+      "half": [2.458252, 1.5, 2.5538337],
+      "id": "blindagem-diag-a",
+      "kind": "poly",
+      "material": "brick",
+      "openings": [
+        {
+          "height": 2.4,
+          "id": "portal-diag-a",
+          "offset": 0,
+          "type": "portal",
+          "width": 1.4
+        }
+      ],
+      "polygon": [-5.808252, -12.796165, -1.1082523, -7.8961663, -0.8917478, -8.103834, -5.5917478, -13.003834],
+      "role": "wall",
+      "transform": {
+        "x": -3.35,
+        "y": 1.5,
+        "z": -10.45
+      }
+    },
+    {
+      "color": [0.43, 0.26, 0.22],
+      "color2": [0.16, 0.3, 0.55],
+      "color3": [0.72, 0.24, 0.12],
+      "half": [2.458252, 1.5, 2.5538337],
+      "id": "blindagem-diag-b",
+      "kind": "poly",
+      "material": "brick",
+      "openings": [
+        {
+          "height": 2.4,
+          "id": "portal-diag-b",
+          "offset": 0,
+          "type": "portal",
+          "width": 1.4
+        }
+      ],
+      "polygon": [1.1082523, -7.8961663, 5.808252, -12.796165, 5.5917478, -13.003834, 0.8917478, -8.103834],
+      "role": "wall",
+      "transform": {
+        "x": 3.35,
+        "y": 1.5,
+        "z": -10.45
+      }
+    },
+    {
+      "color": [0.3, 0.38, 0.46],
+      "half": [2, 0.5, 2],
+      "id": "plataforma-central",
+      "kind": "block",
+      "material": "metal",
+      "role": "block",
+      "transform": {
+        "x": 0,
+        "y": 0.5,
+        "z": 1
+      }
+    },
+    {
+      "color": [0.29, 0.34, 0.42],
+      "half": [3, 1.5, 2],
+      "id": "torre-leste",
+      "kind": "block",
+      "material": "metal",
+      "role": "block",
+      "transform": {
+        "x": 12,
+        "y": 1.5,
+        "z": 8
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.18, 0.38, 0.62],
+      "color3": [0.72, 0.36, 0.12],
+      "half": [5.65, 1.5, 0.15],
+      "id": "parede-armaria",
+      "kind": "block",
+      "material": "metal",
+      "openings": [
+        {
+          "height": 2.1,
+          "id": "porta-armaria",
+          "offset": -1.5,
+          "type": "door",
+          "width": 1.2
+        },
+        {
+          "height": 1,
+          "id": "jan-armaria",
+          "offset": 2.2,
+          "sill": 1.1,
+          "type": "window",
+          "width": 1.8
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 12.5,
+        "y": 1.5,
+        "z": -2
+      }
+    },
+    {
+      "color": [0.38, 0.41, 0.48],
+      "half": [5.3, 0.15, 1.8],
+      "id": "teto-armaria",
+      "kind": "block",
+      "role": "ceiling",
+      "transform": {
+        "x": 12.5,
+        "y": 3.15,
+        "z": -4
+      }
+    },
+    {
+      "color": [0.27, 0.3, 0.36],
+      "color2": [0.72, 0.36, 0.12],
+      "color3": [0.18, 0.38, 0.62],
+      "half": [4.15, 1.5, 0.15],
+      "id": "parede-cofre-frente",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "openings": [
+        {
+          "height": 3,
+          "id": "portal-cofre",
+          "offset": 0.5,
+          "type": "portal",
+          "width": 2.4
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 12.5,
+        "y": 1.5,
+        "z": -6
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.72, 0.36, 0.12],
+      "color3": [0.18, 0.38, 0.62],
+      "half": [0.15, 1.5, 4.15],
+      "id": "parede-cofre-o",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 8.5,
+        "y": 1.5,
+        "z": -10
+      }
+    },
+    {
+      "color": [0.34, 0.39, 0.47],
+      "color2": [0.18, 0.38, 0.62],
+      "color3": [0.72, 0.36, 0.12],
+      "half": [0.15, 1.5, 4.15],
+      "id": "parede-cofre-l",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 16.5,
+        "y": 1.5,
+        "z": -10
+      }
+    },
+    {
+      "color": [0.38, 0.41, 0.48],
+      "half": [4.1, 0.15, 4],
+      "id": "teto-cofre",
+      "kind": "block",
+      "role": "ceiling",
+      "transform": {
+        "x": 12.5,
+        "y": 3.15,
+        "z": -10
+      }
+    }
+  ]
+}

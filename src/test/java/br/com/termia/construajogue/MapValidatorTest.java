@@ -6,6 +6,7 @@ import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.ObjectiveSpec;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 
 import java.io.FileInputStream;
@@ -84,6 +85,57 @@ public final class MapValidatorTest {
         doc = valid();
         doc.prefabs.get(0).id = doc.structures.get(0).id;
         expectError(doc, "id.duplicado", "id repetido");
+
+        doc = valid();
+        doc.objective.type = ObjectiveSpec.ELIMINATE_ALL;
+        doc.prefabs.clear();
+        doc.markers.remove(doc.firstMarker(LogicMarker.EXIT));
+        expectError(doc, "objetivo.inimigos", "combate sem inimigos");
+
+        doc = valid();
+        doc.objective.type = ObjectiveSpec.COLLECT;
+        doc.objective.target = 2;
+        doc.markers.remove(doc.firstMarker(LogicMarker.EXIT));
+        PrefabInstance token = new PrefabInstance("ficha", "pickup.token");
+        doc.prefabs.add(token);
+        expectError(doc, "objetivo.fichas", "fichas insuficientes");
+
+        doc = valid();
+        doc.objective.type = ObjectiveSpec.SURVIVE;
+        doc.objective.durationSeconds = 10f;
+        doc.objective.timeLimitSeconds = 5f;
+        doc.markers.remove(doc.firstMarker(LogicMarker.EXIT));
+        expectError(doc, "objetivo.tempo", "limite menor que sobrevivência");
+
+        doc = valid();
+        PrefabInstance terminal = new PrefabInstance("terminal",
+                "terminal.wall");
+        terminal.properties.put("order", 2f);
+        doc.prefabs.add(terminal);
+        expectError(doc, "terminal.ordem", "sequência começa em dois");
+
+        doc = valid();
+        doc.prefabs.get(0).properties.put("patrolX", "não é número");
+        expectError(doc, "peca.propriedade", "propriedade com tipo errado");
+
+        doc = valid();
+        PrefabInstance npc = new PrefabInstance("pessoa", "npc.human");
+        npc.properties.put("name", "Lia");
+        npc.properties.put("role", "guia");
+        npc.properties.put("greeting", "Olá!");
+        npc.properties.put("background", "Conhece a cidade.");
+        doc.prefabs.add(npc);
+        Check.that(!hasError(doc), "textos válidos do NPC são aceitos");
+
+        doc = valid();
+        npc = new PrefabInstance("pessoa", "npc.human");
+        npc.properties.put("greeting", 12f);
+        doc.prefabs.add(npc);
+        expectError(doc, "peca.propriedade", "fala do NPC precisa ser texto");
+
+        doc = valid();
+        doc.markers.add(new LogicMarker("estranho", "teleporte"));
+        expectError(doc, "marcador.tipo", "marcador desconhecido");
 
         Check.done("MapValidatorTest");
     }

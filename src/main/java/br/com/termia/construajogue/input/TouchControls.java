@@ -39,6 +39,7 @@ public final class TouchControls extends View {
     private volatile float moveZ;
     private volatile boolean firing;
     private volatile boolean interactVisible;
+    private volatile String interactLabel = "ATIVAR";
     private volatile boolean gameOver;
     private volatile boolean paused;
     private float pendingYaw;
@@ -129,6 +130,16 @@ public final class TouchControls extends View {
         }
     }
 
+    /** Define visibilidade e verbo do botão (ATIVAR/FALAR). */
+    public void setInteractAction(boolean visible, String label) {
+        String next = label == null ? "ATIVAR" : label;
+        boolean changed = interactVisible != visible
+                || !next.equals(interactLabel);
+        interactVisible = visible;
+        interactLabel = next;
+        if (changed) postInvalidate();
+    }
+
     /** Fim de partida: qualquer toque vira pedido de reinício. */
     public void setGameOver(boolean value) {
         if (gameOver != value) {
@@ -145,6 +156,11 @@ public final class TouchControls extends View {
     /** Pode ser chamado pela Activity ao perder foco. */
     public void pause() {
         setPaused(true);
+    }
+
+    /** Retoma após fechar um diálogo Android de conversa. */
+    public void resume() {
+        setPaused(false);
     }
 
     private void setPaused(boolean value) {
@@ -332,7 +348,7 @@ public final class TouchControls extends View {
             return;
         }
         overlay.draw(canvas, moveId != -1, anchorX, anchorY, knobX, knobY,
-                firing, interactVisible);
+                firing, interactVisible, interactLabel);
         pauseMenu.drawPauseButton(canvas);
     }
 

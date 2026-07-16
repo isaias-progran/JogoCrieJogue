@@ -16,6 +16,8 @@ public final class LogicMarker {
     public float yaw;
     /** Raio da zona de vitória (exit). */
     public float radius;
+    /** Trava persistente do editor. */
+    public boolean locked;
 
     public LogicMarker() {
     }

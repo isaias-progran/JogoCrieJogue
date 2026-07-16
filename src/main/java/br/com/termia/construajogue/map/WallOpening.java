@@ -19,6 +19,8 @@ public final class WallOpening {
     public float height;
     /** Altura do peitoril (0 = vai até o chão). */
     public float sill;
+    /** Trava persistente do editor. */
+    public boolean locked;
 
     public WallOpening() {
     }

@@ -23,6 +23,7 @@ public final class Hud extends View {
 
     private volatile int ammo;
     private volatile int reserve;
+    private volatile int special;
     private volatile int health = 100;
     private volatile boolean reloading;
     private volatile long hitUntil;
@@ -58,6 +59,11 @@ public final class Hud extends View {
     public void setAmmo(int mag, int reserveCount) {
         ammo = mag;
         reserve = reserveCount;
+        postInvalidate();
+    }
+
+    public void setSpecial(int value) {
+        special = value;
         postInvalidate();
     }
 
@@ -137,6 +143,13 @@ public final class Hud extends View {
         canvas.drawText(ammo + " / " + reserve,
                 getWidth() - 170f * density,
                 getHeight() - 24f * density, text);
+        if (special > 0) {
+            text.setColor(0xFFFFC84A);
+            canvas.drawText("ESPECIAL " + special,
+                    getWidth() - 20f * density,
+                    getHeight() - 24f * density, text);
+            text.setColor(0xFFDDE7EE);
+        }
 
         String objectiveNow = objective;
         if (objectiveNow != null) {

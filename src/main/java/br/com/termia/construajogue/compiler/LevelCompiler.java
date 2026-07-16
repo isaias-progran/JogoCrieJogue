@@ -7,11 +7,15 @@ import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
+import br.com.termia.construajogue.map.WallGeometry;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.prefab.PrefabMeshFactory;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
+import br.com.termia.construajogue.runtime.RuntimeDoor;
 import br.com.termia.construajogue.runtime.RuntimeLevel;
+import br.com.termia.construajogue.runtime.RuntimeNpc;
+import br.com.termia.construajogue.runtime.RuntimeTerminal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,13 +40,21 @@ public final class LevelCompiler {
         List<float[]> colors3 = new ArrayList<>();
         List<float[]> solids = new ArrayList<>();
         List<float[]> polyMeshes = new ArrayList<>();
+        List<float[]> hazards = new ArrayList<>();
         int polyFloats = 0;
         for (StructureObject s : doc.structures) {
+            addHazard(s, hazards);
             if (StructureObject.KIND_POLY.equals(s.kind)) {
-                float[] mesh = polyTriangles(s);
-                polyMeshes.add(mesh);
-                polyFloats += mesh.length;
-                polyColliders(s, solids);
+                List<StructureObject> pieces = WallGeometry.diagonal(s)
+                        && !s.openings.isEmpty()
+                        ? cutDiagonalOpenings(s)
+                        : java.util.Collections.singletonList(s);
+                for (StructureObject piece : pieces) {
+                    float[] mesh = polyTriangles(piece);
+                    polyMeshes.add(mesh);
+                    polyFloats += mesh.length;
+                    polyColliders(piece, solids);
+                }
                 continue;
             }
             if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
@@ -70,9 +82,12 @@ public final class LevelCompiler {
         List<float[]> drones = new ArrayList<>();
         List<float[]> waves = new ArrayList<>();
         List<float[]> mutants = new ArrayList<>();
+        List<float[]> extraEnemies = new ArrayList<>();
         List<float[]> items = new ArrayList<>();
-        float[] terminal = null;
-        PrefabInstance door = null;
+        List<RuntimeTerminal> terminals = new ArrayList<>();
+        List<PrefabInstance> doorInstances = new ArrayList<>();
+        List<float[]> lights = new ArrayList<>();
+        List<RuntimeNpc> npcs = new ArrayList<>();
         for (PrefabInstance p : doc.prefabs) {
             PrefabDefinition def = catalog.find(p.prefabId);
             if (def == null) {
@@ -92,19 +107,57 @@ public final class LevelCompiler {
                 case PrefabDefinition.BEHAVIOR_MUTANT:
                     mutants.add(patrol(p));
                     break;
+                case PrefabDefinition.BEHAVIOR_TURRET:
+                    extraEnemies.add(extraEnemy(RuntimeLevel.ENEMY_TURRET, p));
+                    break;
+                case PrefabDefinition.BEHAVIOR_KAMIKAZE:
+                    extraEnemies.add(extraEnemy(
+                            RuntimeLevel.ENEMY_KAMIKAZE, p));
+                    break;
+                case PrefabDefinition.BEHAVIOR_BOSS:
+                    extraEnemies.add(extraEnemy(RuntimeLevel.ENEMY_BOSS, p));
+                    break;
+                case PrefabDefinition.BEHAVIOR_NPC_HUMAN: {
+                    npcs.add(new RuntimeNpc(p.id,
+                            p.stringProperty("name"),
+                            p.stringProperty("role"),
+                            p.stringProperty("greeting"),
+                            p.stringProperty("background"),
+                            x, y, z, p.transform.yaw));
+                    // O companheiro se move; sua posição não pode virar um
+                    // collider estático e deixar um obstáculo invisível.
+                    break;
+                }
                 case PrefabDefinition.BEHAVIOR_PICKUP_HEALTH:
                     items.add(new float[]{RuntimeLevel.ITEM_HEALTH, x, y, z});
                     break;
                 case PrefabDefinition.BEHAVIOR_PICKUP_AMMO:
                     items.add(new float[]{RuntimeLevel.ITEM_AMMO, x, y, z});
                     break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_TOKEN:
+                    items.add(new float[]{RuntimeLevel.ITEM_TOKEN, x, y, z});
+                    break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_SPECIAL:
+                    items.add(new float[]{RuntimeLevel.ITEM_SPECIAL, x, y, z});
+                    break;
                 case PrefabDefinition.BEHAVIOR_TERMINAL:
-                    terminal = new float[]{x, y, z};
+                    terminals.add(new RuntimeTerminal(p.id, x, y, z,
+                            Math.max(0, Math.round(
+                                    p.floatProperty("order", 0f)))));
                     break;
                 case PrefabDefinition.BEHAVIOR_DOOR:
-                    door = p;
+                case PrefabDefinition.BEHAVIOR_AUTO_DOOR:
+                    doorInstances.add(p);
                     break;
                 case PrefabDefinition.BEHAVIOR_STATIC: {
+                    if (p.prefabId.startsWith("prop.lamp.")) {
+                        lights.add(new float[]{x,
+                                y + p.floatProperty("lightOffsetY", 0f), z,
+                                p.floatProperty("lightR", 1f),
+                                p.floatProperty("lightG", 0.76f),
+                                p.floatProperty("lightB", 0.42f),
+                                p.floatProperty("lightRadius", 6f)});
+                    }
                     float[][] parts = PrefabMeshFactory.parts(p.prefabId);
                     float[][] boxes =
                             PrefabMeshFactory.colliders(p.prefabId);
@@ -140,15 +193,23 @@ public final class LevelCompiler {
 
         float[] spawn = {0f, 0f, 0f, 0f};
         float[] exit = null;
+        float exitElevation = 0f;
+        boolean hasExit = false;
         for (LogicMarker m : doc.markers) {
             if (LogicMarker.PLAYER_SPAWN.equals(m.type)) {
                 spawn = new float[]{m.x, m.y, m.z, m.yaw};
             } else if (LogicMarker.EXIT.equals(m.type)) {
-                exit = new float[]{m.x, m.z, m.radius};
+                exitElevation = m.y;
+                hasExit = true;
+                // Y zero mantém o array legado bit a bit; saídas em outros
+                // pavimentos usam o formato vertical de quatro valores.
+                exit = Math.abs(m.y) < 0.0001f
+                        ? new float[]{m.x, m.z, m.radius}
+                        : new float[]{m.x, m.y, m.z, m.radius};
             }
         }
 
-        int colliderCount = solids.size() + (door == null ? 0 : 1);
+        int colliderCount = solids.size() + doorInstances.size();
         float[][] colliders = new float[colliderCount][6];
         for (int i = 0; i < solids.size(); i++) {
             colliders[i] = solids.get(i);
@@ -176,31 +237,66 @@ public final class LevelCompiler {
             cursor += mesh.length;
         }
 
-        int doorIndex = -1;
-        float[] doorVertexData = null;
-        float[] doorOriginal = null;
-        if (door != null) {
-            doorIndex = solids.size();
+        RuntimeDoor[] runtimeDoors = new RuntimeDoor[doorInstances.size()];
+        for (int i = 0; i < doorInstances.size(); i++) {
+            PrefabInstance door = doorInstances.get(i);
+            int index = solids.size() + i;
+            float hx = door.floatProperty("halfX", 0f);
+            float hy = door.floatProperty("halfY", 0f);
+            float hz = door.floatProperty("halfZ", 0f);
             LegacyLevelLoader.toBounds(door.transform.x, door.transform.y,
-                    door.transform.z, door.floatProperty("halfX", 0f),
-                    door.floatProperty("halfY", 0f),
-                    door.floatProperty("halfZ", 0f), colliders[doorIndex]);
-            doorOriginal = colliders[doorIndex].clone();
-            doorVertexData = new float[Boxes.FLOATS_PER_BOX];
-            Boxes.emitBounds(doorVertexData, 0, doorOriginal,
-                    LegacyLevelLoader.DOOR_COLOR[0],
-                    LegacyLevelLoader.DOOR_COLOR[1],
-                    LegacyLevelLoader.DOOR_COLOR[2]);
+                    door.transform.z, hx, hy, hz, colliders[index]);
+            float[] original = colliders[index].clone();
+            float[] mesh = new float[Boxes.FLOATS_PER_BOX];
+            boolean automatic = "door.auto".equals(door.prefabId);
+            Boxes.emitBounds(mesh, 0, original,
+                    automatic ? 0.46f : LegacyLevelLoader.DOOR_COLOR[0],
+                    automatic ? 0.55f : LegacyLevelLoader.DOOR_COLOR[1],
+                    automatic ? 0.62f : LegacyLevelLoader.DOOR_COLOR[2]);
+            float moveX = 0f;
+            float moveY = 0f;
+            float moveZ = 0f;
+            if (automatic) {
+                if (hx >= hz) {
+                    moveX = hx * 2f + 0.05f;
+                } else {
+                    moveZ = hz * 2f + 0.05f;
+                }
+            } else {
+                moveY = -(hy * 2f);
+            }
+            runtimeDoors[i] = new RuntimeDoor(door.id,
+                    door.stringProperty("controllerId"), index, original,
+                    mesh, moveX, moveY, moveZ, automatic);
         }
 
+        RuntimeDoor firstDoor = runtimeDoors.length == 0
+                ? null : runtimeDoors[0];
+        RuntimeTerminal firstTerminal = terminals.isEmpty()
+                ? null : terminals.get(0);
+        float[] terminal = firstTerminal == null ? null
+                : new float[]{firstTerminal.x, firstTerminal.y,
+                firstTerminal.z};
+
         RuntimeLevel level = new RuntimeLevel(colliders, vertexData,
-                doorVertexData, doorIndex, doorOriginal, terminal, exit,
+                firstDoor == null ? null : firstDoor.vertexData,
+                firstDoor == null ? -1 : firstDoor.colliderIndex,
+                firstDoor == null ? null : firstDoor.original, terminal, exit,
                 items.toArray(new float[0][]), spawn,
                 drones.toArray(new float[0][]),
                 waves.toArray(new float[0][]),
                 mutants.toArray(new float[0][]),
                 doc.ambient, doc.fogColor.clone(), doc.fogFar);
+        level.setInteractive(terminals.toArray(new RuntimeTerminal[0]),
+                runtimeDoors);
+        if (hasExit) level.setExitElevation(exitElevation);
+        level.setExtraEnemySpawns(extraEnemies.toArray(new float[0][]));
+        level.setHazards(hazards.toArray(new float[0][]));
+        level.setLights(lights.toArray(new float[0][]));
+        level.setNpcs(npcs.toArray(new RuntimeNpc[0]));
+        level.setMetadata(doc.id, doc.name, doc.objective);
         level.setSkyMode(skyModeOf(doc.sky));
+        level.setSoundscapeMode(soundscapeModeOf(doc.soundscape));
         return level;
     }
 
@@ -211,6 +307,16 @@ public final class LevelCompiler {
             case "night": return RuntimeLevel.SKY_NIGHT;
             default: return RuntimeLevel.SKY_NONE;
         }
+    }
+
+    public static int soundscapeModeOf(String soundscape) {
+        if ("tunnel".equals(soundscape)) {
+            return RuntimeLevel.SOUNDSCAPE_TUNNEL;
+        }
+        if ("industrial".equals(soundscape)) {
+            return RuntimeLevel.SOUNDSCAPE_INDUSTRIAL;
+        }
+        return RuntimeLevel.SOUNDSCAPE_OUTDOOR;
     }
 
     /**
@@ -254,6 +360,66 @@ public final class LevelCompiler {
             pieces.add(piece(b, lo, hi, cursor, b[hi], base, top));
         }
         return pieces;
+    }
+
+    /** Recorte equivalente para a faixa poligonal de uma parede diagonal. */
+    static List<StructureObject> cutDiagonalOpenings(StructureObject wall) {
+        List<WallOpening> sorted = new ArrayList<>(wall.openings);
+        sorted.sort((a, b) -> Float.compare(a.offset, b.offset));
+        List<StructureObject> pieces = new ArrayList<>();
+        float half = WallGeometry.halfLength(wall);
+        float base = wall.transform.y - wall.half[1];
+        float top = wall.transform.y + wall.half[1];
+        float cursor = -half;
+        for (WallOpening opening : sorted) {
+            float cutLo = Math.max(-half,
+                    opening.offset - opening.width * 0.5f);
+            float cutHi = Math.min(half,
+                    opening.offset + opening.width * 0.5f);
+            if (cutHi <= cutLo) continue;
+            if (cutLo > cursor) {
+                pieces.add(diagonalPiece(wall, cursor, cutLo, base, top));
+            }
+            float sillTop = base + opening.sill;
+            float openingTop = Math.min(top, sillTop + opening.height);
+            if (opening.sill > 0f) {
+                pieces.add(diagonalPiece(wall, cutLo, cutHi,
+                        base, sillTop));
+            }
+            if (openingTop < top) {
+                pieces.add(diagonalPiece(wall, cutLo, cutHi,
+                        openingTop, top));
+            }
+            cursor = Math.max(cursor, cutHi);
+        }
+        if (cursor < half) {
+            pieces.add(diagonalPiece(wall, cursor, half, base, top));
+        }
+        return pieces;
+    }
+
+    private static StructureObject diagonalPiece(StructureObject source,
+                                                   float from, float to,
+                                                   float bottom, float top) {
+        float[] a = WallGeometry.pointAt(source, from);
+        float[] b = WallGeometry.pointAt(source, to);
+        float[] normal = WallGeometry.positiveNormal(source);
+        float halfThickness = WallGeometry.thickness(source) * 0.5f;
+        float nx = normal[0] * halfThickness;
+        float nz = normal[1] * halfThickness;
+        StructureObject piece = new StructureObject(source.id, source.kind);
+        piece.role = source.role;
+        piece.material = source.material;
+        piece.color = source.color;
+        piece.color2 = source.color2;
+        piece.color3 = source.color3;
+        piece.transform.y = (bottom + top) * 0.5f;
+        piece.half = new float[]{0f, (top - bottom) * 0.5f, 0f};
+        piece.polygon = new float[]{a[0] + nx, a[1] + nz,
+                b[0] + nx, b[1] + nz, b[0] - nx, b[1] - nz,
+                a[0] - nx, a[1] - nz};
+        piece.syncPolyBounds();
+        return piece;
     }
 
     private static float[] piece(float[] b, int lo, int hi,
@@ -338,9 +504,12 @@ public final class LevelCompiler {
                                    List<float[]> colors2,
                                    List<float[]> colors3, float[] b,
                                    StructureObject s, float[] stubs) {
+        float[] baseColor = materialColor(s.color, s.material);
+        float[] positiveColor = materialColor(s.color2, s.material);
+        float[] negativeColor = materialColor(s.color3, s.material);
         if (s.color2 == null && s.color3 == null) {
             visuals.add(b);
-            colors.add(s.color);
+            colors.add(baseColor);
             colors2.add(null);
             colors3.add(null);
             return;
@@ -353,7 +522,7 @@ public final class LevelCompiler {
         if (stubs != null && !Float.isNaN(stubs[0]) && stubs[0] > bodyLo) {
             float end = Math.min(stubs[0], bodyHi);
             visuals.add(slice(b, lo, hi, bodyLo + CORNER_INSET, end));
-            colors.add(s.color);
+            colors.add(baseColor);
             colors2.add(null);
             colors3.add(null);
             bodyLo = end;
@@ -361,16 +530,16 @@ public final class LevelCompiler {
         if (stubs != null && !Float.isNaN(stubs[1]) && stubs[1] < bodyHi) {
             float start = Math.max(stubs[1], bodyLo);
             visuals.add(slice(b, lo, hi, start, bodyHi - CORNER_INSET));
-            colors.add(s.color);
+            colors.add(baseColor);
             colors2.add(null);
             colors3.add(null);
             bodyHi = start;
         }
         if (bodyHi > bodyLo) {
             visuals.add(slice(b, lo, hi, bodyLo, bodyHi));
-            colors.add(s.color);
-            colors2.add(s.color2);
-            colors3.add(s.color3);
+            colors.add(baseColor);
+            colors2.add(positiveColor);
+            colors3.add(negativeColor);
         }
     }
 
@@ -393,9 +562,16 @@ public final class LevelCompiler {
         int n = ccw.length / 2;
         float y0 = s.transform.y - s.half[1];
         float y1 = s.transform.y + s.half[1];
-        float r = s.color[0];
-        float g = s.color[1];
-        float b = s.color[2];
+        float[] encoded = materialColor(s.color, s.material);
+        float r = encoded[0];
+        float g = encoded[1];
+        float b = encoded[2];
+        float[] positive = materialColor(
+                s.color2 == null ? s.color : s.color2, s.material);
+        float[] negative = materialColor(
+                s.color3 == null ? s.color : s.color3, s.material);
+        float[] positiveNormal = WallGeometry.diagonal(s)
+                ? WallGeometry.positiveNormal(s) : null;
         float[] out = new float[(tris.length * 2 + n * 6) * 9];
         int o = 0;
         // tampo (+Y): ordem invertida do CCW matemático p/ o culling
@@ -426,6 +602,13 @@ public final class LevelCompiler {
             }
             float nx = -dz / len;
             float nz = dx / len;
+            float[] side = encoded;
+            if (positiveNormal != null) {
+                float facing = nx * positiveNormal[0]
+                        + nz * positiveNormal[1];
+                if (facing > 0.5f) side = positive;
+                else if (facing < -0.5f) side = negative;
+            }
             float[][] quad = {{ax, y0, az}, {bx, y0, bz},
                     {bx, y1, bz}, {ax, y1, az}};
             int[] order = {0, 1, 2, 0, 2, 3};
@@ -436,9 +619,9 @@ public final class LevelCompiler {
                 out[o++] = nx;
                 out[o++] = 0f;
                 out[o++] = nz;
-                out[o++] = r;
-                out[o++] = g;
-                out[o++] = b;
+                out[o++] = side[0];
+                out[o++] = side[1];
+                out[o++] = side[2];
             }
         }
         float[] trimmed = new float[o];
@@ -538,5 +721,57 @@ public final class LevelCompiler {
         return new float[]{p.transform.x, p.transform.y, p.transform.z,
                 p.floatProperty("patrolX", p.transform.x),
                 p.floatProperty("patrolZ", p.transform.z)};
+    }
+
+    private static float[] extraEnemy(int type, PrefabInstance p) {
+        return new float[]{type, p.transform.x, p.transform.y,
+                p.transform.z,
+                p.floatProperty("patrolX", p.transform.x),
+                p.floatProperty("patrolZ", p.transform.z)};
+    }
+
+    private static void addHazard(StructureObject s,
+                                  List<float[]> hazards) {
+        int type;
+        if ("water".equals(s.material)) {
+            type = RuntimeLevel.HAZARD_WATER;
+        } else if ("lava".equals(s.material)) {
+            type = RuntimeLevel.HAZARD_LAVA;
+        } else {
+            return;
+        }
+        hazards.add(new float[]{type,
+                s.transform.x - s.half[0],
+                s.transform.y - s.half[1],
+                s.transform.z - s.half[2],
+                s.transform.x + s.half[0],
+                s.transform.y + s.half[1],
+                s.transform.z + s.half[2]});
+    }
+
+    /**
+     * Material via faixa reservada no canal R. Valores comuns/emissivos
+     * ficam abaixo de 10; o shader recupera id e cor sem mudar o layout
+     * pos+normal+cor nem quebrar a arena legada bit a bit.
+     */
+    private static float[] materialColor(float[] color, String material) {
+        if (color == null) {
+            return null;
+        }
+        int id;
+        switch (material == null ? "plain" : material) {
+            case "brick": id = 1; break;
+            case "wood": id = 2; break;
+            case "checker": id = 3; break;
+            case "metal": id = 4; break;
+            case "water": id = 5; break;
+            case "lava": id = 6; break;
+            case "asphalt": id = 7; break;
+            default: id = 0; break;
+        }
+        if (id == 0) {
+            return color;
+        }
+        return new float[]{color[0] + id * 10f, color[1], color[2]};
     }
 }

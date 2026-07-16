@@ -13,6 +13,8 @@ public final class Weapon {
 
     private int ammo = MAG_SIZE;
     private int reserve = 48;
+    private int special;
+    private boolean lastShotSpecial;
     private float cooldown;
     private float reloadLeft;
     private boolean reloading;
@@ -20,6 +22,8 @@ public final class Weapon {
     public void reset() {
         ammo = MAG_SIZE;
         reserve = 48;
+        special = 0;
+        lastShotSpecial = false;
         cooldown = 0f;
         reloadLeft = 0f;
         reloading = false;
@@ -27,6 +31,10 @@ public final class Weapon {
 
     public void addReserve(int rounds) {
         reserve += rounds;
+    }
+
+    public void addSpecial(int rounds) {
+        special += rounds;
     }
 
     /** Devolve true quando a recarga TERMINOU neste quadro. */
@@ -54,6 +62,10 @@ public final class Weapon {
             return false;
         }
         ammo--;
+        lastShotSpecial = special > 0;
+        if (lastShotSpecial) {
+            special--;
+        }
         cooldown = FIRE_COOLDOWN;
         return true;
     }
@@ -83,4 +95,8 @@ public final class Weapon {
     public int reserve() {
         return reserve;
     }
+
+    public int special() { return special; }
+
+    public boolean lastShotSpecial() { return lastShotSpecial; }
 }

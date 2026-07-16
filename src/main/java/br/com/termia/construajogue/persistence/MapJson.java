@@ -2,6 +2,7 @@ package br.com.termia.construajogue.persistence;
 
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.ObjectiveSpec;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.Transform;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-/** Converte MapDocument ↔ JSON schema 1 (docs/FORMATO-MAPA.md). */
+/** Converte MapDocument ↔ JSON schema atual (docs/FORMATO-MAPA.md). */
 public final class MapJson {
 
     private MapJson() {
@@ -26,12 +27,37 @@ public final class MapJson {
         root.put("schema", MapDocument.SCHEMA);
         root.put("id", doc.id);
         root.put("name", doc.name);
+        if (doc.objective != null && !isDefaultObjective(doc.objective)) {
+            Map<String, Object> objective = new TreeMap<>();
+            objective.put("type", doc.objective.type);
+            if (doc.objective.target != 0) {
+                objective.put("target", doc.objective.target);
+            }
+            if (doc.objective.durationSeconds != 0f) {
+                objective.put("durationSeconds", doc.objective.durationSeconds);
+            }
+            if (doc.objective.timeLimitSeconds != 0f) {
+                objective.put("timeLimitSeconds",
+                        doc.objective.timeLimitSeconds);
+            }
+            if (doc.objective.twoStarSeconds != 0f) {
+                objective.put("twoStarSeconds", doc.objective.twoStarSeconds);
+            }
+            if (doc.objective.threeStarSeconds != 0f) {
+                objective.put("threeStarSeconds",
+                        doc.objective.threeStarSeconds);
+            }
+            root.put("objective", objective);
+        }
         Map<String, Object> env = new TreeMap<>();
         env.put("ambient", doc.ambient);
         env.put("fog", floats(doc.fogColor));
         env.put("fogFar", doc.fogFar);
         if (!"none".equals(doc.sky)) {
             env.put("sky", doc.sky);
+        }
+        if (!"auto".equals(doc.soundscape)) {
+            env.put("soundscape", doc.soundscape);
         }
         root.put("environment", env);
 
@@ -42,6 +68,12 @@ public final class MapJson {
             item.put("kind", s.kind);
             if (s.role != null) {
                 item.put("role", s.role);
+            }
+            if (s.material != null && !"plain".equals(s.material)) {
+                item.put("material", s.material);
+            }
+            if (s.locked) {
+                item.put("locked", true);
             }
             item.put("transform", transform(s.transform));
             if (s.half != null) {
@@ -71,6 +103,9 @@ public final class MapJson {
                     if (o.sill != 0f) {
                         cut.put("sill", o.sill);
                     }
+                    if (o.locked) {
+                        cut.put("locked", true);
+                    }
                     openings.add(cut);
                 }
                 item.put("openings", openings);
@@ -87,6 +122,9 @@ public final class MapJson {
             item.put("transform", transform(p.transform));
             if (p.scale != 1f) {
                 item.put("scale", p.scale);
+            }
+            if (p.locked) {
+                item.put("locked", true);
             }
             if (!p.properties.isEmpty()) {
                 item.put("properties", new TreeMap<>(p.properties));
@@ -108,6 +146,9 @@ public final class MapJson {
             }
             if (m.radius != 0f) {
                 item.put("radius", m.radius);
+            }
+            if (m.locked) {
+                item.put("locked", true);
             }
             markers.add(item);
         }
@@ -134,14 +175,19 @@ public final class MapJson {
         return list;
     }
 
+    private static boolean isDefaultObjective(ObjectiveSpec objective) {
+        return ObjectiveSpec.REACH_EXIT.equals(objective.type)
+                && objective.target == 0
+                && objective.durationSeconds == 0f
+                && objective.timeLimitSeconds == 0f
+                && objective.twoStarSeconds == 0f
+                && objective.threeStarSeconds == 0f;
+    }
+
     // ---- leitura ----
 
     public static MapDocument read(String text) {
-        Object parsed = Json.parse(text);
-        if (!(parsed instanceof Map)) {
-            throw new IllegalArgumentException("mapa: objeto JSON esperado");
-        }
-        Map<?, ?> root = (Map<?, ?>) parsed;
+        Map<?, ?> root = MapMigration.toCurrent(Json.parse(text));
         int schema = intOf(root, "schema", -1);
         if (schema != MapDocument.SCHEMA) {
             throw new IllegalArgumentException(
@@ -150,12 +196,28 @@ public final class MapJson {
         MapDocument doc = new MapDocument();
         doc.id = stringOf(root, "id", null);
         doc.name = stringOf(root, "name", "");
+        Object objective = root.get("objective");
+        if (objective instanceof Map) {
+            Map<?, ?> o = (Map<?, ?>) objective;
+            doc.objective.type = stringOf(o, "type",
+                    ObjectiveSpec.REACH_EXIT);
+            doc.objective.target = intOf(o, "target", 0);
+            doc.objective.durationSeconds = floatOf(o,
+                    "durationSeconds", 0f);
+            doc.objective.timeLimitSeconds = floatOf(o,
+                    "timeLimitSeconds", 0f);
+            doc.objective.twoStarSeconds = floatOf(o,
+                    "twoStarSeconds", 0f);
+            doc.objective.threeStarSeconds = floatOf(o,
+                    "threeStarSeconds", 0f);
+        }
         Object env = root.get("environment");
         if (env instanceof Map) {
             Map<?, ?> e = (Map<?, ?>) env;
             doc.ambient = floatOf(e, "ambient", doc.ambient);
             doc.fogFar = floatOf(e, "fogFar", doc.fogFar);
             doc.sky = stringOf(e, "sky", "none");
+            doc.soundscape = stringOf(e, "soundscape", "auto");
             float[] fog = floatsOf(e.get("fog"), 3);
             if (fog != null) {
                 doc.fogColor = fog;
@@ -166,6 +228,8 @@ public final class MapJson {
             StructureObject structure = new StructureObject(
                     stringOf(s, "id", null), stringOf(s, "kind", ""));
             structure.role = stringOf(s, "role", null);
+            structure.material = stringOf(s, "material", "plain");
+            structure.locked = boolOf(s, "locked", false);
             structure.transform = transformOf(s.get("transform"));
             structure.half = floatsOf(s.get("half"), 3);
             structure.color = floatsOf(s.get("color"), 3);
@@ -174,6 +238,10 @@ public final class MapJson {
             Object polygon = s.get("polygon");
             if (polygon instanceof List) {
                 List<?> list = (List<?>) polygon;
+                if (list.size() < 6 || (list.size() & 1) != 0) {
+                    throw new IllegalArgumentException(
+                            "polygon precisa de pares X,Z (3+ pontos)");
+                }
                 structure.polygon = new float[list.size()];
                 for (int i = 0; i < list.size(); i++) {
                     structure.polygon[i] =
@@ -189,6 +257,7 @@ public final class MapJson {
                 opening.width = floatOf(c, "width", 0f);
                 opening.height = floatOf(c, "height", 0f);
                 opening.sill = floatOf(c, "sill", 0f);
+                opening.locked = boolOf(c, "locked", false);
                 structure.openings.add(opening);
             }
             doc.structures.add(structure);
@@ -199,6 +268,7 @@ public final class MapJson {
                     stringOf(p, "id", null), stringOf(p, "prefabId", ""));
             instance.transform = transformOf(p.get("transform"));
             instance.scale = floatOf(p, "scale", 1f);
+            instance.locked = boolOf(p, "locked", false);
             Object props = p.get("properties");
             if (props instanceof Map) {
                 for (Map.Entry<?, ?> entry : ((Map<?, ?>) props).entrySet()) {
@@ -220,6 +290,7 @@ public final class MapJson {
             marker.z = floatOf(m, "z", 0f);
             marker.yaw = floatOf(m, "yaw", 0f);
             marker.radius = floatOf(m, "radius", 0f);
+            marker.locked = boolOf(m, "locked", false);
             doc.markers.add(marker);
         }
         return doc;
@@ -280,5 +351,11 @@ public final class MapJson {
                                    String fallback) {
         Object value = map.get(key);
         return value instanceof String ? (String) value : fallback;
+    }
+
+    private static boolean boolOf(Map<?, ?> map, String key,
+                                  boolean fallback) {
+        Object value = map.get(key);
+        return value instanceof Boolean ? (Boolean) value : fallback;
     }
 }

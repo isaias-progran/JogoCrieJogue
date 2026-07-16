@@ -1,0 +1,2534 @@
+{
+  "environment": {
+    "ambient": 0.2,
+    "fog": [0.12, 0.16, 0.25],
+    "fogFar": 82,
+    "sky": "dusk"
+  },
+  "id": "exemplo-cidade-aurora",
+  "markers": [
+    {
+      "id": "spawn",
+      "type": "player_spawn",
+      "x": 2.2,
+      "y": 0,
+      "yaw": 180,
+      "z": 20
+    }
+  ],
+  "name": "Cidade Aurora — apagão",
+  "objective": {
+    "target": 12,
+    "threeStarSeconds": 360,
+    "timeLimitSeconds": 720,
+    "twoStarSeconds": 520,
+    "type": "collect"
+  },
+  "prefabs": [
+    {
+      "id": "garagem-auto",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.09,
+        "halfY": 1.05,
+        "halfZ": 0.6
+      },
+      "transform": {
+        "x": -14,
+        "y": 1.05,
+        "z": -17
+      }
+    },
+    {
+      "id": "terminal-rede-a",
+      "prefabId": "terminal.wall",
+      "properties": {
+        "order": 1
+      },
+      "transform": {
+        "x": -13,
+        "y": 1.4,
+        "z": -7.5
+      }
+    },
+    {
+      "id": "portao-patio",
+      "prefabId": "door.gate",
+      "properties": {
+        "controllerId": "terminal-rede-a",
+        "halfX": 1.2,
+        "halfY": 1.4,
+        "halfZ": 0.16
+      },
+      "transform": {
+        "x": -11,
+        "y": 1.4,
+        "z": -9
+      }
+    },
+    {
+      "id": "prefeitura-auto",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.6,
+        "halfY": 1.05,
+        "halfZ": 0.09
+      },
+      "transform": {
+        "x": 11.5,
+        "y": 1.05,
+        "z": -9
+      }
+    },
+    {
+      "id": "prefeitura-escada-ext",
+      "locked": true,
+      "prefabId": "stairs.floor",
+      "transform": {
+        "x": 21,
+        "y": 0,
+        "yaw": 180,
+        "z": -7.35
+      }
+    },
+    {
+      "id": "gabinete-auto",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.09,
+        "halfY": 1.05,
+        "halfZ": 0.6
+      },
+      "transform": {
+        "x": 19,
+        "y": 4.35,
+        "z": -16
+      }
+    },
+    {
+      "id": "terminal-rede-b",
+      "prefabId": "terminal.wall",
+      "properties": {
+        "order": 2
+      },
+      "transform": {
+        "x": 12,
+        "y": 1.4,
+        "z": -19.5
+      }
+    },
+    {
+      "id": "mercado-auto",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.09,
+        "halfY": 1.05,
+        "halfZ": 0.6
+      },
+      "transform": {
+        "x": -10,
+        "y": 1.05,
+        "z": 14
+      }
+    },
+    {
+      "id": "estacao-auto",
+      "prefabId": "door.auto",
+      "properties": {
+        "halfX": 0.6,
+        "halfY": 1.05,
+        "halfZ": 0.09
+      },
+      "transform": {
+        "x": 13,
+        "y": 1.05,
+        "z": 11
+      }
+    },
+    {
+      "id": "portao-controle",
+      "prefabId": "door.gate",
+      "properties": {
+        "controllerId": "terminal-rede-b",
+        "halfX": 0.16,
+        "halfY": 1.4,
+        "halfZ": 1.45
+      },
+      "transform": {
+        "x": 18,
+        "y": 1.4,
+        "z": 16
+      }
+    },
+    {
+      "id": "celula-cruzamento",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 2.2,
+        "y": 0.5,
+        "z": 2.2
+      }
+    },
+    {
+      "id": "celula-patio",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -10,
+        "y": 0.5,
+        "z": -18
+      }
+    },
+    {
+      "id": "celula-garagem",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -20,
+        "y": 0.5,
+        "z": -17
+      }
+    },
+    {
+      "id": "celula-prefeitura",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 14,
+        "y": 0.5,
+        "z": -18
+      }
+    },
+    {
+      "id": "celula-gabinete",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 14,
+        "y": 3.8,
+        "z": -16
+      }
+    },
+    {
+      "id": "celula-mercado",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -21,
+        "y": 0.5,
+        "z": 18
+      }
+    },
+    {
+      "id": "celula-alagada",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 13,
+        "y": 0.5,
+        "z": 18
+      }
+    },
+    {
+      "id": "celula-controle",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 21,
+        "y": 0.5,
+        "z": 18
+      }
+    },
+    {
+      "id": "celula-bairro-oeste",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": -36,
+        "y": 0.5,
+        "z": 0
+      }
+    },
+    {
+      "id": "celula-bairro-leste",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 36,
+        "y": 0.5,
+        "z": 0
+      }
+    },
+    {
+      "id": "celula-bairro-norte",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 0,
+        "y": 0.5,
+        "z": -34
+      }
+    },
+    {
+      "id": "celula-bairro-sul",
+      "prefabId": "pickup.token",
+      "transform": {
+        "x": 0,
+        "y": 0.5,
+        "z": 34
+      }
+    },
+    {
+      "id": "cidade-drone-ns",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": -2,
+        "patrolZ": -12
+      },
+      "transform": {
+        "x": -2,
+        "y": 1.8,
+        "z": 12
+      }
+    },
+    {
+      "id": "cidade-mutante-o",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": -23,
+        "patrolZ": 2
+      },
+      "transform": {
+        "x": -16,
+        "y": 0.85,
+        "z": 2
+      }
+    },
+    {
+      "id": "cidade-kamikaze",
+      "prefabId": "enemy.kamikaze",
+      "properties": {
+        "patrolX": -2,
+        "patrolZ": 5
+      },
+      "transform": {
+        "x": 2,
+        "y": 1.8,
+        "z": -5
+      }
+    },
+    {
+      "id": "cidade-torreta-n",
+      "prefabId": "enemy.turret",
+      "transform": {
+        "x": 3,
+        "y": 0.55,
+        "yaw": 180,
+        "z": -18
+      }
+    },
+    {
+      "id": "garagem-mutante",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": -16,
+        "patrolZ": -17
+      },
+      "transform": {
+        "x": -19,
+        "y": 0.85,
+        "z": -17
+      }
+    },
+    {
+      "id": "patio-torreta",
+      "prefabId": "enemy.turret",
+      "transform": {
+        "x": -9,
+        "y": 0.55,
+        "yaw": 180,
+        "z": -20
+      }
+    },
+    {
+      "id": "prefeitura-wave",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": 20,
+        "patrolZ": -13
+      },
+      "transform": {
+        "x": 15,
+        "y": 1.8,
+        "z": -13
+      }
+    },
+    {
+      "id": "gabinete-drone",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": 14,
+        "patrolZ": -19
+      },
+      "transform": {
+        "x": 14,
+        "y": 5.1,
+        "z": -14
+      }
+    },
+    {
+      "id": "gabinete-torreta",
+      "prefabId": "enemy.turret",
+      "transform": {
+        "x": 17,
+        "y": 3.85,
+        "yaw": 90,
+        "z": -19
+      }
+    },
+    {
+      "id": "mercado-mutante",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": -13,
+        "patrolZ": 16
+      },
+      "transform": {
+        "x": -19,
+        "y": 0.85,
+        "z": 16
+      }
+    },
+    {
+      "id": "mercado-wave",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": -21,
+        "patrolZ": 19
+      },
+      "transform": {
+        "x": -15,
+        "y": 1.8,
+        "z": 19
+      }
+    },
+    {
+      "id": "estacao-chefe",
+      "prefabId": "enemy.boss",
+      "transform": {
+        "x": 21,
+        "y": 1.8,
+        "z": 17
+      }
+    },
+    {
+      "id": "estacao-mutante",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": 13,
+        "patrolZ": 19
+      },
+      "transform": {
+        "x": 13,
+        "y": 0.85,
+        "z": 14
+      }
+    },
+    {
+      "id": "bairro-oeste-drone",
+      "prefabId": "enemy.drone",
+      "properties": {
+        "patrolX": -34,
+        "patrolZ": -2
+      },
+      "transform": {
+        "x": -37,
+        "y": 1.8,
+        "z": 2
+      }
+    },
+    {
+      "id": "bairro-leste-mutante",
+      "prefabId": "enemy.mutant",
+      "properties": {
+        "patrolX": 34,
+        "patrolZ": 2
+      },
+      "transform": {
+        "x": 37,
+        "y": 0.85,
+        "z": -2
+      }
+    },
+    {
+      "id": "bairro-norte-kamikaze",
+      "prefabId": "enemy.kamikaze",
+      "properties": {
+        "patrolX": -2,
+        "patrolZ": -31
+      },
+      "transform": {
+        "x": 2,
+        "y": 1.8,
+        "z": -34
+      }
+    },
+    {
+      "id": "bairro-sul-wave",
+      "prefabId": "enemy.drone.wave",
+      "properties": {
+        "patrolX": 2,
+        "patrolZ": 31
+      },
+      "transform": {
+        "x": -2,
+        "y": 1.8,
+        "z": 34
+      }
+    },
+    {
+      "id": "cidade-vida-rua",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": -2.5,
+        "y": 0.5,
+        "z": -8
+      }
+    },
+    {
+      "id": "cidade-municao-rua",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": 2.5,
+        "y": 0.5,
+        "z": 8
+      }
+    },
+    {
+      "id": "cidade-especial",
+      "prefabId": "pickup.special",
+      "transform": {
+        "x": -2.5,
+        "y": 0.5,
+        "z": 1
+      }
+    },
+    {
+      "id": "garagem-vida",
+      "prefabId": "pickup.health",
+      "transform": {
+        "x": -16,
+        "y": 0.5,
+        "z": -15
+      }
+    },
+    {
+      "id": "mercado-municao",
+      "prefabId": "pickup.ammo",
+      "transform": {
+        "x": -12,
+        "y": 0.5,
+        "z": 19
+      }
+    },
+    {
+      "id": "estacao-especial",
+      "prefabId": "pickup.special",
+      "transform": {
+        "x": 11.5,
+        "y": 0.5,
+        "z": 13
+      }
+    },
+    {
+      "id": "garagem-bancada",
+      "prefabId": "furniture.workbench",
+      "transform": {
+        "x": -20,
+        "y": 0,
+        "z": -20
+      }
+    },
+    {
+      "id": "garagem-armario",
+      "prefabId": "furniture.cabinet",
+      "transform": {
+        "x": -16,
+        "y": 0,
+        "z": -20
+      }
+    },
+    {
+      "id": "patio-caixa-a",
+      "prefabId": "obstacle.crate.large",
+      "transform": {
+        "x": -10,
+        "y": 0,
+        "z": -12
+      }
+    },
+    {
+      "id": "patio-caixa-b",
+      "prefabId": "obstacle.crate.small",
+      "transform": {
+        "x": -9.2,
+        "y": 0,
+        "z": -12.5
+      }
+    },
+    {
+      "id": "patio-barril",
+      "prefabId": "obstacle.barrel",
+      "transform": {
+        "x": -11.2,
+        "y": 0,
+        "z": -12.5
+      }
+    },
+    {
+      "id": "prefeitura-mesa",
+      "prefabId": "furniture.table",
+      "transform": {
+        "x": 15,
+        "y": 0,
+        "z": -15
+      }
+    },
+    {
+      "id": "prefeitura-cadeira-a",
+      "prefabId": "furniture.chair",
+      "transform": {
+        "x": 15,
+        "y": 0,
+        "yaw": 180,
+        "z": -14
+      }
+    },
+    {
+      "id": "prefeitura-cadeira-b",
+      "prefabId": "furniture.chair",
+      "transform": {
+        "x": 16.2,
+        "y": 0,
+        "yaw": 270,
+        "z": -15
+      }
+    },
+    {
+      "id": "gabinete-mesa",
+      "prefabId": "furniture.table",
+      "transform": {
+        "x": 14,
+        "y": 3.3,
+        "z": -18
+      }
+    },
+    {
+      "id": "gabinete-cadeira",
+      "prefabId": "furniture.chair",
+      "transform": {
+        "x": 14,
+        "y": 3.3,
+        "yaw": 180,
+        "z": -17
+      }
+    },
+    {
+      "id": "gabinete-sofa",
+      "prefabId": "furniture.sofa",
+      "transform": {
+        "x": 11,
+        "y": 3.3,
+        "yaw": 90,
+        "z": -14
+      }
+    },
+    {
+      "id": "gabinete-tv",
+      "prefabId": "prop.tv",
+      "transform": {
+        "x": 9.2,
+        "y": 4.7,
+        "yaw": 90,
+        "z": -14
+      }
+    },
+    {
+      "id": "mercado-estante-a",
+      "prefabId": "furniture.shelf",
+      "transform": {
+        "x": -22,
+        "y": 0,
+        "yaw": 90,
+        "z": 13
+      }
+    },
+    {
+      "id": "mercado-estante-b",
+      "prefabId": "furniture.shelf",
+      "transform": {
+        "x": -19,
+        "y": 0,
+        "yaw": 90,
+        "z": 13
+      }
+    },
+    {
+      "id": "mercado-balcao",
+      "prefabId": "furniture.sink.kitchen",
+      "transform": {
+        "x": -14,
+        "y": 0,
+        "z": 20
+      }
+    },
+    {
+      "id": "mercado-mesa",
+      "prefabId": "furniture.table",
+      "transform": {
+        "x": -15,
+        "y": 0,
+        "z": 17
+      }
+    },
+    {
+      "id": "mercado-cadeira",
+      "prefabId": "furniture.chair",
+      "transform": {
+        "x": -15,
+        "y": 0,
+        "yaw": 180,
+        "z": 16
+      }
+    },
+    {
+      "id": "estacao-banco",
+      "prefabId": "furniture.sofa",
+      "transform": {
+        "x": 13,
+        "y": 0,
+        "yaw": 180,
+        "z": 13
+      }
+    },
+    {
+      "id": "estacao-armario",
+      "prefabId": "furniture.cabinet",
+      "transform": {
+        "x": 22,
+        "y": 0,
+        "z": 20
+      }
+    },
+    {
+      "id": "calcada-planta-a",
+      "prefabId": "prop.plant.tall",
+      "transform": {
+        "x": 6,
+        "y": 0,
+        "z": -6
+      }
+    },
+    {
+      "id": "calcada-planta-b",
+      "prefabId": "prop.plant.tall",
+      "transform": {
+        "x": -6,
+        "y": 0,
+        "z": 6
+      }
+    },
+    {
+      "id": "cidade-lia",
+      "prefabId": "npc.human",
+      "properties": {
+        "background": "Lia cuida da rede de Cidade Aurora, conhece a garagem, a prefeitura e a estação alagada. É prática, parceira e fala sem cerimônia. Ela orienta o jogador, mas não controla portas nem combate.",
+        "greeting": "E aí! Deu ruim na cidade; bora ligar os terminais na ordem.",
+        "name": "Lia",
+        "role": "engenheira da rede elétrica"
+      },
+      "transform": {
+        "x": -1.4,
+        "y": 0,
+        "yaw": 180,
+        "z": 20
+      }
+    },
+    {
+      "id": "garagem-luz",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.72,
+        "lightR": 0.55,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": -19,
+        "y": 3.1,
+        "z": -17
+      }
+    },
+    {
+      "id": "prefeitura-luz",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.75,
+        "lightR": 0.6,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": 14,
+        "y": 3.1,
+        "z": -16
+      }
+    },
+    {
+      "id": "gabinete-luz",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.66,
+        "lightR": 1,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": 14,
+        "y": 6.4,
+        "z": -16
+      }
+    },
+    {
+      "id": "mercado-luz",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 0.38,
+        "lightG": 0.72,
+        "lightR": 1,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": -17,
+        "y": 3.1,
+        "z": 16
+      }
+    },
+    {
+      "id": "estacao-luz",
+      "locked": true,
+      "prefabId": "prop.lamp.ceiling",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.65,
+        "lightR": 0.45,
+        "lightRadius": 7
+      },
+      "transform": {
+        "x": 17,
+        "y": 3.1,
+        "z": 16
+      }
+    },
+    {
+      "id": "poste-ns-o-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -4.7,
+        "y": 0,
+        "yaw": 90,
+        "z": -19
+      }
+    },
+    {
+      "id": "poste-ns-l-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 4.7,
+        "y": 0,
+        "yaw": 270,
+        "z": -19
+      }
+    },
+    {
+      "id": "poste-lo-n-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -19,
+        "y": 0,
+        "yaw": 180,
+        "z": -4.7
+      }
+    },
+    {
+      "id": "poste-lo-s-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -19,
+        "y": 0,
+        "z": 4.7
+      }
+    },
+    {
+      "id": "poste-ns-o-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -4.7,
+        "y": 0,
+        "yaw": 90,
+        "z": -9
+      }
+    },
+    {
+      "id": "poste-ns-l-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 4.7,
+        "y": 0,
+        "yaw": 270,
+        "z": -9
+      }
+    },
+    {
+      "id": "poste-lo-n-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -9,
+        "y": 0,
+        "yaw": 180,
+        "z": -4.7
+      }
+    },
+    {
+      "id": "poste-lo-s-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -9,
+        "y": 0,
+        "z": 4.7
+      }
+    },
+    {
+      "id": "poste-ns-o-2",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -4.7,
+        "y": 0,
+        "yaw": 90,
+        "z": 9
+      }
+    },
+    {
+      "id": "poste-ns-l-2",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 4.7,
+        "y": 0,
+        "yaw": 270,
+        "z": 9
+      }
+    },
+    {
+      "id": "poste-lo-n-2",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 9,
+        "y": 0,
+        "yaw": 180,
+        "z": -4.7
+      }
+    },
+    {
+      "id": "poste-lo-s-2",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 9,
+        "y": 0,
+        "z": 4.7
+      }
+    },
+    {
+      "id": "poste-ns-o-3",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": -4.7,
+        "y": 0,
+        "yaw": 90,
+        "z": 19
+      }
+    },
+    {
+      "id": "poste-ns-l-3",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 4.7,
+        "y": 0,
+        "yaw": 270,
+        "z": 19
+      }
+    },
+    {
+      "id": "poste-lo-n-3",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 19,
+        "y": 0,
+        "yaw": 180,
+        "z": -4.7
+      }
+    },
+    {
+      "id": "poste-lo-s-3",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 0.34,
+        "lightG": 0.7,
+        "lightOffsetY": 3.35,
+        "lightR": 1,
+        "lightRadius": 8.5
+      },
+      "transform": {
+        "x": 19,
+        "y": 0,
+        "z": 4.7
+      }
+    },
+    {
+      "id": "poste-anel-o-o-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -34.5,
+        "y": 0,
+        "yaw": 90,
+        "z": -16
+      }
+    },
+    {
+      "id": "poste-anel-o-l-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -29.5,
+        "y": 0,
+        "yaw": 270,
+        "z": -16
+      }
+    },
+    {
+      "id": "poste-anel-l-o-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 29.5,
+        "y": 0,
+        "yaw": 90,
+        "z": -16
+      }
+    },
+    {
+      "id": "poste-anel-l-l-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 34.5,
+        "y": 0,
+        "yaw": 270,
+        "z": -16
+      }
+    },
+    {
+      "id": "poste-anel-n-n-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -16,
+        "y": 0,
+        "yaw": 180,
+        "z": -30.5
+      }
+    },
+    {
+      "id": "poste-anel-n-s-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -16,
+        "y": 0,
+        "z": -25.5
+      }
+    },
+    {
+      "id": "poste-anel-s-n-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -16,
+        "y": 0,
+        "yaw": 180,
+        "z": 25.5
+      }
+    },
+    {
+      "id": "poste-anel-s-s-0",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -16,
+        "y": 0,
+        "z": 30.5
+      }
+    },
+    {
+      "id": "poste-anel-o-o-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -34.5,
+        "y": 0,
+        "yaw": 90,
+        "z": 16
+      }
+    },
+    {
+      "id": "poste-anel-o-l-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": -29.5,
+        "y": 0,
+        "yaw": 270,
+        "z": 16
+      }
+    },
+    {
+      "id": "poste-anel-l-o-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 29.5,
+        "y": 0,
+        "yaw": 90,
+        "z": 16
+      }
+    },
+    {
+      "id": "poste-anel-l-l-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 34.5,
+        "y": 0,
+        "yaw": 270,
+        "z": 16
+      }
+    },
+    {
+      "id": "poste-anel-n-n-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 16,
+        "y": 0,
+        "yaw": 180,
+        "z": -30.5
+      }
+    },
+    {
+      "id": "poste-anel-n-s-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 16,
+        "y": 0,
+        "z": -25.5
+      }
+    },
+    {
+      "id": "poste-anel-s-n-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 16,
+        "y": 0,
+        "yaw": 180,
+        "z": 25.5
+      }
+    },
+    {
+      "id": "poste-anel-s-s-1",
+      "locked": true,
+      "prefabId": "prop.lamp.street",
+      "properties": {
+        "lightB": 1,
+        "lightG": 0.82,
+        "lightOffsetY": 3.35,
+        "lightR": 0.72,
+        "lightRadius": 9
+      },
+      "transform": {
+        "x": 16,
+        "y": 0,
+        "z": 30.5
+      }
+    }
+  ],
+  "schema": 2,
+  "structures": [
+    {
+      "color": [0.42, 0.44, 0.48],
+      "half": [44, 0.2, 40],
+      "id": "cidade-base",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.28,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.16, 0.17, 0.19],
+      "half": [4.2, 0.04, 40],
+      "id": "avenida-ns",
+      "kind": "block",
+      "locked": true,
+      "material": "asphalt",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.04,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.16, 0.17, 0.19],
+      "half": [19.9, 0.04, 4.2],
+      "id": "avenida-oeste",
+      "kind": "block",
+      "locked": true,
+      "material": "asphalt",
+      "role": "floor",
+      "transform": {
+        "x": -24.1,
+        "y": -0.04,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.16, 0.17, 0.19],
+      "half": [19.9, 0.04, 4.2],
+      "id": "avenida-leste",
+      "kind": "block",
+      "locked": true,
+      "material": "asphalt",
+      "role": "floor",
+      "transform": {
+        "x": 24.1,
+        "y": -0.04,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.58, 0.59, 0.61],
+      "half": [11.7, 0.04, 9.7],
+      "id": "calcada-no",
+      "kind": "block",
+      "locked": true,
+      "material": "checker",
+      "role": "floor",
+      "transform": {
+        "x": -16.1,
+        "y": -0.04,
+        "z": -14.1
+      }
+    },
+    {
+      "color": [0.58, 0.59, 0.61],
+      "half": [11.7, 0.04, 9.7],
+      "id": "calcada-ne",
+      "kind": "block",
+      "locked": true,
+      "material": "checker",
+      "role": "floor",
+      "transform": {
+        "x": 16.1,
+        "y": -0.04,
+        "z": -14.1
+      }
+    },
+    {
+      "color": [0.58, 0.59, 0.61],
+      "half": [11.7, 0.04, 9.7],
+      "id": "calcada-so",
+      "kind": "block",
+      "locked": true,
+      "material": "checker",
+      "role": "floor",
+      "transform": {
+        "x": -16.1,
+        "y": -0.04,
+        "z": 14.1
+      }
+    },
+    {
+      "color": [0.58, 0.59, 0.61],
+      "half": [11.7, 0.04, 9.7],
+      "id": "calcada-se",
+      "kind": "block",
+      "locked": true,
+      "material": "checker",
+      "role": "floor",
+      "transform": {
+        "x": 16.1,
+        "y": -0.04,
+        "z": 14.1
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [0.07, 0.005, 3.1],
+      "id": "faixa-ns-0",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.005,
+        "z": -19
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [3.1, 0.005, 0.07],
+      "id": "faixa-lo-0",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": -21,
+        "y": 0.005,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [0.07, 0.005, 3.1],
+      "id": "faixa-ns-1",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.005,
+        "z": -6.5
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [3.1, 0.005, 0.07],
+      "id": "faixa-lo-1",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": -7,
+        "y": 0.005,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [0.07, 0.005, 3.1],
+      "id": "faixa-ns-2",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.005,
+        "z": 6
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [3.1, 0.005, 0.07],
+      "id": "faixa-lo-2",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 7,
+        "y": 0.005,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [0.07, 0.005, 3.1],
+      "id": "faixa-ns-3",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.005,
+        "z": 18.5
+      }
+    },
+    {
+      "color": [0.96, 0.72, 0.12],
+      "half": [3.1, 0.005, 0.07],
+      "id": "faixa-lo-3",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 21,
+        "y": 0.005,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-n-0",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": -6.12
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-s-0",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": 4.38
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-o-0",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": -6.12,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-l-0",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 4.38,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-n-1",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": -5.54
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-s-1",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": 4.96
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-o-1",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": -5.54,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-l-1",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 4.96,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-n-2",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": -4.96
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-s-2",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": 5.54
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-o-2",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": -4.96,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-l-2",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 5.54,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-n-3",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": -4.38
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [3.45, 0.008, 0.11],
+      "id": "zebra-s-3",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": 0.008,
+        "z": 6.12
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-o-3",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": -4.38,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.86, 0.88, 0.84],
+      "half": [0.11, 0.008, 3.45],
+      "id": "zebra-l-3",
+      "kind": "block",
+      "locked": true,
+      "role": "floor",
+      "transform": {
+        "x": 6.12,
+        "y": 0.008,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.16, 0.17, 0.19],
+      "half": [2, 0.04, 40],
+      "id": "anel-oeste",
+      "kind": "block",
+      "locked": true,
+      "material": "asphalt",
+      "role": "floor",
+      "transform": {
+        "x": -32,
+        "y": -0.04,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.16, 0.17, 0.19],
+      "half": [2, 0.04, 40],
+      "id": "anel-leste",
+      "kind": "block",
+      "locked": true,
+      "material": "asphalt",
+      "role": "floor",
+      "transform": {
+        "x": 32,
+        "y": -0.04,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.16, 0.17, 0.19],
+      "half": [44, 0.04, 2],
+      "id": "anel-norte",
+      "kind": "block",
+      "locked": true,
+      "material": "asphalt",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.04,
+        "z": -28
+      }
+    },
+    {
+      "color": [0.16, 0.17, 0.19],
+      "half": [44, 0.04, 2],
+      "id": "anel-sul",
+      "kind": "block",
+      "locked": true,
+      "material": "asphalt",
+      "role": "floor",
+      "transform": {
+        "x": 0,
+        "y": -0.04,
+        "z": 28
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "half": [8, 2.5, 4],
+      "id": "predio-noroeste",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "block",
+      "transform": {
+        "x": -18,
+        "y": 2.5,
+        "z": -35
+      }
+    },
+    {
+      "color": [0.2, 0.35, 0.55],
+      "half": [8, 3, 4],
+      "id": "predio-nordeste",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "block",
+      "transform": {
+        "x": 18,
+        "y": 3,
+        "z": -35
+      }
+    },
+    {
+      "color": [0.25, 0.43, 0.31],
+      "half": [8, 2, 4],
+      "id": "predio-sudoeste",
+      "kind": "block",
+      "locked": true,
+      "material": "wood",
+      "role": "block",
+      "transform": {
+        "x": -18,
+        "y": 2,
+        "z": 35
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "half": [8, 2.75, 4],
+      "id": "predio-sudeste",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "block",
+      "transform": {
+        "x": 18,
+        "y": 2.75,
+        "z": 35
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [4, 2.25, 8],
+      "id": "predio-oeste-n",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "block",
+      "transform": {
+        "x": -39,
+        "y": 2.25,
+        "z": -14
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "half": [4, 1.75, 8],
+      "id": "predio-oeste-s",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "block",
+      "transform": {
+        "x": -39,
+        "y": 1.75,
+        "z": 14
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "half": [4, 2.75, 8],
+      "id": "predio-leste-n",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "block",
+      "transform": {
+        "x": 39,
+        "y": 2.75,
+        "z": -14
+      }
+    },
+    {
+      "color": [0.2, 0.35, 0.55],
+      "half": [4, 2.25, 8],
+      "id": "predio-leste-s",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "block",
+      "transform": {
+        "x": 39,
+        "y": 2.25,
+        "z": 14
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "half": [44.15, 1.5, 0.15],
+      "id": "fachada-norte",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": -40
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "half": [44.15, 1.5, 0.15],
+      "id": "fachada-sul",
+      "kind": "block",
+      "locked": true,
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 0,
+        "y": 1.5,
+        "z": 40
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [0.15, 1.5, 40.15],
+      "id": "fachada-oeste",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -44,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [0.15, 1.5, 40.15],
+      "id": "fachada-leste",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 44,
+        "y": 1.5,
+        "z": 0
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [5.15, 1.5, 0.15],
+      "id": "garagem-n",
+      "kind": "block",
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -19,
+        "y": 1.5,
+        "z": -21
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [5.15, 1.5, 0.15],
+      "id": "garagem-s",
+      "kind": "block",
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -19,
+        "y": 1.5,
+        "z": -13
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [0.15, 1.5, 4.15],
+      "id": "garagem-o",
+      "kind": "block",
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -24,
+        "y": 1.5,
+        "z": -17
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [0.15, 1.5, 4.15],
+      "id": "garagem-l",
+      "kind": "block",
+      "material": "metal",
+      "openings": [
+        {
+          "height": 2.3,
+          "id": "garagem-porta",
+          "offset": 0,
+          "type": "door",
+          "width": 2.4
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": -14,
+        "y": 1.5,
+        "z": -17
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [4.85, 0.15, 3.85],
+      "id": "garagem-teto",
+      "kind": "block",
+      "material": "metal",
+      "role": "ceiling",
+      "transform": {
+        "x": -19,
+        "y": 3.15,
+        "z": -17
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [0.15, 1.5, 6.15],
+      "id": "patio-leste",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -8,
+        "y": 1.5,
+        "z": -15
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [1.05, 1.5, 0.15],
+      "id": "patio-s-o",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -13.1,
+        "y": 1.5,
+        "z": -9
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [1.05, 1.5, 0.15],
+      "id": "patio-s-l",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": -8.9,
+        "y": 1.5,
+        "z": -9
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [8.65, 1.5, 0.15],
+      "id": "prefeitura-n",
+      "kind": "block",
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 16.5,
+        "y": 1.5,
+        "z": -22
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [8.65, 1.5, 0.15],
+      "id": "prefeitura-s",
+      "kind": "block",
+      "material": "brick",
+      "openings": [
+        {
+          "height": 2.3,
+          "id": "prefeitura-entrada",
+          "offset": -5,
+          "type": "door",
+          "width": 1.5
+        },
+        {
+          "height": 3,
+          "id": "prefeitura-escada",
+          "offset": 4.5,
+          "type": "portal",
+          "width": 1.6
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 16.5,
+        "y": 1.5,
+        "z": -9
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [0.15, 1.5, 6.65],
+      "id": "prefeitura-o",
+      "kind": "block",
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 8,
+        "y": 1.5,
+        "z": -15.5
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [0.15, 1.5, 6.65],
+      "id": "prefeitura-l",
+      "kind": "block",
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 25,
+        "y": 1.5,
+        "z": -15.5
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [8.35, 0.15, 6.35],
+      "id": "prefeitura-laje",
+      "kind": "block",
+      "material": "metal",
+      "role": "ceiling",
+      "transform": {
+        "x": 16.5,
+        "y": 3.15,
+        "z": -15.5
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [5.15, 1.5, 0.15],
+      "id": "gabinete-n",
+      "kind": "block",
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 14,
+        "y": 4.8,
+        "z": -21
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [5.15, 1.5, 0.15],
+      "id": "gabinete-s",
+      "kind": "block",
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 14,
+        "y": 4.8,
+        "z": -11
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [0.15, 1.5, 5.15],
+      "id": "gabinete-o",
+      "kind": "block",
+      "material": "brick",
+      "role": "wall",
+      "transform": {
+        "x": 9,
+        "y": 4.8,
+        "z": -16
+      }
+    },
+    {
+      "color": [0.46, 0.25, 0.2],
+      "color2": [0.2, 0.35, 0.55],
+      "half": [0.15, 1.5, 5.15],
+      "id": "gabinete-l",
+      "kind": "block",
+      "material": "brick",
+      "openings": [
+        {
+          "height": 2.2,
+          "id": "gabinete-porta",
+          "offset": 0,
+          "type": "door",
+          "width": 1.3
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 19,
+        "y": 4.8,
+        "z": -16
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [4.85, 0.15, 4.85],
+      "id": "gabinete-teto",
+      "kind": "block",
+      "material": "metal",
+      "role": "ceiling",
+      "transform": {
+        "x": 14,
+        "y": 6.45,
+        "z": -16
+      }
+    },
+    {
+      "color": [0.25, 0.43, 0.31],
+      "color2": [0.46, 0.25, 0.2],
+      "half": [7.15, 1.5, 0.15],
+      "id": "mercado-n",
+      "kind": "block",
+      "material": "wood",
+      "role": "wall",
+      "transform": {
+        "x": -17,
+        "y": 1.5,
+        "z": 10
+      }
+    },
+    {
+      "color": [0.25, 0.43, 0.31],
+      "color2": [0.46, 0.25, 0.2],
+      "half": [7.15, 1.5, 0.15],
+      "id": "mercado-s",
+      "kind": "block",
+      "material": "wood",
+      "role": "wall",
+      "transform": {
+        "x": -17,
+        "y": 1.5,
+        "z": 21
+      }
+    },
+    {
+      "color": [0.25, 0.43, 0.31],
+      "color2": [0.46, 0.25, 0.2],
+      "half": [0.15, 1.5, 5.65],
+      "id": "mercado-o",
+      "kind": "block",
+      "material": "wood",
+      "role": "wall",
+      "transform": {
+        "x": -24,
+        "y": 1.5,
+        "z": 15.5
+      }
+    },
+    {
+      "color": [0.25, 0.43, 0.31],
+      "color2": [0.46, 0.25, 0.2],
+      "half": [0.15, 1.5, 5.65],
+      "id": "mercado-l",
+      "kind": "block",
+      "material": "wood",
+      "openings": [
+        {
+          "height": 2.3,
+          "id": "mercado-entrada",
+          "offset": -1.5,
+          "type": "door",
+          "width": 1.5
+        },
+        {
+          "height": 1.3,
+          "id": "mercado-vitrine",
+          "offset": 2.3,
+          "sill": 1,
+          "type": "window",
+          "width": 2.2
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": -10,
+        "y": 1.5,
+        "z": 15.5
+      }
+    },
+    {
+      "color": [0.25, 0.43, 0.31],
+      "half": [6.85, 0.15, 5.35],
+      "id": "mercado-teto",
+      "kind": "block",
+      "material": "wood",
+      "role": "ceiling",
+      "transform": {
+        "x": -17,
+        "y": 3.15,
+        "z": 15.5
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.96, 0.72, 0.12],
+      "half": [7.15, 1.5, 0.15],
+      "id": "estacao-n",
+      "kind": "block",
+      "material": "metal",
+      "openings": [
+        {
+          "height": 2.3,
+          "id": "estacao-entrada",
+          "offset": -4,
+          "type": "door",
+          "width": 1.5
+        }
+      ],
+      "role": "wall",
+      "transform": {
+        "x": 17,
+        "y": 1.5,
+        "z": 11
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.96, 0.72, 0.12],
+      "half": [7.15, 1.5, 0.15],
+      "id": "estacao-s",
+      "kind": "block",
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 17,
+        "y": 1.5,
+        "z": 21
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.96, 0.72, 0.12],
+      "half": [0.15, 1.5, 5.15],
+      "id": "estacao-o",
+      "kind": "block",
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 10,
+        "y": 1.5,
+        "z": 16
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "color2": [0.96, 0.72, 0.12],
+      "half": [0.15, 1.5, 5.15],
+      "id": "estacao-l",
+      "kind": "block",
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 24,
+        "y": 1.5,
+        "z": 16
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [6.85, 0.15, 4.85],
+      "id": "estacao-teto",
+      "kind": "block",
+      "material": "metal",
+      "role": "ceiling",
+      "transform": {
+        "x": 17,
+        "y": 3.15,
+        "z": 16
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [0.15, 1.5, 2.3500001],
+      "id": "controle-n",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 18,
+        "y": 1.5,
+        "z": 13.2
+      }
+    },
+    {
+      "color": [0.31, 0.35, 0.41],
+      "half": [0.15, 1.5, 2.05],
+      "id": "controle-s",
+      "kind": "block",
+      "locked": true,
+      "material": "metal",
+      "role": "wall",
+      "transform": {
+        "x": 18,
+        "y": 1.5,
+        "z": 19.1
+      }
+    },
+    {
+      "color": [0.08, 0.36, 0.66],
+      "half": [2.2, 0.03, 1.6],
+      "id": "estacao-agua",
+      "kind": "block",
+      "material": "water",
+      "role": "floor",
+      "transform": {
+        "x": 13,
+        "y": 0.03,
+        "z": 18
+      }
+    }
+  ]
+}

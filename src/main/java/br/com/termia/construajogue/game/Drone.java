@@ -47,6 +47,10 @@ public final class Drone implements Enemy {
     private final float bz;
     private final float hoverY;
     private final float phase;
+    private final boolean boss;
+    private final float sizeScale;
+    private final float speedScale;
+    private final int damageValue;
     private final float[] feet = new float[3];
 
     private float x;
@@ -54,7 +58,7 @@ public final class Drone implements Enemy {
     private float z;
     private boolean towardB = true;
     private int state;
-    private int health = MAX_HEALTH;
+    private int health;
     private float flash;
     private float fireTimer;
     private float searchTimer;
@@ -65,12 +69,22 @@ public final class Drone implements Enemy {
 
     /** spawn = {x, y, z, x2, z2}; dormente = parado no chão até o alarme. */
     public Drone(float[] spawn, int index, boolean dormant) {
+        this(spawn, index, dormant, false);
+    }
+
+    /** Variante chefe: maior, mais resistente, rápida e perigosa. */
+    public Drone(float[] spawn, int index, boolean dormant, boolean boss) {
         ax = spawn[0];
         az = spawn[2];
         bx = spawn[3];
         bz = spawn[4];
         hoverY = spawn[1];
         phase = index * 2.1f;
+        this.boss = boss;
+        sizeScale = boss ? 1.7f : 1f;
+        speedScale = boss ? 1.22f : 1f;
+        damageValue = boss ? 18 : 8;
+        health = boss ? 12 : MAX_HEALTH;
         x = ax;
         z = az;
         state = dormant ? DORMANT : PATROL;
@@ -118,8 +132,9 @@ public final class Drone implements Enemy {
 
         y = hoverY + BOB_AMPLITUDE * (float) Math.sin(time * 2.0 + phase);
         float dx = px - x;
+        float dy = py - y;
         float dz = pz - z;
-        float dist = (float) Math.hypot(dx, dz);
+        float dist = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         boolean sees = playerAlive && dist < SIGHT_RANGE
                 && lineOfSight(px, py, pz, boxes);
         if (sees) {
@@ -131,7 +146,7 @@ public final class Drone implements Enemy {
             case PATROL:
                 float tx = towardB ? bx : ax;
                 float tz = towardB ? bz : az;
-                if (moveToward(tx, tz, PATROL_SPEED, dt, boxes)) {
+                if (moveToward(tx, tz, PATROL_SPEED * speedScale, dt, boxes)) {
                     towardB = !towardB;
                 }
                 if (sees) {
@@ -146,7 +161,7 @@ public final class Drone implements Enemy {
                 } else if (dist < ATTACK_RANGE) {
                     state = ATTACK;
                 } else {
-                    moveToward(px, pz, CHASE_SPEED, dt, boxes);
+                    moveToward(px, pz, CHASE_SPEED * speedScale, dt, boxes);
                 }
                 break;
             case ATTACK:
@@ -169,7 +184,7 @@ public final class Drone implements Enemy {
                     break;
                 }
                 boolean arrived = moveToward(lastSeenX, lastSeenZ,
-                        CHASE_SPEED, dt, boxes);
+                        CHASE_SPEED * speedScale, dt, boxes);
                 if (arrived) {
                     searchTimer -= dt;
                     if (searchTimer <= 0f) {
@@ -194,12 +209,12 @@ public final class Drone implements Enemy {
         }
         float scale = speed * dt / dist;
         feet[0] = x;
-        feet[1] = y - HALF_Y;
+        feet[1] = y - HALF_Y * sizeScale;
         feet[2] = z;
-        Collision.moveHorizontal(feet, 0, dx * scale, HALF_X, 2 * HALF_Y, 0f,
-                boxes);
-        Collision.moveHorizontal(feet, 2, dz * scale, HALF_X, 2 * HALF_Y, 0f,
-                boxes);
+        Collision.moveHorizontal(feet, 0, dx * scale, HALF_X * sizeScale,
+                2 * HALF_Y * sizeScale, 0f, boxes);
+        Collision.moveHorizontal(feet, 2, dz * scale, HALF_X * sizeScale,
+                2 * HALF_Y * sizeScale, 0f, boxes);
         x = feet[0];
         z = feet[2];
         return false;
@@ -236,7 +251,8 @@ public final class Drone implements Enemy {
         fallVelocity = 0f;
         // onde este drone repousa: raio p/ baixo acha o piso local
         float t = Raycast.hitBoxes(x, y, z, 0f, -1f, 0f, sceneBoxes);
-        restY = t == Raycast.MISS ? HALF_Y : y - t + HALF_Y;
+        restY = t == Raycast.MISS ? HALF_Y * sizeScale
+                : y - t + HALF_Y * sizeScale;
         return true;
     }
 
@@ -263,22 +279,22 @@ public final class Drone implements Enemy {
 
     @Override
     public int type() {
-        return TYPE_DRONE;
+        return boss ? TYPE_BOSS : TYPE_DRONE;
     }
 
     @Override
     public int damage() {
-        return 8;
+        return damageValue;
     }
 
     /** AABB atual para o hitscan. */
     public void boundsInto(float[] out6) {
-        out6[0] = x - HALF_X;
-        out6[1] = y - HALF_Y;
-        out6[2] = z - HALF_Z;
-        out6[3] = x + HALF_X;
-        out6[4] = y + HALF_Y;
-        out6[5] = z + HALF_Z;
+        out6[0] = x - HALF_X * sizeScale;
+        out6[1] = y - HALF_Y * sizeScale;
+        out6[2] = z - HALF_Z * sizeScale;
+        out6[3] = x + HALF_X * sizeScale;
+        out6[4] = y + HALF_Y * sizeScale;
+        out6[5] = z + HALF_Z * sizeScale;
     }
 
     public float x() {

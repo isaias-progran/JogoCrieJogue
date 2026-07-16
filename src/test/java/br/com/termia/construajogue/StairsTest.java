@@ -16,7 +16,8 @@ import java.io.IOException;
 /**
  * Sobe a escada de andar ANDANDO, com a colisão real do jogador
  * (raio 0.35, altura 1.75, degrau 0.35): o teste caminha no eixo Z e
- * precisa terminar em cima (y = 3 m). Também confere a rampa.
+ * precisa terminar em cima (y = 3 m). Também confere a rampa e a passagem
+ * do último degrau para o topo de uma laje/teto em y = 3,3 m.
  */
 public final class StairsTest {
 
@@ -39,6 +40,8 @@ public final class StairsTest {
                 "rampa de andar leva a 3 m");
         Check.that(climb(catalog, "ramp.short") > 0.9f,
                 "rampa curta leva a 1 m");
+        Check.that(climbOntoSlab(catalog) > 3.25f,
+                "escada alcança o topo de um teto de 30 cm");
         Check.done("StairsTest");
     }
 
@@ -80,5 +83,35 @@ public final class StairsTest {
             top = Math.max(top, pos[1]);
         }
         return top;
+    }
+
+    /** Escada externa seguida pela laje que vira o piso do novo andar. */
+    private static float climbOntoSlab(PrefabCatalog catalog) {
+        MapDocument doc = new MapDocument();
+        StructureObject floor = new StructureObject("piso",
+                StructureObject.KIND_BLOCK);
+        floor.role = StructureObject.ROLE_FLOOR;
+        floor.transform.y = -0.15f;
+        floor.half = new float[]{5f, 0.15f, 8f};
+        floor.color = new float[]{0.4f, 0.4f, 0.4f};
+        doc.structures.add(floor);
+        StructureObject slab = new StructureObject("teto",
+                StructureObject.KIND_BLOCK);
+        slab.role = StructureObject.ROLE_CEILING;
+        slab.transform.y = 3.15f;
+        slab.transform.z = 4.9f;
+        slab.half = new float[]{5f, 0.15f, 3.15f};
+        slab.color = new float[]{0.4f, 0.4f, 0.4f};
+        doc.structures.add(slab); // começa em Z=1,75, junto do topo
+        doc.prefabs.add(new PrefabInstance("escada", "stairs.floor"));
+        RuntimeLevel level = LevelCompiler.compile(doc, catalog);
+        float[] pos = {0f, 0f, -4f};
+        for (int i = 0; i < 550; i++) {
+            Collision.moveHorizontal(pos, 2, 0.02f, RADIUS, HEIGHT, STEP,
+                    level.colliders());
+            Collision.moveVertical(pos, -0.1f, RADIUS, HEIGHT,
+                    level.colliders());
+        }
+        return pos[1];
     }
 }

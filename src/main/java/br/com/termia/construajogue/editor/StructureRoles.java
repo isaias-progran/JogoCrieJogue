@@ -86,8 +86,9 @@ public final class StructureRoles {
                 s.half[0] * 2f, s.half[2] * 2f);
         if (isCeiling(s)) {
             return size + String.format("  ·  elevação %.2f m",
-                    heightValue(s));
+                    heightValue(s)) + (s.locked ? "  ·  TRAVADO" : "");
         }
-        return size + String.format("  ·  altura %.2f m", heightValue(s));
+        return size + String.format("  ·  altura %.2f m", heightValue(s))
+                + (s.locked ? "  ·  TRAVADO" : "");
     }
 }

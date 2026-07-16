@@ -11,9 +11,12 @@ import br.com.termia.construajogue.engine.Shader;
 import br.com.termia.construajogue.engine.Sky;
 import br.com.termia.construajogue.game.Enemy;
 import br.com.termia.construajogue.game.GameState;
+import br.com.termia.construajogue.game.GameResult;
 import br.com.termia.construajogue.game.Sounds;
 import br.com.termia.construajogue.runtime.LevelProvider;
 import br.com.termia.construajogue.runtime.RuntimeLevel;
+import br.com.termia.construajogue.runtime.RuntimeDoor;
+import br.com.termia.construajogue.runtime.RuntimeNpc;
 import br.com.termia.construajogue.input.TouchControls;
 import br.com.termia.construajogue.ui.Hud;
 
@@ -39,6 +42,14 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
 
         /** Uma vez por segundo, com a contagem de quadros do último segundo. */
         void onFps(int fps);
+
+        void onGameResult(GameResult result);
+
+        /** A Activity abre o diálogo fora da thread GL. */
+        void onNpcInteraction(RuntimeNpc npc, String mapName);
+
+        /** A Activity fala a saudação sem abrir diálogo. */
+        void onNpcGreeting(RuntimeNpc npc);
     }
 
     private static final String SCENE_VERTEX = ""
@@ -70,12 +81,65 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             + "uniform float uFogFar;\n"
             + "uniform vec3 uTint;\n"
             + "uniform float uGrid;\n"
+            + "uniform float uTime;\n"
+            + "uniform int uLightCount;\n"
+            + "uniform vec4 uLightPosRadius[4];\n"
+            + "uniform vec3 uLightColor[4];\n"
+            + "uniform float uAlpha;\n"
             + "out vec4 outColor;\n"
             + "const vec3 LIGHT = vec3(0.37139, 0.74278, 0.55708);\n"
             + "void main() {\n"
             + "  vec3 n = normalize(vNormal);\n"
+            + "  float material = floor(vColor.r / 10.0 + 0.001);\n"
+            + "  vec3 base = vec3(vColor.r - material * 10.0, vColor.gb);\n"
+            + "  vec2 uv = abs(n.y) > 0.7 ? vWorld.xz : "
+            + "(abs(n.x) > 0.7 ? vWorld.zy : vWorld.xy);\n"
+            + "  if (material > 0.5 && material < 1.5) {\n"
+            + "    float row = floor(uv.y * 2.0);\n"
+            + "    vec2 q = fract(vec2(uv.x * 2.0 + mod(row, 2.0) * 0.5, "
+            + "uv.y * 2.0));\n"
+            + "    float mortar = step(0.08, q.x) * step(0.10, q.y);\n"
+            + "    base *= mix(0.48, 1.08, mortar);\n"
+            + "  } else if (material > 1.5 && material < 2.5) {\n"
+            + "    float grain = 0.82 + 0.18 * sin(uv.x * 18.0 "
+            + "+ sin(uv.y * 3.0) * 2.0);\n"
+            + "    base *= grain;\n"
+            + "  } else if (material > 2.5 && material < 3.5) {\n"
+            + "    float tile = mod(floor(uv.x * 2.0) + floor(uv.y * 2.0), 2.0);\n"
+            + "    base *= mix(0.42, 1.18, tile);\n"
+            + "  } else if (material > 3.5 && material < 4.5) {\n"
+            + "    base *= 0.82 + 0.18 * abs(sin(uv.y * 28.0));\n"
+            + "  } else if (material > 4.5 && material < 5.5) {\n"
+            + "    float wave = sin((uv.x + uv.y) * 5.0 + uTime * 2.2);\n"
+            + "    base = mix(base * 0.72, vec3(0.12, 0.52, 0.90), "
+            + "0.28 + wave * 0.08);\n"
+            + "  } else if (material > 5.5 && material < 6.5) {\n"
+            + "    float flow = sin(uv.x * 7.0 + uTime * 3.0) "
+            + "+ sin(uv.y * 5.0 - uTime * 2.0);\n"
+            + "    base = mix(base, vec3(1.25, 0.48, 0.05), "
+            + "0.35 + 0.12 * flow);\n"
+            + "  } else if (material > 6.5 && material < 7.5) {\n"
+            + "    vec2 cell = floor(uv * 14.0);\n"
+            + "    float grain = fract(sin(dot(cell, "
+            + "vec2(12.9898, 78.233))) * 43758.5453);\n"
+            + "    float seam = smoothstep(0.965, 1.0, "
+            + "abs(sin(uv.x * 1.7 + sin(uv.y * 1.9))));\n"
+            + "    base *= (0.78 + 0.20 * grain) * (1.0 - seam * 0.20);\n"
+            + "  }\n"
             + "  float diff = max(dot(n, LIGHT), 0.0);\n"
-            + "  vec3 col = vColor * uTint * (uAmbient + (1.0 - uAmbient) * diff);\n"
+            + "  vec3 col = base * uTint * (uAmbient + (1.0 - uAmbient) * diff);\n"
+            + "  for (int i = 0; i < 4; i++) {\n"
+            + "    if (i >= uLightCount) break;\n"
+            + "    vec3 delta = uLightPosRadius[i].xyz - vWorld;\n"
+            + "    float d = length(delta);\n"
+            + "    float radius = uLightPosRadius[i].w;\n"
+            + "    float att = pow(max(0.0, 1.0 - d / radius), 2.0);\n"
+            + "    float ndl = max(dot(n, delta / max(d, 0.001)), 0.0);\n"
+            + "    col += base * uTint * uLightColor[i] * att "
+            + "* (0.18 + 0.82 * ndl);\n"
+            + "  }\n"
+            + "  if (material > 5.5 && material < 6.5) "
+            + "col += base * 0.55;\n"
             + "  if (uGrid > 0.5 && abs(n.y) > 0.9) {\n" // grade de 1m
             + "    vec2 g = abs(fract(vWorld.xz) - 0.5);\n"
             + "    float line = smoothstep(0.46, 0.5, max(g.x, g.y));\n"
@@ -83,7 +147,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             + "  }\n"
             + "  float dist = length(vWorld - uEye);\n"
             + "  float fog = smoothstep(uFogFar * 0.35, uFogFar, dist);\n"
-            + "  outColor = vec4(mix(col, uFogColor, fog), 1.0);\n"
+            + "  outColor = vec4(mix(col, uFogColor, fog), uAlpha);\n"
             + "}\n";
 
     private final Listener listener;
@@ -102,7 +166,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private RuntimeLevel level;
     private GameState game;
     private Mesh levelMesh;
-    private Mesh doorMesh;
+    private Mesh[] doorMeshes = new Mesh[0];
     private GameMeshes meshes;
     private Sky sky;
     private int program;
@@ -114,12 +178,20 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private int fogFarLoc;
     private int tintLoc;
     private int gridLoc;
+    private int timeLoc;
+    private int lightCountLoc;
+    private int lightPosRadiusLoc;
+    private int lightColorLoc;
+    private int alphaLoc;
+    private final float[] lightPosRadius = new float[16];
+    private final float[] lightColor = new float[12];
+    private final int[] nearestLights = new int[4];
+    private final float[] nearestLightDist = new float[4];
     private boolean ready;
     private long lastFrame;
     private int frames;
     private long fpsWindowStart;
     private float gameTime;
-    private float doorHeight;
     private int levelIndex;
 
     public GameRenderer(Listener listener, TouchControls controls,
@@ -134,13 +206,12 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     /** Carrega somente dados/estado; os VBOs dependem do contexto atual. */
     private void loadLevelState(int index, float priorTime) throws IOException {
         RuntimeLevel loaded = levels.load(index);
+        sounds.setAmbient(loaded.skyMode(), loaded.soundscapeMode());
         GameState next = new GameState(loaded, camera, controls, sounds, hud,
                 index + 1, levels.count(), priorTime);
         level = loaded;
         game = next;
         levelIndex = index;
-        doorHeight = level.doorOriginal() == null ? 0f
-                : level.doorOriginal()[4] - level.doorOriginal()[1];
     }
 
     private void uploadLevelMeshes(boolean replacing) {
@@ -148,13 +219,16 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             if (levelMesh != null) {
                 levelMesh.release();
             }
-            if (doorMesh != null) {
-                doorMesh.release();
+            for (Mesh mesh : doorMeshes) {
+                if (mesh != null) mesh.release();
             }
         }
         levelMesh = new Mesh(level.vertexData());
-        doorMesh = level.doorVertexData() == null ? null
-                : new Mesh(level.doorVertexData());
+        RuntimeDoor[] doors = level.doors();
+        doorMeshes = new Mesh[doors.length];
+        for (int i = 0; i < doors.length; i++) {
+            doorMeshes[i] = new Mesh(doors[i].vertexData);
+        }
         float[] fog = level.fogColor();
         GLES30.glClearColor(fog[0], fog[1], fog[2], 1f);
     }
@@ -184,6 +258,14 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             fogFarLoc = GLES30.glGetUniformLocation(program, "uFogFar");
             tintLoc = GLES30.glGetUniformLocation(program, "uTint");
             gridLoc = GLES30.glGetUniformLocation(program, "uGrid");
+            timeLoc = GLES30.glGetUniformLocation(program, "uTime");
+            lightCountLoc = GLES30.glGetUniformLocation(program,
+                    "uLightCount");
+            lightPosRadiusLoc = GLES30.glGetUniformLocation(program,
+                    "uLightPosRadius[0]");
+            lightColorLoc = GLES30.glGetUniformLocation(program,
+                    "uLightColor[0]");
+            alphaLoc = GLES30.glGetUniformLocation(program, "uAlpha");
             uploadLevelMeshes(false);
             meshes = new GameMeshes();
             sky = new Sky();
@@ -229,6 +311,18 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         }
 
         game.update(dt, gameTime);
+        RuntimeNpc greetingNpc = game.takeNpcGreeting();
+        if (greetingNpc != null && listener != null) {
+            listener.onNpcGreeting(greetingNpc);
+        }
+        RuntimeNpc requestedNpc = game.takeNpcInteraction();
+        if (requestedNpc != null && listener != null) {
+            listener.onNpcInteraction(requestedNpc, level.mapName());
+        }
+        GameResult result = game.takeResult();
+        if (result != null && listener != null) {
+            listener.onGameResult(result);
+        }
         try {
             if (game.takeAdvanceRequest()) {
                 switchLevel(levelIndex + 1, game.elapsedCampaignTime());
@@ -283,6 +377,9 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         GLES30.glUniform1f(ambientLoc, level.ambient());
         GLES30.glUniform3f(fogColorLoc, fog[0], fog[1], fog[2]);
         GLES30.glUniform1f(fogFarLoc, level.fogFar());
+        GLES30.glUniform1f(timeLoc, gameTime);
+        GLES30.glUniform1f(alphaLoc, 1f);
+        uploadNearestLights();
 
         // cenário
         GLES30.glUniform3f(offsetLoc, 0f, 0f, 0f);
@@ -291,19 +388,60 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         levelMesh.draw();
         GLES30.glUniform1f(gridLoc, 0f);
 
-        // portão descendo no chão
-        if (doorMesh != null) {
-            GLES30.glUniform3f(offsetLoc, 0f,
-                    -game.doorProgress() * doorHeight, 0f);
-            doorMesh.draw();
+        // sombras blob baratas: leitura espacial sem mapa de sombras
+        GLES30.glEnable(GLES30.GL_BLEND);
+        GLES30.glBlendFunc(GLES30.GL_SRC_ALPHA,
+                GLES30.GL_ONE_MINUS_SRC_ALPHA);
+        GLES30.glDepthMask(false);
+        GLES30.glUniform1f(alphaLoc, 0.34f);
+        GLES30.glUniform3f(tintLoc, 0.5f, 0.5f, 0.5f);
+        float playerRayY = game.playerY() + 0.1f;
+        float playerDown = br.com.termia.construajogue.engine.Raycast.hitBoxes(
+                game.playerX(), playerRayY, game.playerZ(),
+                0f, -1f, 0f, level.colliders());
+        float playerGround = playerDown
+                == br.com.termia.construajogue.engine.Raycast.MISS
+                ? game.playerY() - 0.01f
+                : playerRayY - playerDown + 0.015f;
+        GLES30.glUniform3f(offsetLoc, game.playerX(),
+                playerGround, game.playerZ());
+        meshes.shadow.draw();
+        for (Enemy enemy : game.enemies()) {
+            float ground = enemy.y() - 0.01f;
+            float down = br.com.termia.construajogue.engine.Raycast.hitBoxes(
+                    enemy.x(), enemy.y(), enemy.z(), 0f, -1f, 0f,
+                    level.colliders());
+            if (down != br.com.termia.construajogue.engine.Raycast.MISS) {
+                ground = enemy.y() - down + 0.015f;
+            }
+            GLES30.glUniform3f(offsetLoc, enemy.x(), ground, enemy.z());
+            meshes.shadow.draw();
+        }
+        for (RuntimeNpc npc : level.npcs()) {
+            GLES30.glUniform3f(offsetLoc, npc.x, npc.y + 0.015f, npc.z);
+            meshes.shadow.draw();
+        }
+        GLES30.glDepthMask(true);
+        GLES30.glDisable(GLES30.GL_BLEND);
+        GLES30.glUniform1f(alphaLoc, 1f);
+
+        // portas dinâmicas: portão desce; folha automática desliza
+        RuntimeDoor[] doors = level.doors();
+        for (int i = 0; i < doorMeshes.length; i++) {
+            float progress = game.doorProgress(i);
+            GLES30.glUniform3f(offsetLoc, doors[i].moveX * progress,
+                    doors[i].moveY * progress,
+                    doors[i].moveZ * progress);
+            doorMeshes[i].draw();
         }
 
         // luz de status do terminal: laranja pulsando -> verde fixo
-        float[] terminal = level.terminal();
-        if (terminal != null) {
-            GLES30.glUniform3f(offsetLoc, terminal[0], terminal[1],
-                    terminal[2]);
-            if (game.terminalActive()) {
+        br.com.termia.construajogue.runtime.RuntimeTerminal[] terminals =
+                level.terminals();
+        for (int i = 0; i < terminals.length; i++) {
+            GLES30.glUniform3f(offsetLoc, terminals[i].x, terminals[i].y,
+                    terminals[i].z);
+            if (game.terminalActive(i)) {
                 GLES30.glUniform3f(tintLoc, 0.3f, 1.6f, 0.5f);
             } else {
                 float pulse = 1.2f + 0.6f * (float) Math.sin(gameTime * 4.0);
@@ -322,9 +460,24 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             GLES30.glUniform3f(tintLoc, 1.2f, 1.2f, 1.2f);
             if (item[0] == RuntimeLevel.ITEM_HEALTH) {
                 meshes.health.draw();
-            } else {
+            } else if (item[0] == RuntimeLevel.ITEM_AMMO) {
                 meshes.ammo.draw();
+            } else if (item[0] == RuntimeLevel.ITEM_SPECIAL) {
+                meshes.special.draw();
+            } else {
+                meshes.token.draw();
             }
+        }
+
+        // Pessoas amigáveis respiram paradas e saltitam ao acompanhar.
+        GLES30.glUniform3f(tintLoc, 1f, 1f, 1f);
+        for (RuntimeNpc npc : level.npcs()) {
+            float speed = npc.moving ? 8.5f : 1.8f;
+            float amplitude = npc.moving ? 0.045f : 0.008f;
+            float breathe = amplitude * (float) Math.sin(
+                    gameTime * speed + npc.x * 0.3f);
+            GLES30.glUniform3f(offsetLoc, npc.x, npc.y + breathe, npc.z);
+            meshes.human.draw();
         }
 
         // inimigos: mesma linguagem de flash/aviso, malhas distintas
@@ -341,11 +494,21 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
                 GLES30.glUniform3f(tintLoc, 0.45f, 0.45f, 0.5f);
             } else if (enemy.type() == Enemy.TYPE_MUTANT) {
                 GLES30.glUniform3f(tintLoc, 0.9f, 1.15f, 0.9f);
+            } else if (enemy.type() == Enemy.TYPE_BOSS) {
+                GLES30.glUniform3f(tintLoc, 1.15f, 0.55f, 1.25f);
+            } else if (enemy.type() == Enemy.TYPE_KAMIKAZE) {
+                GLES30.glUniform3f(tintLoc, 1.35f, 0.65f, 0.25f);
             } else {
                 GLES30.glUniform3f(tintLoc, 1f, 1f, 1f);
             }
             if (enemy.type() == Enemy.TYPE_MUTANT) {
                 meshes.mutant.draw();
+            } else if (enemy.type() == Enemy.TYPE_TURRET) {
+                meshes.turret.draw();
+            } else if (enemy.type() == Enemy.TYPE_KAMIKAZE) {
+                meshes.kamikaze.draw();
+            } else if (enemy.type() == Enemy.TYPE_BOSS) {
+                meshes.boss.draw();
             } else {
                 meshes.drone.draw();
             }
@@ -365,12 +528,57 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         GLES30.glUniformMatrix4fv(viewProjLoc, 1, false, projection, 0);
         GLES30.glUniform3f(eyeLoc, 0f, 0f, 0f);
         GLES30.glUniform1f(fogFarLoc, 1000f); // sem neblina na arma
+        GLES30.glUniform1i(lightCountLoc, 0);
+        GLES30.glUniform1f(alphaLoc, 1f);
         GLES30.glUniform3f(offsetLoc, 0f, 0f, game.recoil());
         GLES30.glUniform3f(tintLoc, 1f, 1f, 1f);
         meshes.gun.draw();
         if (game.muzzleVisible()) {
             GLES30.glUniform3f(tintLoc, 2.5f, 2.2f, 1.2f);
             meshes.flash.draw();
+        }
+    }
+
+    /** Escolhe no máximo quatro luzes mais próximas sem alocar no quadro. */
+    private void uploadNearestLights() {
+        float[][] lights = level.lights();
+        int count = Math.min(4, lights.length);
+        for (int i = 0; i < 4; i++) {
+            nearestLights[i] = -1;
+            nearestLightDist[i] = Float.MAX_VALUE;
+        }
+        for (int i = 0; i < lights.length; i++) {
+            float dx = lights[i][0] - eye[0];
+            float dy = lights[i][1] - eye[1];
+            float dz = lights[i][2] - eye[2];
+            float d = dx * dx + dy * dy + dz * dz;
+            for (int slot = 0; slot < 4; slot++) {
+                if (d < nearestLightDist[slot]) {
+                    for (int move = 3; move > slot; move--) {
+                        nearestLightDist[move] = nearestLightDist[move - 1];
+                        nearestLights[move] = nearestLights[move - 1];
+                    }
+                    nearestLightDist[slot] = d;
+                    nearestLights[slot] = i;
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < count; i++) {
+            float[] l = lights[nearestLights[i]];
+            lightPosRadius[i * 4] = l[0];
+            lightPosRadius[i * 4 + 1] = l[1];
+            lightPosRadius[i * 4 + 2] = l[2];
+            lightPosRadius[i * 4 + 3] = Math.max(0.1f, l[6]);
+            lightColor[i * 3] = l[3];
+            lightColor[i * 3 + 1] = l[4];
+            lightColor[i * 3 + 2] = l[5];
+        }
+        GLES30.glUniform1i(lightCountLoc, count);
+        if (count > 0) {
+            GLES30.glUniform4fv(lightPosRadiusLoc, count,
+                    lightPosRadius, 0);
+            GLES30.glUniform3fv(lightColorLoc, count, lightColor, 0);
         }
     }
 }

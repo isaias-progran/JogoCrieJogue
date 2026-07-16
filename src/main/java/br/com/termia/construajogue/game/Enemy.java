@@ -5,6 +5,9 @@ public interface Enemy {
 
     int TYPE_DRONE = 0;
     int TYPE_MUTANT = 1;
+    int TYPE_TURRET = 2;
+    int TYPE_KAMIKAZE = 3;
+    int TYPE_BOSS = 4;
 
     int EV_NONE = 0;
     int EV_ATTACK_HIT = 1;

@@ -14,6 +14,8 @@ public final class PrefabInstance {
     public String prefabId;
     public Transform transform = new Transform();
     public float scale = 1f;
+    /** Trava persistente do editor; não altera o comportamento no jogo. */
+    public boolean locked;
     public final Map<String, Object> properties = new TreeMap<>();
 
     public PrefabInstance() {

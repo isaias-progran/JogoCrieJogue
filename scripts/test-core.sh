@@ -15,15 +15,46 @@ TEST=src/test/java/br/com/termia/construajogue
 javac -d "$OUT" -encoding UTF-8 \
     "$SRC"/engine/Boxes.java \
     "$SRC"/engine/Collision.java \
+    "$SRC"/engine/Raycast.java \
     "$SRC"/util/*.java \
     "$SRC"/geometry/Triangulator.java \
     "$SRC"/map/*.java \
+    "$SRC"/editor/StructureRoles.java \
+    "$SRC"/editor/tools/GroupSelection.java \
+    "$SRC"/editor/tools/OpeningTool.java \
+    "$SRC"/editor/tools/PaintTool.java \
+    "$SRC"/editor/tools/PrefabPlacementTool.java \
+    "$SRC"/editor/tools/StoryLevels.java \
     "$SRC"/persistence/MapJson.java \
+    "$SRC"/persistence/MapMigration.java \
+    "$SRC"/sharing/Base64Url.java \
+    "$SRC"/sharing/MapShareCodec.java \
+    "$SRC"/sharing/QrCode.java \
+    "$SRC"/game/ObjectiveTracker.java \
+    "$SRC"/game/SpatialRules.java \
+    "$SRC"/game/GameResult.java \
+    "$SRC"/game/NpcGreetingTracker.java \
+    "$SRC"/game/NpcCompanion.java \
+    "$SRC"/game/Enemy.java \
+    "$SRC"/game/Mutant.java \
+    "$SRC"/game/Kamikaze.java \
+    "$SRC"/game/Weapon.java \
+    "$SRC"/ai/AiScenarioPlan.java \
+    "$SRC"/ai/AiScenarioProfile.java \
+    "$SRC"/ai/AiScenarioBuilder.java \
+    "$SRC"/ai/AiOpenAiClient.java \
+    "$SRC"/ai/NpcPersonality.java \
+    "$SRC"/ai/NpcConversationMemory.java \
+    "$SRC"/ai/AiRequestGate.java \
     "$SRC"/prefab/*.java \
     "$SRC"/compiler/*.java \
     "$SRC"/runtime/RuntimeLevel.java \
+    "$SRC"/runtime/RuntimeDoor.java \
+    "$SRC"/runtime/RuntimeTerminal.java \
+    "$SRC"/runtime/RuntimeNpc.java \
     "$SRC"/runtime/LegacyLevelLoader.java \
     "$SRC"/runtime/LevelProvider.java \
+    "$SRC"/runtime/LazyLevelProvider.java \
     "$SRC"/runtime/SingleLevelProvider.java \
     "$TEST"/*.java
 
@@ -41,7 +72,10 @@ if ! diff -q src/main/assets/maps/arena.json build/arena-gerada.json \
 fi
 
 for TESTE in JsonTest MapJsonTest PrefabCatalogTest MapValidatorTest \
-        LevelCompilerTest WallOpeningTest StairsTest PolygonTest; do
+        LevelCompilerTest WallOpeningTest StairsTest PolygonTest \
+        MapShareQrTest EditorToolsTest GameplayRulesTest \
+        StoryLevelsTest VerticalEnemyTest ElaborateMapTest CityMapTest \
+        AiScenarioTest; do
     java -cp "$OUT" "br.com.termia.construajogue.$TESTE"
 done
 echo "testes do núcleo OK"

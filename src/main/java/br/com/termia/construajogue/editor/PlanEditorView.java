@@ -8,11 +8,18 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import br.com.termia.construajogue.compiler.LevelCompiler;
+import br.com.termia.construajogue.editor.tools.GroupSelection;
+import br.com.termia.construajogue.editor.tools.OpeningTool;
+import br.com.termia.construajogue.editor.tools.PaintTool;
+import br.com.termia.construajogue.editor.tools.PrefabPlacementTool;
+import br.com.termia.construajogue.editor.tools.StoryLevels;
 import br.com.termia.construajogue.map.LogicMarker;
+import br.com.termia.construajogue.map.MapCopies;
 import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
+import br.com.termia.construajogue.map.WallGeometry;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.prefab.PrefabMeshFactory;
 import br.com.termia.construajogue.util.Ids;
@@ -22,7 +29,7 @@ import java.util.List;
 /**
  * Planta 2D (vista de topo, X→direita, Z→baixo) que edita o MapDocument
  * direto. Um dedo aplica a ferramenta; dois dedos fazem pan/zoom e
- * cancelam o gesto. Snap de 0.25m, área útil de ±32m (PLANO §9).
+ * cancelam o gesto. Snap de 0.25m, área útil de ±48m.
  */
 public final class PlanEditorView extends View {
 
@@ -37,6 +44,7 @@ public final class PlanEditorView extends View {
     public static final int TOOL_OPENING = 8;
     public static final int TOOL_PAINT = 9;
     public static final int TOOL_POINTS = 10;
+    public static final int TOOL_GROUP = 11;
 
     /** O host guarda snapshots p/ undo e reage a mudanças/seleção. */
     public interface Host {
@@ -46,18 +54,24 @@ public final class PlanEditorView extends View {
 
         void selectionChanged(String description);
 
+        /** O usuário trocou o pavimento visível/ativo. */
+        void storyChanged(float baseY);
+
         /** Contorno fechado; o host decide (piso só / piso+paredes). */
         void polygonClosed(boolean floorRole);
     }
 
     private static final float SNAP = 0.25f;
-    private static final float AREA = 32f;
+    private static final float AREA = 48f;
     private static final float WALL_HALF_T = 0.15f;
     private static final float WALL_HEIGHT = 3f;
 
     private final Host host;
     private MapDocument doc;
     private int tool = TOOL_FLOOR;
+    /** Altura do piso em que novas estruturas e peças são criadas. */
+    private float activeBaseY;
+    private List<Float> storyLevels = new java.util.ArrayList<>();
 
     private float scale = 30f;
     private float camX;
@@ -109,6 +123,11 @@ public final class PlanEditorView extends View {
     // último toque SEM snap (pintura decide o lado pela posição exata)
     private float rawX;
     private float rawZ;
+    // seleção retangular/movimento de cômodo (regras em editor/tools)
+    private final GroupSelection group = new GroupSelection();
+    private boolean groupMoving;
+    private float groupLastX;
+    private float groupLastZ;
 
     public PlanEditorView(Context context, Host host) {
         super(context);
@@ -130,19 +149,85 @@ public final class PlanEditorView extends View {
 
     public void setDocument(MapDocument doc) {
         this.doc = doc;
+        storyLevels = StoryLevels.discover(doc);
+        boolean found = false;
+        for (float level : storyLevels) {
+            if (Math.abs(level - activeBaseY) <= 0.08f) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) activeBaseY = 0f;
         clearSelection();
         invalidate();
     }
 
+    public float activeBaseY() {
+        return activeBaseY;
+    }
+
+    public List<Float> storyBases() {
+        return new java.util.ArrayList<>(storyLevels);
+    }
+
+    /** Chamado pelo host depois de qualquer mutação do documento. */
+    public void documentChanged() {
+        storyLevels = StoryLevels.discover(doc);
+        invalidate();
+    }
+
+    /** Troca o andar editado; objetos de outros pavimentos ficam ocultos. */
+    public void setActiveBaseY(float value) {
+        switchStory(value, true);
+    }
+
+    private void switchStory(float value, boolean clear) {
+        activeBaseY = StoryLevels.normalize(Math.max(-20f,
+                Math.min(100f, value)));
+        if (clear) clearSelection();
+        host.storyChanged(activeBaseY);
+        invalidate();
+    }
+
+    /** Topo da laje selecionada, pronto para receber o andar seguinte. */
+    public Float selectedCeilingTop() {
+        return selectedStructure != null
+                && StructureRoles.isCeiling(selectedStructure)
+                ? StoryLevels.normalize(StoryLevels.top(selectedStructure))
+                : null;
+    }
+
+    private boolean visible(StructureObject value) {
+        return StoryLevels.belongs(value, activeBaseY, storyLevels);
+    }
+
+    private boolean visible(PrefabInstance value) {
+        return StoryLevels.belongs(value, activeBaseY, storyLevels);
+    }
+
+    private boolean visible(LogicMarker value) {
+        return StoryLevels.belongs(value, activeBaseY);
+    }
+
     public void setTool(int tool) {
+        int previousTool = this.tool;
         this.tool = tool;
         dragging = false;
         routeMode = false;
         if (tool != TOOL_POINTS) {
             contour.clear();
         }
-        if (tool != TOOL_SELECT) {
+        if (tool == TOOL_SELECT) {
             clearSelection();
+        } else if (tool != TOOL_GROUP) {
+            clearSelection();
+        } else if (tool == TOOL_GROUP) {
+            if (previousTool != TOOL_GROUP) group.clear();
+            selectedStructure = null;
+            selectedMarker = null;
+            selectedPrefab = null;
+            selectedOpening = null;
+            selectedOpeningWall = null;
         }
         invalidate();
     }
@@ -193,7 +278,8 @@ public final class PlanEditorView extends View {
         s.role = contourRole;
         s.polygon = polygon;
         s.half = new float[]{0f, 0.15f, 0f};
-        s.transform.y = ceiling ? WALL_HEIGHT + 0.15f : -0.15f;
+        s.transform.y = activeBaseY
+                + (ceiling ? WALL_HEIGHT + 0.15f : -0.15f);
         s.color = ceiling ? new float[]{0.38f, 0.41f, 0.48f}
                 : new float[]{0.30f, 0.33f, 0.38f};
         s.syncPolyBounds();
@@ -253,7 +339,7 @@ public final class PlanEditorView extends View {
             s.role = StructureObject.ROLE_WALL;
             float half = (horizontal ? dx : dz) / 2f + WALL_HALF_T;
             s.transform.x = (ax + bx) / 2f;
-            s.transform.y = WALL_HEIGHT / 2f;
+            s.transform.y = activeBaseY + WALL_HEIGHT / 2f;
             s.transform.z = (az + bz) / 2f;
             s.half = horizontal
                     ? new float[]{half, WALL_HEIGHT / 2f, WALL_HALF_T}
@@ -272,7 +358,7 @@ public final class PlanEditorView extends View {
         s.polygon = new float[]{ax + nx, az + nz, bx + nx, bz + nz,
                 bx - nx, bz - nz, ax - nx, az - nz};
         s.half = new float[]{0f, WALL_HEIGHT / 2f, 0f};
-        s.transform.y = WALL_HEIGHT / 2f;
+        s.transform.y = activeBaseY + WALL_HEIGHT / 2f;
         s.color = new float[]{0.46f, 0.48f, 0.55f};
         s.syncPolyBounds();
         doc.structures.add(s);
@@ -281,7 +367,8 @@ public final class PlanEditorView extends View {
     /** Inimigo selecionado? Então o próximo toque marca a patrulha. */
     public boolean startRouteMode() {
         if (selectedPrefab == null
-                || !selectedPrefab.prefabId.startsWith("enemy.")) {
+                || !selectedPrefab.prefabId.startsWith("enemy.")
+                || selectedPrefab.locked) {
             return false;
         }
         routeMode = true;
@@ -299,7 +386,12 @@ public final class PlanEditorView extends View {
 
     public boolean hasSelection() {
         return selectedStructure != null || selectedPrefab != null
-                || selectedOpening != null;
+                || selectedOpening != null || selectedMarker != null
+                || !group.isEmpty();
+    }
+
+    public boolean hasGroupSelection() {
+        return !group.isEmpty();
     }
 
     public StructureObject selectedStructure() {
@@ -308,6 +400,32 @@ public final class PlanEditorView extends View {
 
     public PrefabInstance selectedPrefab() {
         return selectedPrefab;
+    }
+
+    public LogicMarker selectedMarker() {
+        return selectedMarker;
+    }
+
+    public boolean selectedLocked() {
+        if (!group.isEmpty()) {
+            return group.anyLocked();
+        }
+        if (selectedOpening != null) {
+            return selectedOpening.locked
+                    || (selectedOpeningWall != null
+                    && selectedOpeningWall.locked);
+        }
+        if (selectedStructure != null) {
+            return selectedStructure.locked;
+        }
+        if (selectedPrefab != null) {
+            return selectedPrefab.locked;
+        }
+        return selectedMarker != null && selectedMarker.locked;
+    }
+
+    public boolean selectedAllLocked() {
+        return !group.isEmpty() ? group.allLocked() : selectedLocked();
     }
 
     /** Arma a ferramenta PEÇA: o próximo toque solta esta peça. */
@@ -340,6 +458,10 @@ public final class PlanEditorView extends View {
                 && selectedOpening == null) {
             return;
         }
+        if (selectedLocked()) {
+            host.selectionChanged("objeto travado — destrave para editar");
+            return;
+        }
         host.beforeChange();
         if (selectedOpening != null) {
             float wallHeight = selectedOpeningWall.half[1] * 2f;
@@ -352,8 +474,8 @@ public final class PlanEditorView extends View {
                     StructureRoles.describe(selectedStructure));
         } else {
             // peça: ALTURA = distância do chão (voo do drone, item…)
-            selectedPrefab.transform.y =
-                    Math.max(0f, Math.min(10f, value));
+            selectedPrefab.transform.y = activeBaseY
+                    + Math.max(0f, Math.min(10f, value));
             host.selectionChanged(describePrefab(selectedPrefab));
         }
         host.afterChange();
@@ -366,6 +488,10 @@ public final class PlanEditorView extends View {
      */
     public void rotateSelected() {
         if (selectedPrefab == null && selectedStructure == null) {
+            return;
+        }
+        if (selectedLocked()) {
+            host.selectionChanged("objeto travado — destrave para girar");
             return;
         }
         mutateSelected(() -> {
@@ -405,6 +531,10 @@ public final class PlanEditorView extends View {
         if (!hasSelection()) {
             return;
         }
+        if (selectedLocked()) {
+            host.selectionChanged("objeto travado — destrave para editar");
+            return;
+        }
         host.beforeChange();
         change.run();
         host.afterChange();
@@ -424,26 +554,117 @@ public final class PlanEditorView extends View {
                 : WallOpening.DOOR.equals(o.type) ? "porta" : "portal";
         return String.format("%s  %.2f × %.2f m", name, o.width, o.height)
                 + (o.sill > 0f
-                ? String.format("  ·  peitoril %.2f m", o.sill) : "");
+                ? String.format("  ·  peitoril %.2f m", o.sill) : "")
+                + (o.locked ? "  ·  TRAVADO" : "");
     }
 
     private String describePrefab(PrefabInstance p) {
         return p.prefabId + String.format("  ·  %.2f m do chão",
-                p.transform.y);
+                p.transform.y - activeBaseY)
+                + (p.locked ? "  ·  TRAVADO" : "");
+    }
+
+    /** Duplica a seleção 0,5 m para baixo/direita e mantém o original. */
+    public void duplicateSelected() {
+        if (!hasSelection() || (selectedMarker != null && group.isEmpty())) {
+            host.selectionChanged(selectedMarker == null
+                    ? "nada selecionado"
+                    : "início/saída são únicos e não podem ser duplicados");
+            return;
+        }
+        host.beforeChange();
+        if (!group.isEmpty()) {
+            int count = group.duplicateInto(doc, 0.5f, 0.5f);
+            host.afterChange();
+            host.selectionChanged(count + " objeto(s) duplicado(s)");
+            focusSelection();
+            invalidate();
+            return;
+        } else if (selectedStructure != null) {
+            StructureObject copy = MapCopies.structure(selectedStructure,
+                    0.5f, 0.5f);
+            doc.structures.add(copy);
+            selectedStructure = copy;
+        } else if (selectedPrefab != null) {
+            PrefabInstance copy = MapCopies.prefab(selectedPrefab,
+                    0.5f, 0.5f);
+            doc.prefabs.add(copy);
+            selectedPrefab = copy;
+        } else {
+            WallOpening copy = MapCopies.opening(selectedOpening);
+            float half = WallGeometry.halfLength(selectedOpeningWall);
+            float step = copy.width + 0.25f;
+            float candidate = copy.offset + step;
+            if (candidate + copy.width / 2f > half) {
+                candidate = copy.offset - step;
+            }
+            copy.offset = Math.max(-half + copy.width / 2f,
+                    Math.min(half - copy.width / 2f, candidate));
+            selectedOpeningWall.openings.add(copy);
+            selectedOpening = copy;
+        }
+        host.afterChange();
+        host.selectionChanged("cópia criada");
+        focusSelection();
+        invalidate();
+    }
+
+    /** Trava/destrava o elemento selecionado sem impedir sua seleção. */
+    public void toggleSelectedLock() {
+        if (!hasSelection()) {
+            return;
+        }
+        if (selectedOpening != null && selectedOpeningWall != null
+                && selectedOpeningWall.locked) {
+            host.selectionChanged("a parede está travada — destrave a parede");
+            return;
+        }
+        host.beforeChange();
+        if (!group.isEmpty()) {
+            boolean lock = !group.allLocked();
+            group.toggleLocks();
+            host.afterChange();
+            host.selectionChanged(group.size() + " objeto(s) "
+                    + (lock ? "travados" : "destravados"));
+            invalidate();
+            return;
+        }
+        boolean value = !selectedLocked();
+        if (selectedOpening != null) {
+            selectedOpening.locked = value;
+        } else if (selectedStructure != null) {
+            selectedStructure.locked = value;
+        } else if (selectedPrefab != null) {
+            selectedPrefab.locked = value;
+        } else {
+            selectedMarker.locked = value;
+        }
+        host.afterChange();
+        host.selectionChanged(value ? "objeto TRAVADO" : "objeto destravado");
+        invalidate();
     }
 
     public void deleteSelected() {
         if (selectedStructure == null && selectedPrefab == null
-                && selectedOpening == null) {
+                && selectedOpening == null && selectedMarker == null
+                && group.isEmpty()) {
+            return;
+        }
+        if (selectedLocked()) {
+            host.selectionChanged("objeto travado — destrave para excluir");
             return;
         }
         host.beforeChange();
-        if (selectedOpening != null) {
+        if (!group.isEmpty()) {
+            group.deleteFrom(doc);
+        } else if (selectedOpening != null) {
             selectedOpeningWall.openings.remove(selectedOpening);
         } else if (selectedStructure != null) {
             doc.structures.remove(selectedStructure);
-        } else {
+        } else if (selectedPrefab != null) {
             doc.prefabs.remove(selectedPrefab);
+        } else {
+            doc.markers.remove(selectedMarker);
         }
         clearSelection();
         host.afterChange();
@@ -456,7 +677,185 @@ public final class PlanEditorView extends View {
         selectedPrefab = null;
         selectedOpening = null;
         selectedOpeningWall = null;
+        group.clear();
         host.selectionChanged(null);
+    }
+
+    /** Centraliza e aproxima a seleção atual. */
+    public void focusSelection() {
+        if (!hasSelection()) {
+            focusAll();
+            return;
+        }
+        if (!group.isEmpty()) {
+            float[] b = group.bounds();
+            frame(b[0], b[1], b[2], b[3]);
+        } else if (selectedStructure != null) {
+            frame(selectedStructure.transform.x - selectedStructure.half[0],
+                    selectedStructure.transform.z - selectedStructure.half[2],
+                    selectedStructure.transform.x + selectedStructure.half[0],
+                    selectedStructure.transform.z + selectedStructure.half[2]);
+        } else if (selectedPrefab != null) {
+            float[] fp = PrefabMeshFactory.footprint(selectedPrefab.prefabId);
+            float hx = fp == null ? 1f : fp[0];
+            float hz = fp == null ? 1f : fp[1];
+            frame(selectedPrefab.transform.x - hx,
+                    selectedPrefab.transform.z - hz,
+                    selectedPrefab.transform.x + hx,
+                    selectedPrefab.transform.z + hz);
+        } else if (selectedMarker != null) {
+            float r = Math.max(1.5f, selectedMarker.radius);
+            frame(selectedMarker.x - r, selectedMarker.z - r,
+                    selectedMarker.x + r, selectedMarker.z + r);
+        } else {
+            float[] point = WallGeometry.pointAt(selectedOpeningWall,
+                    selectedOpening.offset);
+            float x = point[0];
+            float z = point[1];
+            frame(x - 1.5f, z - 1.5f, x + 1.5f, z + 1.5f);
+        }
+    }
+
+    /** Enquadra todo o conteúdo do mapa. */
+    public void focusAll() {
+        float minX = Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+        for (StructureObject s : doc.structures) {
+            if (!visible(s)) continue;
+            minX = Math.min(minX, s.transform.x - s.half[0]);
+            minZ = Math.min(minZ, s.transform.z - s.half[2]);
+            maxX = Math.max(maxX, s.transform.x + s.half[0]);
+            maxZ = Math.max(maxZ, s.transform.z + s.half[2]);
+        }
+        for (PrefabInstance p : doc.prefabs) {
+            if (!visible(p)) continue;
+            minX = Math.min(minX, p.transform.x - 1f);
+            minZ = Math.min(minZ, p.transform.z - 1f);
+            maxX = Math.max(maxX, p.transform.x + 1f);
+            maxZ = Math.max(maxZ, p.transform.z + 1f);
+        }
+        for (LogicMarker m : doc.markers) {
+            if (!visible(m)) continue;
+            minX = Math.min(minX, m.x - Math.max(0.5f, m.radius));
+            minZ = Math.min(minZ, m.z - Math.max(0.5f, m.radius));
+            maxX = Math.max(maxX, m.x + Math.max(0.5f, m.radius));
+            maxZ = Math.max(maxZ, m.z + Math.max(0.5f, m.radius));
+        }
+        if (minX == Float.MAX_VALUE) {
+            frame(-4f, -4f, 4f, 4f);
+        } else {
+            frame(minX, minZ, maxX, maxZ);
+        }
+    }
+
+    private void frame(float minX, float minZ, float maxX, float maxZ) {
+        camX = (minX + maxX) / 2f;
+        camZ = (minZ + maxZ) / 2f;
+        float spanX = Math.max(2f, maxX - minX);
+        float spanZ = Math.max(2f, maxZ - minZ);
+        float w = Math.max(1f, getWidth() * 0.78f);
+        float h = Math.max(1f, getHeight() * 0.62f);
+        scale = Math.max(6f, Math.min(160f,
+                Math.min(w / spanX, h / spanZ)));
+        invalidate();
+    }
+
+    public int objectCount() {
+        int openings = 0;
+        for (StructureObject s : doc.structures) openings += s.openings.size();
+        return doc.structures.size() + doc.prefabs.size() + doc.markers.size()
+                + openings;
+    }
+
+    public String objectLabel(int index) {
+        if (index < doc.structures.size()) {
+            StructureObject s = doc.structures.get(index);
+            return (s.locked ? "[TRAVADO] " : "")
+                    + StructureRoles.name(s) + elevation(s.transform.y)
+                    + " · " + shortId(s.id);
+        }
+        index -= doc.structures.size();
+        if (index < doc.prefabs.size()) {
+            PrefabInstance p = doc.prefabs.get(index);
+            return (p.locked ? "[TRAVADO] " : "")
+                    + p.prefabId + elevation(p.transform.y)
+                    + " · " + shortId(p.id);
+        }
+        index -= doc.prefabs.size();
+        if (index < doc.markers.size()) {
+            LogicMarker m = doc.markers.get(index);
+            return (m.locked ? "[TRAVADO] " : "")
+                    + (LogicMarker.PLAYER_SPAWN.equals(m.type)
+                    ? "Início" : "Saída") + elevation(m.y)
+                    + " · " + shortId(m.id);
+        }
+        index -= doc.markers.size();
+        for (StructureObject wall : doc.structures) {
+            if (index < wall.openings.size()) {
+                WallOpening opening = wall.openings.get(index);
+                return (opening.locked ? "[TRAVADO] " : "")
+                        + describeOpening(opening) + " · parede "
+                        + shortId(wall.id) + elevation(wall.transform.y);
+            }
+            index -= wall.openings.size();
+        }
+        return "objeto desconhecido";
+    }
+
+    public void selectObject(int index) {
+        clearSelection();
+        if (index < doc.structures.size()) {
+            selectedStructure = doc.structures.get(index);
+            switchStory(StoryLevels.baseOf(selectedStructure,
+                    storyLevels), false);
+            host.selectionChanged(StructureRoles.describe(selectedStructure));
+        } else {
+            index -= doc.structures.size();
+            if (index < doc.prefabs.size()) {
+                selectedPrefab = doc.prefabs.get(index);
+                switchStory(StoryLevels.baseOf(selectedPrefab,
+                        storyBases()), false);
+                host.selectionChanged(describePrefab(selectedPrefab));
+            } else {
+                index -= doc.prefabs.size();
+                if (index < doc.markers.size()) {
+                    selectedMarker = doc.markers.get(index);
+                    switchStory(selectedMarker.y, false);
+                    host.selectionChanged((LogicMarker.PLAYER_SPAWN.equals(
+                            selectedMarker.type) ? "início" : "saída")
+                            + (selectedMarker.locked
+                            ? "  ·  TRAVADO" : ""));
+                } else {
+                    index -= doc.markers.size();
+                    for (StructureObject wall : doc.structures) {
+                        if (index < wall.openings.size()) {
+                            selectedOpeningWall = wall;
+                            selectedOpening = wall.openings.get(index);
+                            switchStory(StoryLevels.baseOf(wall), false);
+                            host.selectionChanged(
+                                    describeOpening(selectedOpening));
+                            break;
+                        }
+                        index -= wall.openings.size();
+                    }
+                }
+            }
+        }
+        focusSelection();
+        invalidate();
+    }
+
+    private static String shortId(String id) {
+        if (id == null) {
+            return "?";
+        }
+        return id.length() <= 8 ? id : id.substring(0, 8);
+    }
+
+    private static String elevation(float value) {
+        return String.format(" · Y %.2f m", value).replace('.', ',');
     }
 
     // ---- coordenadas ----
@@ -517,7 +916,7 @@ public final class PlanEditorView extends View {
         float best = Math.max(0.24f, 28f / scale);
         float hit = Float.NaN;
         for (StructureObject s : doc.structures) {
-            if (s == exclude || !StructureObject.ROLE_WALL
+            if (!visible(s) || s == exclude || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -641,7 +1040,7 @@ public final class PlanEditorView extends View {
         float best = Math.max(0.4f, 36f / scale);
         float[] hit = null;
         for (StructureObject s : doc.structures) {
-            if (s.polygon != null || !StructureObject.ROLE_WALL
+            if (!visible(s) || s.polygon != null || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -675,7 +1074,7 @@ public final class PlanEditorView extends View {
         float best = Math.max(0.4f, 36f / scale);
         float[] hit = null;
         for (StructureObject s : doc.structures) {
-            if (s.polygon != null || !StructureObject.ROLE_WALL
+            if (!visible(s) || s.polygon != null || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -710,13 +1109,27 @@ public final class PlanEditorView extends View {
                         toWorldZ(e.getY()), true);
                 startZ = curZ = snapPoint(toWorldX(e.getX()),
                         toWorldZ(e.getY()), false);
-                if (tool == TOOL_SELECT) {
+                if (tool == TOOL_GROUP) {
+                    groupMoving = !group.isEmpty()
+                            && group.containsPoint(rawX, rawZ);
+                    groupLastX = curX;
+                    groupLastZ = curZ;
+                    movedSelection = false;
+                    if (!groupMoving) {
+                        group.clear();
+                        host.selectionChanged("arraste ao redor dos objetos");
+                    } else if (group.anyLocked()) {
+                        host.selectionChanged("a seleção contém objeto "
+                                + "travado — destrave para mover");
+                    }
+                } else if (tool == TOOL_SELECT) {
                     dragEdge = -1;
                     dragPoint = -1;
-                    if (selectedStructure != null
+                    if (!selectedLocked() && selectedStructure != null
                             && selectedStructure.polygon != null) {
                         dragPoint = polyPointAt(rawX, rawZ);
-                    } else if (selectedStructure != null) {
+                    } else if (!selectedLocked()
+                            && selectedStructure != null) {
                         dragEdge = edgeAt(rawX, rawZ);
                     }
                     if (dragEdge < 0 && dragPoint < 0) {
@@ -726,6 +1139,7 @@ public final class PlanEditorView extends View {
                 invalidate();
                 return true;
             case MotionEvent.ACTION_POINTER_DOWN:
+                commitMovedSelection();
                 dragging = false;
                 panning = true;
                 lastMidX = mid(e, true);
@@ -756,6 +1170,21 @@ public final class PlanEditorView extends View {
                             toWorldZ(e.getY()), false);
                     if (tool == TOOL_SELECT) {
                         dragSelection();
+                    } else if (tool == TOOL_GROUP && groupMoving
+                            && !group.anyLocked()) {
+                        float dx = curX - groupLastX;
+                        float dz = curZ - groupLastZ;
+                        if (dx != 0f || dz != 0f) {
+                            if (!movedSelection) {
+                                host.beforeChange();
+                                movedSelection = true;
+                            }
+                            group.translate(dx, dz);
+                            groupLastX = curX;
+                            groupLastZ = curZ;
+                            host.selectionChanged(group.size()
+                                    + " objeto(s) movendo");
+                        }
                     }
                     invalidate();
                 }
@@ -776,8 +1205,10 @@ public final class PlanEditorView extends View {
                 dragPoint = -1;
                 return true;
             case MotionEvent.ACTION_CANCEL:
+                commitMovedSelection();
                 dragging = false;
                 panning = false;
+                groupMoving = false;
                 invalidate();
                 return true;
             default:
@@ -802,17 +1233,19 @@ public final class PlanEditorView extends View {
         }
         switch (tool) {
             case TOOL_FLOOR:
-                addRect(StructureObject.ROLE_FLOOR, -0.15f, 0.15f,
+                addRect(StructureObject.ROLE_FLOOR,
+                        activeBaseY - 0.15f, 0.15f,
                         new float[]{0.30f, 0.33f, 0.38f});
                 break;
             case TOOL_BLOCK:
-                addRect(StructureObject.ROLE_BLOCK, 0.5f, 0.5f,
+                addRect(StructureObject.ROLE_BLOCK,
+                        activeBaseY + 0.5f, 0.5f,
                         new float[]{0.62f, 0.45f, 0.30f});
                 break;
             case TOOL_CEILING:
                 // placa de 0.3m com a base na altura padrão da parede
                 addRect(StructureObject.ROLE_CEILING,
-                        WALL_HEIGHT + 0.15f, 0.15f,
+                        activeBaseY + WALL_HEIGHT + 0.15f, 0.15f,
                         new float[]{0.38f, 0.41f, 0.48f});
                 break;
             case TOOL_WALL:
@@ -868,13 +1301,31 @@ public final class PlanEditorView extends View {
                 break;
             }
             case TOOL_SELECT:
-                if (movedSelection) {
-                    host.afterChange();
-                    movedSelection = false;
+                commitMovedSelection();
+                break;
+            case TOOL_GROUP:
+                if (groupMoving) {
+                    commitMovedSelection();
+                } else {
+                    group.select(doc, startX, startZ, curX, curZ,
+                            activeBaseY);
+                    host.selectionChanged(group.isEmpty()
+                            ? "nenhum objeto na área"
+                            : group.size() + " objeto(s) selecionado(s) — "
+                            + "arraste dentro da moldura para mover");
                 }
+                groupMoving = false;
                 break;
             default:
                 break;
+        }
+    }
+
+    /** Fecha a transação iniciada no primeiro deslocamento do gesto. */
+    private void commitMovedSelection() {
+        if (movedSelection) {
+            host.afterChange();
+            movedSelection = false;
         }
     }
 
@@ -914,7 +1365,7 @@ public final class PlanEditorView extends View {
         // meia espessura extra nas pontas fecha os cantos entre paredes
         float half = (horizontal ? dx : dz) / 2f + WALL_HALF_T;
         s.transform.x = horizontal ? (startX + curX) / 2f : startX;
-        s.transform.y = WALL_HEIGHT / 2f;
+        s.transform.y = activeBaseY + WALL_HEIGHT / 2f;
         s.transform.z = horizontal ? startZ : (startZ + curZ) / 2f;
         s.half = horizontal
                 ? new float[]{half, WALL_HEIGHT / 2f, WALL_HALF_T}
@@ -968,7 +1419,7 @@ public final class PlanEditorView extends View {
         StructureObject chip = null;
         float chipBest = 20f / scale;
         for (StructureObject s : doc.structures) {
-            if (StructureObject.ROLE_WALL
+            if (!visible(s) || StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -980,6 +1431,10 @@ public final class PlanEditorView extends View {
             }
         }
         if (chip != null) {
+            if (chip.locked) {
+                host.selectionChanged("objeto travado — destrave para pintar");
+                return;
+            }
             host.beforeChange();
             chip.color = activePaint.clone();
             chip.color2 = null;
@@ -994,72 +1449,14 @@ public final class PlanEditorView extends View {
             host.selectionChanged("toque numa estrutura para pintar");
             return;
         }
-        boolean wall = StructureObject.ROLE_WALL
-                .equals(StructureRoles.roleOf(target));
-        host.beforeChange();
-        if (!wall) {
-            target.color = activePaint.clone();
-            target.color2 = null;
-            target.color3 = null;
-        } else if (paintBucket) {
-            for (StructureObject w : connectedWalls(target)) {
-                paintWallSide(w, wx, wz, false);
-            }
-        } else {
-            paintWallSide(target, wx, wz, true);
-        }
-        host.afterChange();
-        invalidate();
-    }
-
-    /**
-     * Pinta a FACE da parede voltada para (wx, wz) — a cor base (pontas
-     * e topo) nunca muda ao pintar um lado, senão vaza pelo canto.
-     * `allowBoth`: toque no terço central pinta a parede inteira.
-     */
-    private void paintWallSide(StructureObject s, float wx, float wz,
-                               boolean allowBoth) {
-        if (s.polygon != null) {
-            // parede diagonal: cor única (sem lados por enquanto)
-            s.color = activePaint.clone();
-            s.color2 = null;
-            s.color3 = null;
+        if (target.locked) {
+            host.selectionChanged("objeto travado — destrave para pintar");
             return;
         }
-        boolean thinX = s.half[0] < s.half[2];
-        float d = thinX ? wx - s.transform.x : wz - s.transform.z;
-        float half = thinX ? s.half[0] : s.half[2];
-        if (allowBoth && Math.abs(d) <= half * 0.34f) {
-            s.color = activePaint.clone();
-            s.color2 = null;
-            s.color3 = null;
-        } else if (d > 0f) {
-            s.color2 = activePaint.clone();
-        } else {
-            s.color3 = activePaint.clone();
-        }
-    }
-
-    /** Paredes conectadas à inicial (encostadas em XZ), via varredura. */
-    private List<StructureObject> connectedWalls(StructureObject start) {
-        List<StructureObject> found = new java.util.ArrayList<>();
-        found.add(start);
-        for (int i = 0; i < found.size(); i++) {
-            StructureObject a = found.get(i);
-            for (StructureObject s : doc.structures) {
-                if (found.contains(s) || !StructureObject.ROLE_WALL
-                        .equals(StructureRoles.roleOf(s))) {
-                    continue;
-                }
-                if (Math.abs(a.transform.x - s.transform.x)
-                        <= a.half[0] + s.half[0] + 0.05f
-                        && Math.abs(a.transform.z - s.transform.z)
-                        <= a.half[2] + s.half[2] + 0.05f) {
-                    found.add(s);
-                }
-            }
-        }
-        return found;
+        host.beforeChange();
+        PaintTool.apply(doc, target, wx, wz, activePaint, paintBucket);
+        host.afterChange();
+        invalidate();
     }
 
     /** Estrutura sob o ponto (teto por último, como na seleção). */
@@ -1068,11 +1465,11 @@ public final class PlanEditorView extends View {
             boolean wantCeiling = pass == 1;
             for (int i = doc.structures.size() - 1; i >= 0; i--) {
                 StructureObject s = doc.structures.get(i);
-                if (StructureRoles.isCeiling(s) != wantCeiling) {
+                if (!visible(s)
+                        || StructureRoles.isCeiling(s) != wantCeiling) {
                     continue;
                 }
-                if (Math.abs(wx - s.transform.x) <= s.half[0]
-                        && Math.abs(wz - s.transform.z) <= s.half[2]) {
+                if (structureContains(s, wx, wz)) {
                     return s;
                 }
             }
@@ -1080,61 +1477,37 @@ public final class PlanEditorView extends View {
         return null;
     }
 
+    private boolean structureContains(StructureObject s, float wx, float wz) {
+        if (WallGeometry.diagonal(s)) {
+            return WallGeometry.distanceTo(s, wx, wz)
+                    <= WallGeometry.thickness(s) * 0.5f
+                    + Math.max(0.08f, 8f / scale);
+        }
+        return Math.abs(wx - s.transform.x) <= s.half[0]
+                && Math.abs(wz - s.transform.z) <= s.half[2];
+    }
+
     /** Recorta o vão armado na parede tocada. */
     private void placeOpening() {
         if (activeOpeningType == null) {
             return;
         }
-        StructureObject wall = wallAt(curX, curZ);
+        StructureObject wall = OpeningTool.wallAt(doc, curX, curZ,
+                Math.max(0.3f, 24f / scale), activeBaseY);
         if (wall == null) {
             host.selectionChanged("toque em cima de uma parede");
             return;
         }
-        boolean bath = "window_bath".equals(activeOpeningType);
-        boolean window = bath
-                || WallOpening.WINDOW.equals(activeOpeningType);
-        boolean portal = WallOpening.PORTAL.equals(activeOpeningType);
-        WallOpening o = new WallOpening(Ids.create(),
-                window ? WallOpening.WINDOW : activeOpeningType);
-        o.width = bath ? 0.6f : window ? 1.2f : portal ? 1.6f : 1.0f;
-        o.sill = bath ? 1.5f : window ? 0.9f : 0f;
-        float wallHeight = wall.half[1] * 2f;
-        o.height = portal ? wallHeight
-                : Math.min(bath ? 0.6f : window ? 1.2f : 2.1f,
-                wallHeight - o.sill);
-        boolean alongX = wall.half[0] >= wall.half[2];
-        float along = alongX ? curX : curZ;
-        float centerAlong = alongX ? wall.transform.x : wall.transform.z;
-        float halfLen = Math.max(wall.half[0], wall.half[2]);
-        o.offset = Math.max(-halfLen + o.width / 2f,
-                Math.min(halfLen - o.width / 2f, along - centerAlong));
+        if (wall.locked) {
+            host.selectionChanged("parede travada — destrave para criar o vão");
+            return;
+        }
+        WallOpening o = OpeningTool.create(activeOpeningType, wall,
+                curX, curZ);
         host.beforeChange();
         wall.openings.add(o);
         host.afterChange();
         host.selectionChanged(describeOpening(o));
-    }
-
-    /** Parede reta sob o toque (diagonais não aceitam vãos ainda). */
-    private StructureObject wallAt(float wx, float wz) {
-        float slack = Math.max(0.3f, 24f / scale);
-        StructureObject best = null;
-        float bestDist = Float.MAX_VALUE;
-        for (StructureObject s : doc.structures) {
-            if (s.polygon != null || !StructureObject.ROLE_WALL
-                    .equals(StructureRoles.roleOf(s))) {
-                continue;
-            }
-            float dx = Math.max(0f,
-                    Math.abs(wx - s.transform.x) - s.half[0]);
-            float dz = Math.max(0f,
-                    Math.abs(wz - s.transform.z) - s.half[2]);
-            float dist = (float) Math.hypot(dx, dz);
-            if (dist <= slack && dist < bestDist) {
-                bestDist = dist;
-                best = s;
-            }
-        }
-        return best;
     }
 
     /** Solta a peça armada onde o dedo terminou, com altura típica. */
@@ -1145,6 +1518,7 @@ public final class PlanEditorView extends View {
         // tocar numa peça existente seleciona (não empilha outra em cima)
         for (int i = doc.prefabs.size() - 1; i >= 0; i--) {
             PrefabInstance existing = doc.prefabs.get(i);
+            if (!visible(existing)) continue;
             if (Math.hypot(curX - existing.transform.x,
                     curZ - existing.transform.z) < 24f / scale) {
                 selectedPrefab = existing;
@@ -1154,63 +1528,11 @@ public final class PlanEditorView extends View {
             }
         }
         host.beforeChange();
-        PrefabInstance p = new PrefabInstance(Ids.create(),
-                activePrefab.id);
-        p.transform.x = curX;
-        p.transform.z = curZ;
-        p.transform.y = defaultY(activePrefab);
-        if (PrefabDefinition.BEHAVIOR_DOOR.equals(activePrefab.behavior)) {
-            p.properties.put("halfX", 1.5f);
-            p.properties.put("halfY", 1.4f);
-            p.properties.put("halfZ", 0.4f);
-        }
+        PrefabInstance p = PrefabPlacementTool.create(activePrefab,
+                curX, curZ, activeBaseY);
         doc.prefabs.add(p);
-        autoLinkDoor();
+        PrefabPlacementTool.autoLinkDoors(doc);
         host.afterChange();
-    }
-
-    /** Alturas típicas da campanha original (base do chão em y=0). */
-    private static float defaultY(PrefabDefinition def) {
-        switch (def.behavior) {
-            case PrefabDefinition.BEHAVIOR_DRONE:
-            case PrefabDefinition.BEHAVIOR_DRONE_DORMANT:
-                return 1.8f;
-            case PrefabDefinition.BEHAVIOR_MUTANT:
-                return 0.85f;
-            case PrefabDefinition.BEHAVIOR_TERMINAL:
-            case PrefabDefinition.BEHAVIOR_DOOR:
-                return 1.4f;
-            case PrefabDefinition.BEHAVIOR_STATIC:
-                // peças de parede nascem na altura típica de fixação
-                if ("prop.lamp.ceiling".equals(def.id)) {
-                    return 3.0f;
-                }
-                if ("prop.tv".equals(def.id)) {
-                    return 1.4f;
-                }
-                if ("prop.mirror.round".equals(def.id)) {
-                    return 1.5f;
-                }
-                return 0f;
-            default:
-                return 0.5f; // itens balançando perto do chão
-        }
-    }
-
-    /** Uma porta e um terminal no mapa: liga automaticamente. */
-    private void autoLinkDoor() {
-        PrefabInstance door = null;
-        PrefabInstance terminal = null;
-        for (PrefabInstance p : doc.prefabs) {
-            if (p.prefabId.startsWith("door.")) {
-                door = p;
-            } else if (p.prefabId.startsWith("terminal.")) {
-                terminal = p;
-            }
-        }
-        if (door != null && terminal != null) {
-            door.properties.put("controllerId", terminal.id);
-        }
     }
 
     /** Início e saída são únicos: reposiciona se já existir. */
@@ -1224,12 +1546,13 @@ public final class PlanEditorView extends View {
         }
         marker.x = curX;
         marker.z = curZ;
-        marker.y = 0f;
+        marker.y = activeBaseY;
         host.afterChange();
     }
 
     private void pick(float wx, float wz) {
         movedSelection = false;
+        group.clear();
         selectedMarker = null;
         selectedStructure = null;
         selectedPrefab = null;
@@ -1241,7 +1564,7 @@ public final class PlanEditorView extends View {
         StructureObject chipHit = null;
         float chipBest = chipRadius;
         for (StructureObject s : doc.structures) {
-            if (StructureObject.ROLE_WALL
+            if (!visible(s) || StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -1262,6 +1585,7 @@ public final class PlanEditorView extends View {
         // peças primeiro: ícones pequenos por cima das estruturas
         for (int i = doc.prefabs.size() - 1; i >= 0; i--) {
             PrefabInstance p = doc.prefabs.get(i);
+            if (!visible(p)) continue;
             if (Math.hypot(wx - p.transform.x, wz - p.transform.z)
                     < 24f / scale) {
                 selectedPrefab = p;
@@ -1272,25 +1596,27 @@ public final class PlanEditorView extends View {
             }
         }
         for (LogicMarker m : doc.markers) {
+            if (!visible(m)) continue;
             if (Math.hypot(wx - m.x, wz - m.z) < 24f / scale) {
                 selectedMarker = m;
                 grabDx = m.x - wx;
                 grabDz = m.z - wz;
-                host.selectionChanged(LogicMarker.PLAYER_SPAWN
-                        .equals(m.type) ? "início" : "saída");
+                host.selectionChanged((LogicMarker.PLAYER_SPAWN
+                        .equals(m.type) ? "início" : "saída")
+                        + (m.locked ? "  ·  TRAVADO" : ""));
                 return;
             }
         }
         // vãos antes das paredes: são menores e moram em cima delas
         for (StructureObject s : doc.structures) {
-            if (!StructureObject.ROLE_WALL
+            if (!visible(s) || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
-            boolean alongX = s.half[0] >= s.half[2];
             for (WallOpening o : s.openings) {
-                float ox = alongX ? s.transform.x + o.offset : s.transform.x;
-                float oz = alongX ? s.transform.z : s.transform.z + o.offset;
+                float[] point = WallGeometry.pointAt(s, o.offset);
+                float ox = point[0];
+                float oz = point[1];
                 if (Math.hypot(wx - ox, wz - oz)
                         < Math.max(o.width / 2f, 20f / scale)) {
                     selectedOpening = o;
@@ -1305,11 +1631,11 @@ public final class PlanEditorView extends View {
             boolean wantCeiling = pass == 1;
             for (int i = doc.structures.size() - 1; i >= 0; i--) {
                 StructureObject s = doc.structures.get(i);
-                if (StructureRoles.isCeiling(s) != wantCeiling) {
+                if (!visible(s)
+                        || StructureRoles.isCeiling(s) != wantCeiling) {
                     continue;
                 }
-                if (Math.abs(wx - s.transform.x) <= s.half[0]
-                        && Math.abs(wz - s.transform.z) <= s.half[2]) {
+                if (structureContains(s, wx, wz)) {
                     selectedStructure = s;
                     grabDx = s.transform.x - wx;
                     grabDz = s.transform.z - wz;
@@ -1324,6 +1650,9 @@ public final class PlanEditorView extends View {
     private void dragSelection() {
         if (selectedStructure == null && selectedMarker == null
                 && selectedPrefab == null && selectedOpening == null) {
+            return;
+        }
+        if (selectedLocked()) {
             return;
         }
         if (!movedSelection) {
@@ -1348,15 +1677,8 @@ public final class PlanEditorView extends View {
         }
         if (selectedOpening != null) {
             // vão desliza pela própria parede
-            StructureObject wall = selectedOpeningWall;
-            boolean alongX = wall.half[0] >= wall.half[2];
-            float along = snap(alongX ? curX : curZ);
-            float centerAlong = alongX
-                    ? wall.transform.x : wall.transform.z;
-            float halfLen = Math.max(wall.half[0], wall.half[2]);
-            float w2 = selectedOpening.width / 2f;
-            selectedOpening.offset = Math.max(-halfLen + w2,
-                    Math.min(halfLen - w2, along - centerAlong));
+            OpeningTool.move(selectedOpening, selectedOpeningWall,
+                    curX, curZ, true);
             return;
         }
         float nx = snap(curX + grabDx);
@@ -1393,17 +1715,19 @@ public final class PlanEditorView extends View {
         }
         drawGrid(canvas);
         for (StructureObject s : doc.structures) {
-            if (!StructureRoles.isCeiling(s)) {
-                drawStructure(canvas, s, s == selectedStructure, false);
+            if (visible(s) && !StructureRoles.isCeiling(s)) {
+                drawStructure(canvas, s, s == selectedStructure
+                        || group.contains(s), false);
             }
         }
         for (StructureObject s : doc.structures) {
-            drawOpenings(canvas, s);
+            if (visible(s)) drawOpenings(canvas, s);
         }
         // tetos por cima de tudo, translúcidos
         for (StructureObject s : doc.structures) {
-            if (StructureRoles.isCeiling(s)) {
-                drawStructure(canvas, s, s == selectedStructure, true);
+            if (visible(s) && StructureRoles.isCeiling(s)) {
+                drawStructure(canvas, s, s == selectedStructure
+                        || group.contains(s), true);
             }
         }
         if (tool == TOOL_WALL) {
@@ -1413,20 +1737,51 @@ public final class PlanEditorView extends View {
             drawPreview(canvas);
         }
         if (tool == TOOL_SELECT && selectedStructure != null
-                && selectedStructure.polygon == null) {
+                && selectedStructure.polygon == null
+                && !selectedStructure.locked) {
             drawEdgeHandles(canvas, selectedStructure);
         }
         drawContour(canvas);
         for (PrefabInstance p : doc.prefabs) {
-            drawRoute(canvas, p, p == selectedPrefab);
+            if (visible(p)) drawRoute(canvas, p, p == selectedPrefab);
         }
         for (PrefabInstance p : doc.prefabs) {
-            drawPrefab(canvas, p, p == selectedPrefab);
+            if (visible(p)) {
+                drawPrefab(canvas, p,
+                        p == selectedPrefab || group.contains(p));
+            }
         }
         for (LogicMarker m : doc.markers) {
-            drawMarker(canvas, m, m == selectedMarker);
+            if (visible(m)) {
+                drawMarker(canvas, m,
+                        m == selectedMarker || group.contains(m));
+            }
         }
+        drawGroupSelection(canvas);
         drawMeasureLabels(canvas);
+    }
+
+    /** Moldura da área sendo escolhida e do grupo já selecionado. */
+    private void drawGroupSelection(Canvas canvas) {
+        if (tool != TOOL_GROUP) return;
+        float[] b;
+        if (dragging && !groupMoving && group.isEmpty()) {
+            b = new float[]{Math.min(startX, curX), Math.min(startZ, curZ),
+                    Math.max(startX, curX), Math.max(startZ, curZ)};
+        } else {
+            b = group.bounds();
+        }
+        if (b == null) return;
+        fill.setColor(0x222FA8E0);
+        canvas.drawRect(toPxX(b[0]), toPxY(b[1]),
+                toPxX(b[2]), toPxY(b[3]), fill);
+        stroke.setColor(group.anyLocked() ? 0xFFFFB050 : 0xFF4CC8FF);
+        stroke.setStrokeWidth(4f);
+        stroke.setPathEffect(new android.graphics.DashPathEffect(
+                new float[]{14f, 8f}, 0f));
+        canvas.drawRect(toPxX(b[0]), toPxY(b[1]),
+                toPxX(b[2]), toPxY(b[3]), stroke);
+        stroke.setPathEffect(null);
     }
 
     /** Contorno em andamento: linhas, pontos e o primeiro em destaque. */
@@ -1496,6 +1851,33 @@ public final class PlanEditorView extends View {
     /** Vãos sobre a parede: porta marrom, portal escuro, janela azul. */
     private void drawOpenings(Canvas canvas, StructureObject s) {
         if (s.openings.isEmpty()) {
+            return;
+        }
+        if (WallGeometry.diagonal(s)) {
+            float[] direction = WallGeometry.direction(s);
+            float thickness = Math.max(5f,
+                    WallGeometry.thickness(s) * scale);
+            for (WallOpening o : s.openings) {
+                float[] center = WallGeometry.pointAt(s, o.offset);
+                float hx = direction[0] * o.width * 0.5f;
+                float hz = direction[1] * o.width * 0.5f;
+                if (o == selectedOpening) {
+                    stroke.setColor(0xFFFFFFFF);
+                    stroke.setStrokeWidth(thickness + 5f);
+                    canvas.drawLine(toPxX(center[0] - hx),
+                            toPxY(center[1] - hz),
+                            toPxX(center[0] + hx),
+                            toPxY(center[1] + hz), stroke);
+                }
+                stroke.setColor(WallOpening.WINDOW.equals(o.type)
+                        ? 0xFF4A90C2 : WallOpening.DOOR.equals(o.type)
+                        ? 0xFF8A6238 : 0xFF10151B);
+                stroke.setStrokeWidth(thickness);
+                canvas.drawLine(toPxX(center[0] - hx),
+                        toPxY(center[1] - hz),
+                        toPxX(center[0] + hx),
+                        toPxY(center[1] + hz), stroke);
+            }
             return;
         }
         boolean alongX = s.half[0] >= s.half[2];
@@ -1584,9 +1966,21 @@ public final class PlanEditorView extends View {
             }
             return;
         }
-        if (p.prefabId.startsWith("enemy.mutant")) {
+        if (p.prefabId.startsWith("npc.human")) {
+            letter = "H";
+            color = 0xFF4FB5D8;
+        } else if (p.prefabId.startsWith("enemy.mutant")) {
             letter = "M";
             color = 0xFFB05CC9;
+        } else if (p.prefabId.startsWith("enemy.turret")) {
+            letter = "R";
+            color = 0xFFB04A42;
+        } else if (p.prefabId.startsWith("enemy.kamikaze")) {
+            letter = "K";
+            color = 0xFFFF7A30;
+        } else if (p.prefabId.startsWith("enemy.boss")) {
+            letter = "C";
+            color = 0xFFC054D8;
         } else if (p.prefabId.startsWith("enemy.drone.wave")) {
             letter = "Z";
             color = 0xFF8A8F9C;
@@ -1596,6 +1990,12 @@ public final class PlanEditorView extends View {
         } else if (p.prefabId.startsWith("pickup.health")) {
             letter = "+";
             color = 0xFF39B54A;
+        } else if (p.prefabId.startsWith("pickup.token")) {
+            letter = "F";
+            color = 0xFF42BFE8;
+        } else if (p.prefabId.startsWith("pickup.special")) {
+            letter = "S";
+            color = 0xFFFFA030;
         } else if (p.prefabId.startsWith("pickup.")) {
             letter = "A";
             color = 0xFFD9B23C;
@@ -1635,7 +2035,7 @@ public final class PlanEditorView extends View {
         stroke.setColor(0xFFE0C060);
         stroke.setStrokeWidth(2.5f);
         for (StructureObject s : doc.structures) {
-            if (!StructureObject.ROLE_WALL
+            if (!visible(s) || !StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {
                 continue;
             }
@@ -1676,6 +2076,13 @@ public final class PlanEditorView extends View {
         stroke.setStrokeWidth(2f);
         canvas.drawRect(toPxX(-AREA), toPxY(-AREA), toPxX(AREA),
                 toPxY(AREA), stroke);
+        textPaint.setColor(0xFFE0C060);
+        float density = getResources().getDisplayMetrics().density;
+        canvas.drawText("ANDAR ATIVO  ·  Y "
+                        + String.format("%.2f m", activeBaseY)
+                        .replace('.', ','),
+                20f, 122f * density, textPaint);
+        textPaint.setColor(0xFFAFC3D0);
     }
 
     private void drawStructure(Canvas canvas, StructureObject s,
@@ -1810,6 +2217,7 @@ public final class PlanEditorView extends View {
      */
     private void drawMeasureLabels(Canvas canvas) {
         for (StructureObject s : doc.structures) {
+            if (!visible(s)) continue;
             boolean selected = s == selectedStructure;
             if (StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s))) {

@@ -3,6 +3,7 @@ package br.com.termia.construajogue.editor;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.graphics.Color;
+import android.text.InputFilter;
 import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
@@ -11,13 +12,18 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import br.com.termia.construajogue.compiler.MapValidator;
 import br.com.termia.construajogue.compiler.ValidationIssue;
 import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.ObjectiveSpec;
+import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.WallGeometry;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.persistence.MapJson;
 import br.com.termia.construajogue.persistence.MapStore;
@@ -31,12 +37,16 @@ import java.util.Locale;
 
 /**
  * Modo Construir: planta + barra superior (voltar, desfazer/refazer,
- * testar) + barra de ferramentas. Salva automático ao sair e ao testar;
+ * testar) + barra de ferramentas. Salva após breve inatividade, no máximo
+ * a cada 10 s de edição contínua, ao sair e ao testar;
  * o teste recebe um snapshot profundo — o documento nunca é alterado
  * pela partida (ARQUITETURA §8).
  */
 public final class EditorHost extends FrameLayout
         implements PlanEditorView.Host {
+
+    private static final long AUTO_SAVE_DELAY_MS = 2500L;
+    private static final long AUTO_SAVE_MAX_MS = 10000L;
 
     public interface Listener {
         void onTest(MapDocument snapshot);
@@ -51,6 +61,7 @@ public final class EditorHost extends FrameLayout
     private final UndoHistory history = new UndoHistory();
     private final PlanEditorView plan;
     private final TextView status;
+    private final TextView counts;
     private final List<Button> toolButtons = new ArrayList<>();
     private Button undoButton;
     private Button redoButton;
@@ -58,8 +69,31 @@ public final class EditorHost extends FrameLayout
     private Button heightButton;
     private Button rotateButton;
     private Button routeButton;
-    private LinearLayout sidePanel;
+    private Button duplicateButton;
+    private Button lockButton;
+    private Button materialButton;
+    private Button logicButton;
+    private Button storyButton;
+    private ScrollView sidePanel;
+    private FrameLayout previewOverlay;
+    private EditorPreviewView previewView;
+    private final EditorTutorial tutorial;
     private MapDocument doc;
+    private boolean dirty;
+    private final Runnable autoSaveTask = new Runnable() {
+        @Override
+        public void run() {
+            if (dirty) {
+                saveNow();
+            }
+        }
+    };
+    private final Runnable maxAutoSaveTask = new Runnable() {
+        @Override
+        public void run() {
+            if (dirty) saveNow();
+        }
+    };
 
     public EditorHost(Activity activity, MapStore store,
                       PrefabCatalog catalog, MapDocument doc,
@@ -80,25 +114,43 @@ public final class EditorHost extends FrameLayout
         status.setTextSize(13f);
         status.setPadding(24, 8, 24, 8);
         status.setBackgroundColor(0x88141B22);
+        float density = activity.getResources()
+                .getDisplayMetrics().density;
         LayoutParams statusParams = new LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM | Gravity.START);
+        statusParams.bottomMargin = (int) (24f * density);
         addView(status, statusParams);
+
+        counts = new TextView(activity);
+        counts.setTextColor(0xFF7F96A5);
+        counts.setTextSize(11f);
+        counts.setPadding(24, 3, 24, 3);
+        counts.setBackgroundColor(0xCC10151B);
+        addView(counts, new LayoutParams(LayoutParams.MATCH_PARENT,
+                (int) (24f * density), Gravity.BOTTOM | Gravity.START));
 
         addView(buildTopBar(), new LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT, Gravity.TOP));
         sidePanel = buildSidePanel();
-        float density = activity.getResources()
-                .getDisplayMetrics().density;
         LayoutParams panelParams = new LayoutParams(
-                (int) (168f * density), LayoutParams.WRAP_CONTENT,
+                (int) (210f * density), LayoutParams.MATCH_PARENT,
                 Gravity.TOP | Gravity.END);
         panelParams.topMargin = (int) (104f * density);
+        panelParams.bottomMargin = (int) (28f * density);
         panelParams.rightMargin = 8;
         addView(sidePanel, panelParams);
         sidePanel.setVisibility(GONE);
         selectTool(PlanEditorView.TOOL_FLOOR);
+        refreshCounts();
         refreshButtons();
+        tutorial = new EditorTutorial(activity, this, step -> {
+            int[] tools = {PlanEditorView.TOOL_FLOOR,
+                    PlanEditorView.TOOL_WALL, PlanEditorView.TOOL_SPAWN,
+                    PlanEditorView.TOOL_EXIT, PlanEditorView.TOOL_SELECT};
+            selectTool(tools[Math.max(0, Math.min(step, tools.length - 1))]);
+        });
+        postDelayed(tutorial::startIfNeeded, 450L);
     }
 
     /**
@@ -167,11 +219,18 @@ public final class EditorHost extends FrameLayout
     }
 
     /** Painel lateral recolhível, como no editor3d: uma linha por item. */
-    private LinearLayout buildSidePanel() {
+    private ScrollView buildSidePanel() {
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setBackgroundColor(0xEE141B22);
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setBackgroundColor(0xEE141B22);
         panel.setPadding(8, 8, 8, 8);
+        storyButton = panelItem("Andar ativo: térreo…", () -> {
+            hidePanel();
+            chooseStory();
+        }, null);
+        storyButton.setTextColor(0xFFE0C060);
+        panel.addView(storyButton);
         addPanelTool(panel, "Piso", PlanEditorView.TOOL_FLOOR);
         addPanelTool(panel, "Parede", PlanEditorView.TOOL_WALL);
         addPanelTool(panel, "Teto", PlanEditorView.TOOL_CEILING);
@@ -190,16 +249,61 @@ public final class EditorHost extends FrameLayout
         }, PlanEditorView.TOOL_PREFAB));
         addPanelTool(panel, "Início", PlanEditorView.TOOL_SPAWN);
         addPanelTool(panel, "Saída", PlanEditorView.TOOL_EXIT);
+        addPanelTool(panel, "Selecionar área / mover cômodo",
+                PlanEditorView.TOOL_GROUP);
         routeButton = panelItem("Rota do inimigo", () -> {
             hidePanel();
             startRoute();
         }, null);
         panel.addView(routeButton);
+        panel.addView(panelItem("Objetivo…", () -> {
+            hidePanel();
+            chooseObjective();
+        }, null));
+        materialButton = panelItem("Material / água / lava…", () -> {
+            hidePanel();
+            chooseMaterial();
+        }, null);
+        panel.addView(materialButton);
+        logicButton = panelItem("Lógica da peça…", () -> {
+            hidePanel();
+            configureSelectedLogic();
+        }, null);
+        panel.addView(logicButton);
         panel.addView(panelItem("Céu…", () -> {
             hidePanel();
             chooseSky();
         }, null));
-        return panel;
+        duplicateButton = panelItem("Duplicar seleção", () -> {
+            hidePanel();
+            plan.duplicateSelected();
+        }, null);
+        panel.addView(duplicateButton);
+        lockButton = panelItem("Travar / destravar", () -> {
+            hidePanel();
+            plan.toggleSelectedLock();
+        }, null);
+        panel.addView(lockButton);
+        panel.addView(panelItem("Enquadrar seleção", () -> {
+            hidePanel();
+            plan.focusSelection();
+        }, null));
+        panel.addView(panelItem("Enquadrar mapa", () -> {
+            hidePanel();
+            plan.focusAll();
+        }, null));
+        panel.addView(panelItem("Prévia 3D orbital", () -> {
+            hidePanel();
+            showPreview3d();
+        }, null));
+        panel.addView(panelItem("Objetos…", () -> {
+            hidePanel();
+            showObjectList();
+        }, null));
+        scroll.addView(panel, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.WRAP_CONTENT));
+        return scroll;
     }
 
     private void addPanelTool(LinearLayout panel, String label, int tool) {
@@ -288,6 +392,9 @@ public final class EditorHost extends FrameLayout
             status.setText("toque ponto a ponto (diagonal vale); "
                     + "PRIMEIRO ponto fecha o anel; nas paredes, tocar "
                     + "o ÚLTIMO termina a linha; ↶ remove");
+        } else if (tool == PlanEditorView.TOOL_GROUP) {
+            status.setText("arraste uma moldura ao redor dos objetos; "
+                    + "depois arraste dentro dela para mover o conjunto");
         } else {
             status.setText("arraste com um dedo; dois dedos movem a vista");
         }
@@ -302,16 +409,37 @@ public final class EditorHost extends FrameLayout
 
     @Override
     public void afterChange() {
+        boolean firstDirtyChange = !dirty;
+        dirty = true;
+        plan.documentChanged();
+        removeCallbacks(autoSaveTask);
+        postDelayed(autoSaveTask, AUTO_SAVE_DELAY_MS);
+        if (firstDirtyChange) {
+            postDelayed(maxAutoSaveTask, AUTO_SAVE_MAX_MS);
+        }
+        refreshCounts();
+        refreshStoryButton();
         refreshButtons();
     }
 
     @Override
     public void selectionChanged(String description) {
-        if (plan.tool() == PlanEditorView.TOOL_SELECT) {
+        if (status != null && (plan.tool() == PlanEditorView.TOOL_SELECT
+                || plan.tool() == PlanEditorView.TOOL_GROUP)) {
             status.setText(description == null
                     ? "nada selecionado" : description);
         }
         refreshButtons();
+    }
+
+    @Override
+    public void storyChanged(float baseY) {
+        refreshStoryButton();
+        refreshCounts();
+        if (status != null && !plan.hasSelection()) {
+            status.setText("andar ativo em Y " + meters(baseY)
+                    + " — tudo que você criar ficará neste pavimento");
+        }
     }
 
     // ---- ações ----
@@ -327,16 +455,251 @@ public final class EditorHost extends FrameLayout
         undoButton.setAlpha(canUndo ? 1f : 0.4f);
         redoButton.setEnabled(history.canRedo());
         redoButton.setAlpha(history.canRedo() ? 1f : 0.4f);
-        deleteButton.setEnabled(plan.hasSelection());
-        deleteButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
-        heightButton.setEnabled(plan.hasSelection());
-        heightButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
+        boolean deletable = plan.hasSelection() && !plan.selectedLocked();
+        deleteButton.setEnabled(deletable);
+        deleteButton.setAlpha(deletable ? 1f : 0.4f);
+        boolean measurable = plan.selectedStructure() != null
+                || plan.selectedPrefab() != null
+                || plan.selectedOpening() != null;
+        heightButton.setEnabled(measurable && !plan.selectedLocked());
+        heightButton.setAlpha(measurable && !plan.selectedLocked()
+                ? 1f : 0.4f);
         boolean rotatable = plan.selectedStructure() != null
                 || plan.selectedPrefab() != null;
-        rotateButton.setEnabled(rotatable);
-        rotateButton.setAlpha(rotatable ? 1f : 0.4f);
-        routeButton.setEnabled(plan.selectedIsEnemy());
-        routeButton.setAlpha(plan.selectedIsEnemy() ? 1f : 0.4f);
+        rotateButton.setEnabled(rotatable && !plan.selectedLocked());
+        rotateButton.setAlpha(rotatable && !plan.selectedLocked()
+                ? 1f : 0.4f);
+        boolean routeEnabled = plan.selectedIsEnemy() && !plan.selectedLocked();
+        routeButton.setEnabled(routeEnabled);
+        routeButton.setAlpha(routeEnabled ? 1f : 0.4f);
+        if (duplicateButton != null) {
+            boolean duplicable = plan.selectedStructure() != null
+                    || plan.selectedPrefab() != null
+                    || plan.selectedOpening() != null
+                    || plan.hasGroupSelection();
+            duplicateButton.setEnabled(duplicable);
+            duplicateButton.setAlpha(duplicable ? 1f : 0.4f);
+        }
+        if (lockButton != null) {
+            lockButton.setEnabled(plan.hasSelection());
+            lockButton.setAlpha(plan.hasSelection() ? 1f : 0.4f);
+            lockButton.setText(plan.selectedAllLocked()
+                    ? "Destravar seleção" : "Travar seleção");
+        }
+        if (materialButton != null) {
+            boolean enabled = plan.selectedStructure() != null
+                    && !plan.selectedLocked();
+            materialButton.setEnabled(enabled);
+            materialButton.setAlpha(enabled ? 1f : 0.4f);
+        }
+        if (logicButton != null) {
+            PrefabInstance p = plan.selectedPrefab();
+            boolean enabled = p != null && (p.prefabId.startsWith("door.")
+                    || p.prefabId.startsWith("terminal.")
+                    || "npc.human".equals(p.prefabId))
+                    && !plan.selectedLocked();
+            logicButton.setEnabled(enabled);
+            logicButton.setAlpha(enabled ? 1f : 0.4f);
+        }
+    }
+
+    private void refreshCounts() {
+        int enemies = 0;
+        int items = doc.markers.size();
+        for (br.com.termia.construajogue.map.PrefabInstance p : doc.prefabs) {
+            PrefabDefinition def = catalog.find(p.prefabId);
+            if (def == null) {
+                continue;
+            }
+            if (def.behavior.startsWith("drone")
+                    || PrefabDefinition.BEHAVIOR_MUTANT.equals(def.behavior)
+                    || PrefabDefinition.BEHAVIOR_TURRET.equals(def.behavior)
+                    || PrefabDefinition.BEHAVIOR_KAMIKAZE.equals(def.behavior)
+                    || PrefabDefinition.BEHAVIOR_BOSS.equals(def.behavior)) {
+                enemies++;
+            }
+            if (def.behavior.startsWith("pickup")) {
+                items++;
+            }
+        }
+        boolean warning = doc.structures.size() > 80
+                || doc.prefabs.size() > 200 || enemies > 24 || items > 64;
+        counts.setText((warning ? "⚠  " : "")
+                + "Y " + meters(plan.activeBaseY()) + "  ·  estruturas "
+                + doc.structures.size() + "/80"
+                + "  ·  peças " + doc.prefabs.size() + "/200"
+                + "  ·  inimigos " + enemies + "/24"
+                + "  ·  itens " + items + "/64");
+        counts.setTextColor(warning ? 0xFFFFC060 : 0xFF7F96A5);
+    }
+
+    private void refreshStoryButton() {
+        if (storyButton == null) return;
+        storyButton.setText("Andar ativo: "
+                + (Math.abs(plan.activeBaseY()) < 0.01f
+                ? "térreo" : "Y " + meters(plan.activeBaseY())) + "…");
+    }
+
+    /** Escolhe um pavimento existente ou abre um novo sobre a laje. */
+    private void chooseStory() {
+        final List<Float> levels = plan.storyBases();
+        String[] labels = new String[levels.size() + 2];
+        for (int i = 0; i < levels.size(); i++) {
+            float y = levels.get(i);
+            String name = Math.abs(y) < 0.01f
+                    ? "Térreo · Y 0,00 m" : "Pavimento · Y " + meters(y);
+            labels[i] = Math.abs(y - plan.activeBaseY()) < 0.08f
+                    ? "✓  " + name : name;
+        }
+        labels[levels.size()] = "Novo andar sobre o teto selecionado";
+        labels[levels.size() + 1] = "Elevação personalizada…";
+        new AlertDialog.Builder(activity)
+                .setTitle("Andares · topo do teto = piso")
+                .setItems(labels, (dialog, which) -> {
+                    if (which < levels.size()) {
+                        plan.setActiveBaseY(levels.get(which));
+                        plan.focusAll();
+                    } else if (which == levels.size()) {
+                        openStoryAboveSelectedCeiling();
+                    } else {
+                        showCustomStoryHeight();
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void openStoryAboveSelectedCeiling() {
+        Float top = plan.selectedCeilingTop();
+        if (top == null) {
+            Toast.makeText(activity, "Selecione um teto primeiro; depois "
+                    + "abra Andar ativo novamente", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (Math.abs(top - plan.activeBaseY()) < 0.08f) {
+            Toast.makeText(activity, "Você já está sobre essa laje",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        plan.setActiveBaseY(top);
+        plan.focusAll();
+        selectTool(PlanEditorView.TOOL_WALL);
+        status.setText("novo andar em Y " + meters(top)
+                + " — a laje já é o piso; desenhe paredes, peças e teto");
+    }
+
+    private void showCustomStoryHeight() {
+        EditText input = new EditText(activity);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL
+                | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        input.setText(String.format(Locale.US, "%.2f", plan.activeBaseY()));
+        new AlertDialog.Builder(activity)
+                .setTitle("Elevação do andar (Y)")
+                .setMessage("Use a altura do topo da laje. Faixa: -20 a 100 m.")
+                .setView(input)
+                .setPositiveButton("Abrir", (dialog, which) -> {
+                    try {
+                        float value = Float.parseFloat(input.getText()
+                                .toString().replace(',', '.'));
+                        plan.setActiveBaseY(clamp(value, -20f, 100f));
+                        plan.focusAll();
+                    } catch (NumberFormatException bad) {
+                        Toast.makeText(activity, "Número inválido",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private static String meters(float value) {
+        return String.format(Locale.US, "%.2f m", value).replace('.', ',');
+    }
+
+    private void showObjectList() {
+        int count = plan.objectCount();
+        if (count == 0) {
+            Toast.makeText(activity, "O mapa ainda está vazio",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] labels = new String[count];
+        for (int i = 0; i < count; i++) {
+            labels[i] = plan.objectLabel(i);
+        }
+        new AlertDialog.Builder(activity)
+                .setTitle("Objetos do mapa")
+                .setItems(labels, (dialog, which) -> {
+                    selectTool(PlanEditorView.TOOL_SELECT);
+                    plan.selectObject(which);
+                })
+                .setNegativeButton("Fechar", null)
+                .show();
+    }
+
+    /** Abre a prévia no próprio editor; a planta continua intacta atrás. */
+    private void showPreview3d() {
+        if (previewOverlay != null) return;
+        try {
+            MapDocument snapshot = MapJson.read(MapJson.write(doc));
+            previewView = new EditorPreviewView(activity, snapshot, catalog,
+                    message -> activity.runOnUiThread(() -> Toast.makeText(
+                            activity, "Falha na prévia 3D: " + message,
+                            Toast.LENGTH_LONG).show()));
+        } catch (RuntimeException failure) {
+            Toast.makeText(activity, "Não consegui montar a prévia: "
+                    + failure.getMessage(), Toast.LENGTH_LONG).show();
+            previewView = null;
+            return;
+        }
+        previewOverlay = new FrameLayout(activity);
+        previewOverlay.setBackgroundColor(Color.BLACK);
+        previewOverlay.addView(previewView, new FrameLayout.LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+        TextView hint = new TextView(activity);
+        hint.setText("PRÉVIA 3D  ·  arraste para orbitar  ·  pinça aproxima");
+        hint.setTextColor(0xFFDDE7EE);
+        hint.setTextSize(13f);
+        hint.setPadding(24, 18, 24, 18);
+        hint.setBackgroundColor(0xAA10151B);
+        previewOverlay.addView(hint, new FrameLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.START));
+
+        Button close = action("FECHAR 3D", this::closePreview);
+        close.setTextColor(0xFFFFFFFF);
+        FrameLayout.LayoutParams closeParams = new FrameLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.END);
+        closeParams.setMargins(8, 8, 8, 8);
+        previewOverlay.addView(close, closeParams);
+        addView(previewOverlay, new LayoutParams(LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT));
+    }
+
+    private void closePreview() {
+        if (previewOverlay == null) return;
+        previewView.onPause();
+        removeView(previewOverlay);
+        previewView = null;
+        previewOverlay = null;
+    }
+
+    /** @return true se consumiu o voltar fechando a prévia. */
+    public boolean closePreviewIfOpen() {
+        if (previewOverlay == null) return false;
+        closePreview();
+        return true;
+    }
+
+    public void pausePreview() {
+        if (previewView != null) previewView.onPause();
+    }
+
+    public void resumePreview() {
+        if (previewView != null) previewView.onResume();
     }
 
     /** Próximo toque na planta marca a patrulha do inimigo. */
@@ -345,6 +708,195 @@ public final class EditorHost extends FrameLayout
             status.setText("toque onde o inimigo deve patrulhar; toque "
                     + "no próprio inimigo para deixá-lo parado");
         }
+    }
+
+    private void chooseObjective() {
+        String[] labels = {"Chegar à saída", "Eliminar todos os inimigos",
+                "Coletar N fichas", "Sobreviver por X segundos"};
+        String[] types = {ObjectiveSpec.REACH_EXIT,
+                ObjectiveSpec.ELIMINATE_ALL, ObjectiveSpec.COLLECT,
+                ObjectiveSpec.SURVIVE};
+        new AlertDialog.Builder(activity)
+                .setTitle("Objetivo do mapa")
+                .setItems(labels, (dialog, which) ->
+                        showObjectiveForm(types[which], labels[which]))
+                .show();
+    }
+
+    private void showObjectiveForm(String type, String label) {
+        ObjectiveSpec current = doc.objective == null
+                ? new ObjectiveSpec() : doc.objective;
+        LinearLayout form = new LinearLayout(activity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(48, 16, 48, 0);
+        EditText target = field(form, "Quantidade de fichas",
+                current.target > 0 ? current.target : 3);
+        setFieldVisible(target, ObjectiveSpec.COLLECT.equals(type));
+        EditText duration = field(form, "Duração para sobreviver (s)",
+                current.durationSeconds > 0f
+                        ? current.durationSeconds : 30f);
+        setFieldVisible(duration, ObjectiveSpec.SURVIVE.equals(type));
+        EditText limit = field(form, "Tempo-limite (s; 0 = sem limite)",
+                current.timeLimitSeconds);
+        EditText two = field(form, "Meta para 2 estrelas (s; 0 = desligada)",
+                current.twoStarSeconds);
+        EditText three = field(form,
+                "Meta para 3 estrelas (s; 0 = desligada)",
+                current.threeStarSeconds);
+        new AlertDialog.Builder(activity)
+                .setTitle(label)
+                .setView(form)
+                .setPositiveButton("Aplicar", (dialog, which) -> {
+                    try {
+                        ObjectiveSpec next = new ObjectiveSpec();
+                        next.type = type;
+                        next.target = ObjectiveSpec.COLLECT.equals(type)
+                                ? Math.max(0, Math.round(parse(target))) : 0;
+                        next.durationSeconds = ObjectiveSpec.SURVIVE.equals(type)
+                                ? Math.max(0f, parse(duration)) : 0f;
+                        next.timeLimitSeconds = Math.max(0f, parse(limit));
+                        next.twoStarSeconds = Math.max(0f, parse(two));
+                        next.threeStarSeconds = Math.max(0f, parse(three));
+                        beforeChange();
+                        doc.objective = next;
+                        afterChange();
+                        status.setText("Objetivo: " + label);
+                    } catch (NumberFormatException bad) {
+                        Toast.makeText(activity, "Número inválido",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void chooseMaterial() {
+        final String[] ids = {"plain", "brick", "wood", "checker",
+                "metal", "asphalt", "water", "lava"};
+        String[] labels = {"Liso", "Tijolo", "Madeira", "Xadrez",
+                "Metal", "Asfalto", "Água (lentidão)", "Lava (dano)"};
+        new AlertDialog.Builder(activity)
+                .setTitle("Material da estrutura")
+                .setItems(labels, (dialog, which) ->
+                        plan.mutateSelected(() -> {
+                            StructureObject s = plan.selectedStructure();
+                            if (s == null) return;
+                            s.material = ids[which];
+                            if ("water".equals(ids[which])) {
+                                s.color = new float[]{0.08f, 0.36f, 0.66f};
+                            } else if ("lava".equals(ids[which])) {
+                                s.color = new float[]{0.95f, 0.22f, 0.04f};
+                            } else if ("asphalt".equals(ids[which])) {
+                                s.color = new float[]{0.16f, 0.17f, 0.19f};
+                            }
+                        }))
+                .show();
+    }
+
+    private void configureSelectedLogic() {
+        PrefabInstance selected = plan.selectedPrefab();
+        if (selected == null) return;
+        if ("npc.human".equals(selected.prefabId)) {
+            LinearLayout form = new LinearLayout(activity);
+            form.setOrientation(LinearLayout.VERTICAL);
+            form.setPadding(48, 16, 48, 0);
+            EditText name = textField(form, "Nome",
+                    textProperty(selected, "name", "Morador"), 48, 1);
+            EditText role = textField(form, "Papel na história",
+                    textProperty(selected, "role", "Morador local"), 80, 1);
+            EditText greeting = textField(form, "Primeira fala",
+                    textProperty(selected, "greeting",
+                            "Olá. Posso explicar o que aconteceu aqui."),
+                    240, 3);
+            EditText background = textField(form,
+                    "Contexto que a IA usará na conversa",
+                    textProperty(selected, "background",
+                            "Conhece este lugar e ajuda o jogador."), 600, 5);
+            ScrollView scroller = new ScrollView(activity);
+            scroller.addView(form);
+            new AlertDialog.Builder(activity)
+                    .setTitle("Pessoa amigável")
+                    .setView(scroller)
+                    .setPositiveButton("Aplicar", (dialog, which) ->
+                            plan.mutateSelected(() -> {
+                                selected.properties.put("name",
+                                        requiredText(name, "Morador", 48));
+                                selected.properties.put("role",
+                                        requiredText(role,
+                                                "Morador local", 80));
+                                selected.properties.put("greeting",
+                                        requiredText(greeting,
+                                                "Olá. Posso ajudar.", 240));
+                                selected.properties.put("background",
+                                        requiredText(background,
+                                                "Conhece este lugar.", 600));
+                            }))
+                    .setNegativeButton("Cancelar", null)
+                    .show();
+            return;
+        }
+        if (selected.prefabId.startsWith("terminal.")) {
+            LinearLayout form = new LinearLayout(activity);
+            form.setOrientation(LinearLayout.VERTICAL);
+            form.setPadding(48, 16, 48, 0);
+            EditText order = field(form,
+                    "Ordem da sequência (0 = livre)",
+                    selected.floatProperty("order", 0f));
+            new AlertDialog.Builder(activity)
+                    .setTitle("Terminal")
+                    .setView(form)
+                    .setPositiveButton("Aplicar", (dialog, which) -> {
+                        try {
+                            float value = Math.max(0, Math.round(parse(order)));
+                            plan.mutateSelected(() -> {
+                                if (value == 0f) {
+                                    selected.properties.remove("order");
+                                } else {
+                                    selected.properties.put("order", value);
+                                }
+                            });
+                        } catch (NumberFormatException bad) {
+                            Toast.makeText(activity, "Número inválido",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton("Cancelar", null)
+                    .show();
+            return;
+        }
+        if ("door.auto".equals(selected.prefabId)) {
+            Toast.makeText(activity,
+                    "Esta porta abre automaticamente por proximidade",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        List<PrefabInstance> terminals = new ArrayList<>();
+        for (PrefabInstance p : doc.prefabs) {
+            if (p.prefabId.startsWith("terminal.")) terminals.add(p);
+        }
+        if (terminals.isEmpty()) {
+            Toast.makeText(activity, "Coloque um terminal primeiro",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        String[] labels = new String[terminals.size()];
+        for (int i = 0; i < labels.length; i++) {
+            PrefabInstance p = terminals.get(i);
+            labels[i] = "Terminal " + (i + 1) + "  ("
+                    + String.format(Locale.US, "%.1f, %.1f",
+                    p.transform.x, p.transform.z) + ")";
+        }
+        new AlertDialog.Builder(activity)
+                .setTitle("Terminal que abre o portão")
+                .setItems(labels, (dialog, which) ->
+                        plan.mutateSelected(() -> selected.properties.put(
+                                "controllerId", terminals.get(which).id)))
+                .show();
+    }
+
+    private static float parse(EditText field) {
+        return Float.parseFloat(field.getText().toString()
+                .replace(',', '.'));
     }
 
     /** Presets: nome, ambiente, horizonte/neblina, alcance, skybox. */
@@ -440,8 +992,68 @@ public final class EditorHost extends FrameLayout
             grid.addView(swatch);
         }
         box.addView(grid);
+        Button custom = new Button(activity);
+        custom.setText("COR PERSONALIZADA…");
+        custom.setAllCaps(false);
+        custom.setOnClickListener(v -> {
+            boolean useBucket = bucket.isChecked();
+            dialog.dismiss();
+            showCustomColor(useBucket);
+        });
+        box.addView(custom);
         box.addView(bucket);
         dialog.show();
+    }
+
+    /** Seletor RGB sem dependências externas, com prévia em tempo real. */
+    private void showCustomColor(boolean bucket) {
+        LinearLayout form = new LinearLayout(activity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(48, 20, 48, 8);
+        final int[] rgb = {128, 128, 128};
+        TextView preview = new TextView(activity);
+        preview.setText("PRÉVIA");
+        preview.setTextColor(Color.WHITE);
+        preview.setGravity(Gravity.CENTER);
+        preview.setBackgroundColor(Color.rgb(rgb[0], rgb[1], rgb[2]));
+        form.addView(preview, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 88));
+        String[] names = {"Vermelho", "Verde", "Azul"};
+        for (int i = 0; i < 3; i++) {
+            final int channel = i;
+            TextView label = new TextView(activity);
+            label.setText(names[i] + ": " + rgb[i]);
+            label.setTextColor(0xFFDDE7EE);
+            form.addView(label);
+            SeekBar slider = new SeekBar(activity);
+            slider.setMax(255);
+            slider.setProgress(rgb[i]);
+            slider.setOnSeekBarChangeListener(
+                    new SeekBar.OnSeekBarChangeListener() {
+                        @Override
+                        public void onProgressChanged(SeekBar bar, int value,
+                                                      boolean fromUser) {
+                            rgb[channel] = value;
+                            label.setText(names[channel] + ": " + value);
+                            preview.setBackgroundColor(Color.rgb(
+                                    rgb[0], rgb[1], rgb[2]));
+                        }
+
+                        @Override public void onStartTrackingTouch(SeekBar b) {}
+                        @Override public void onStopTrackingTouch(SeekBar b) {}
+                    });
+            form.addView(slider);
+        }
+        new AlertDialog.Builder(activity)
+                .setTitle("Cor personalizada")
+                .setView(form)
+                .setPositiveButton("Usar", (dialog, which) -> {
+                    plan.setActivePaint(new float[]{rgb[0] / 255f,
+                            rgb[1] / 255f, rgb[2] / 255f}, bucket);
+                    selectTool(PlanEditorView.TOOL_PAINT);
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     /** Contorno livre: escolhe o papel e arma a ferramenta de pontos. */
@@ -543,11 +1155,11 @@ public final class EditorHost extends FrameLayout
             title = "Medidas — " + StructureRoles.name(s);
             if (wall) {
                 fields.add(field(form, "Comprimento (m)",
-                        Math.max(s.half[0], s.half[2]) * 2f));
+                        WallGeometry.halfLength(s) * 2f));
                 fields.add(field(form, "Altura (m)",
                         StructureRoles.heightValue(s)));
                 fields.add(field(form, "Espessura (m)",
-                        Math.min(s.half[0], s.half[2]) * 2f));
+                        WallGeometry.thickness(s)));
             } else {
                 fields.add(field(form, "Largura (m)", s.half[0] * 2f));
                 fields.add(field(form, "Profundidade (m)",
@@ -558,7 +1170,8 @@ public final class EditorHost extends FrameLayout
         } else {
             title = "Medidas da peça";
             fields.add(field(form, "Distância do chão (m)",
-                    plan.selectedPrefab().transform.y));
+                    plan.selectedPrefab().transform.y
+                            - plan.activeBaseY()));
         }
 
         new AlertDialog.Builder(activity)
@@ -596,10 +1209,9 @@ public final class EditorHost extends FrameLayout
                     .equals(StructureRoles.roleOf(s));
             plan.mutateSelected(() -> {
                 if (wall) {
-                    boolean alongX = s.half[0] >= s.half[2];
-                    s.half[alongX ? 0 : 2] = clamp(v[0], 0.3f, 64f) / 2f;
+                    WallGeometry.resize(s, clamp(v[0], 0.3f, 64f),
+                            clamp(v[2], 0.05f, 2f));
                     StructureRoles.applyHeight(s, v[1]);
-                    s.half[alongX ? 2 : 0] = clamp(v[2], 0.05f, 2f) / 2f;
                 } else {
                     s.half[0] = clamp(v[0], 0.1f, 64f) / 2f;
                     s.half[2] = clamp(v[1], 0.1f, 64f) / 2f;
@@ -625,8 +1237,49 @@ public final class EditorHost extends FrameLayout
         input.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         input.setText(String.format(Locale.US, "%.2f", value));
+        input.setTag(caption);
         form.addView(input);
         return input;
+    }
+
+    private EditText textField(LinearLayout form, String label, String value,
+                               int limit, int lines) {
+        TextView caption = new TextView(activity);
+        caption.setText(label);
+        caption.setTextSize(13f);
+        caption.setTextColor(0xFF8FA3B0);
+        form.addView(caption);
+        EditText input = new EditText(activity);
+        input.setInputType(InputType.TYPE_CLASS_TEXT
+                | (lines > 1 ? InputType.TYPE_TEXT_FLAG_MULTI_LINE : 0));
+        input.setSingleLine(lines == 1);
+        if (lines > 1) input.setMinLines(lines);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limit)});
+        input.setText(value);
+        form.addView(input);
+        return input;
+    }
+
+    private static String textProperty(PrefabInstance prefab, String key,
+                                       String fallback) {
+        String value = prefab.stringProperty(key);
+        return value == null || value.trim().isEmpty() ? fallback : value;
+    }
+
+    private static String requiredText(EditText input, String fallback,
+                                       int limit) {
+        String value = input.getText().toString().trim();
+        if (value.isEmpty()) value = fallback;
+        return value.length() > limit ? value.substring(0, limit) : value;
+    }
+
+    private static void setFieldVisible(EditText input, boolean visible) {
+        int value = visible ? VISIBLE : GONE;
+        input.setVisibility(value);
+        Object caption = input.getTag();
+        if (caption instanceof TextView) {
+            ((TextView) caption).setVisibility(value);
+        }
     }
 
     private void undo() {
@@ -649,14 +1302,29 @@ public final class EditorHost extends FrameLayout
         }
         doc = MapJson.read(snapshot);
         plan.setDocument(doc);
+        dirty = true;
+        removeCallbacks(autoSaveTask);
+        postDelayed(autoSaveTask, AUTO_SAVE_DELAY_MS);
+        removeCallbacks(maxAutoSaveTask);
+        postDelayed(maxAutoSaveTask, AUTO_SAVE_MAX_MS);
+        refreshCounts();
+        refreshStoryButton();
         refreshButtons();
     }
 
-    private boolean save() {
+    /** Salva imediatamente; usado também pelo ciclo de vida da Activity. */
+    public boolean saveNow() {
+        removeCallbacks(autoSaveTask);
+        removeCallbacks(maxAutoSaveTask);
+        if (!dirty) {
+            return true;
+        }
         try {
             store.save(doc);
+            dirty = false;
             return true;
         } catch (IOException failure) {
+            postDelayed(maxAutoSaveTask, AUTO_SAVE_MAX_MS);
             Toast.makeText(activity, "Falha ao salvar: "
                     + failure.getMessage(), Toast.LENGTH_LONG).show();
             return false;
@@ -664,8 +1332,9 @@ public final class EditorHost extends FrameLayout
     }
 
     public void close() {
-        save();
-        listener.onClose();
+        if (saveNow()) {
+            listener.onClose();
+        }
     }
 
     private void test() {
@@ -687,7 +1356,7 @@ public final class EditorHost extends FrameLayout
             Toast.makeText(activity, join(warnings),
                     Toast.LENGTH_LONG).show();
         }
-        if (!save()) {
+        if (!saveNow()) {
             return;
         }
         // snapshot profundo: a partida nunca toca o documento em edição

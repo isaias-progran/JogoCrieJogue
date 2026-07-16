@@ -3,7 +3,9 @@ package br.com.termia.construajogue;
 import br.com.termia.construajogue.compiler.LevelCompiler;
 import br.com.termia.construajogue.compiler.MapValidator;
 import br.com.termia.construajogue.compiler.ValidationIssue;
+import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.persistence.MapJson;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
@@ -59,6 +61,9 @@ public final class LevelCompilerTest {
         Check.sameFloats(compiled.terminal(), legacy.terminal(),
                 "terminal");
         Check.sameFloats(compiled.exit(), legacy.exit(), "saída");
+        Check.that(compiled.exitElevationKnown()
+                        && compiled.exitElevation() == 0f,
+                "saída JSON térrea guarda Y sem quebrar array legado");
         Check.sameRows(compiled.items(), legacy.items(), "itens");
         Check.sameFloats(compiled.spawn(), legacy.spawn(), "início");
         Check.sameRows(compiled.droneSpawns(), legacy.droneSpawns(),
@@ -72,6 +77,32 @@ public final class LevelCompilerTest {
                 "cor da neblina");
         Check.that(compiled.fogFar() == legacy.fogFar(),
                 "distância da neblina");
+
+        MapDocument upper = new MapDocument();
+        LogicMarker upperExit = new LogicMarker("saida-alta",
+                LogicMarker.EXIT);
+        upperExit.x = 2f;
+        upperExit.y = 3.3f;
+        upperExit.z = 4f;
+        upperExit.radius = 1.2f;
+        upper.markers.add(upperExit);
+        StructureObject water = new StructureObject("agua-alta",
+                StructureObject.KIND_BLOCK);
+        water.role = StructureObject.ROLE_FLOOR;
+        water.material = "water";
+        water.transform.y = 3.15f;
+        water.half = new float[]{2f, 0.15f, 2f};
+        water.color = new float[]{0.2f, 0.4f, 0.7f};
+        upper.structures.add(water);
+        RuntimeLevel upperLevel = LevelCompiler.compile(upper, catalog);
+        Check.sameFloats(upperLevel.exit(),
+                new float[]{2f, 3.3f, 4f, 1.2f},
+                "saída de andar preserva Y");
+        Check.sameFloats(upperLevel.hazards()[0], new float[]{
+                RuntimeLevel.HAZARD_WATER, -2f,
+                water.transform.y - water.half[1], -2f, 2f,
+                water.transform.y + water.half[1], 2f},
+                "perigo de andar preserva volume Y");
         Check.done("LevelCompilerTest (arena JSON == arena texto)");
     }
 }

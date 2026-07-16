@@ -8,6 +8,232 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-15
+- **v0.21.1 (versionCode 42) — NPC brasileiro casual e voz por personalidade.**
+  - A conversa agora separa identidade, personalidade, regras e exemplos no
+    prompt. O NPC responde em uma ou duas frases de português brasileiro
+    cotidiano, aceita contrações e até duas gírias leves quando couber, evita
+    fórmulas de atendimento como “Certamente” e não mistura regionalismos ao
+    acaso. A saída caiu de 220 para 140 tokens para manter fala curta.
+  - Seis personalidades locais e determinísticas — parceiro, prático, calmo,
+    firme, animado e reservado — são escolhidas pelo papel/contexto ou pela
+    identidade do NPC. A mesma personalidade orienta o texto e altera
+    levemente ritmo/tom do TTS; portanto até uma única voz instalada ganha
+    variação consistente, sem rede ou cobrança adicional.
+  - O gerador passou a pedir temperamento e saudação casual; Lia agora avisa
+    “Deu ruim na cidade” e chama o jogador com “bora”. O schema dos mapas e as
+    barreiras de segurança não mudaram. São 587 verificações JVM; o APK Android
+    compilou com 329.153 bytes e assinatura v2/v3. Falta conferir no aparelho
+    se os seis ajustes de ritmo/tom agradam na voz Google instalada.
+- **v0.21.0 (versionCode 41) — modelo escolhível para gerar mapas.**
+  - O formulário oferece GPT-5.6 Terra (padrão equilibrado), GPT-5.6 Sol
+    (qualidade máxima), GPT-5.6 Luna (econômico) e o GPT-5.4 mini anterior
+    para compatibilidade. Terra usa raciocínio médio, Sol alto e Luna baixo;
+    cada perfil reserva saída suficiente para raciocínio e JSON estruturado.
+  - A escolha vale somente para criar o cenário e aparece novamente na prévia.
+    Falas de NPC continuam no 5.4 mini para não transformar cada conversa em
+    uma solicitação cara/lenta. Sol avisa na tela que pode demorar e custar
+    mais, sem presumir preço específico.
+  - Segurança não foi aberta: os quatro IDs ficam numa allowlist compilada no
+    APK, um valor diferente é recusado antes da rede, nenhum modelo recebe
+    ferramentas e o resultado continua preso ao mesmo schema/validador. HTTP
+    404 orienta escolher outra opção caso o Project não tenha acesso.
+  - A suíte pura-Java soma 581 verificações, cobrindo modelo, esforço, limite
+    de saída, fallback e separação entre cenário/NPC. APK assinado v2/v3 com
+    325.057 bytes nesta build.
+- **v0.20.1 (versionCode 40) — prompt grande sem esconder GERAR.**
+  - O formulário de cenário passou a rolar dentro do diálogo, enquanto a barra
+    `CANCELAR/GERAR` permanece fora da área rolável. O campo aceita até 1.000
+    caracteres, mostra no máximo sete linhas e possui rolagem interna; o
+    teclado redimensiona o diálogo. A mesma proteção foi aplicada à tela da
+    chave para aparelhos menores e orientação paisagem. As 573 verificações
+    passaram; APK assinado v2/v3 com 325.058 bytes nesta build.
+- **v0.20.0 (versionCode 39) — plantas realmente diferentes e prédios verticais.**
+  - O contrato da IA agora inclui implantação, rota, padrão de cômodos,
+    cobertura, número de prédios/cômodos/andares e uma lista ordenada de zonas
+    com tipo, tamanho, pavimentos e finalidade. Dez layouts, cinco rotas,
+    cinco padrões internos e 16 recursos seguros substituem a escolha antiga
+    que se limitava quase só a tema, tamanho e acabamento.
+  - O construtor local ganhou plantas independentes para edifício único/torre,
+    rua, pátio, campus, labirinto, praça com alas, sequência linear e volumes
+    espalhados. `buildingCount`, `roomCount`, `route`, `roofStyle`, `zones` e
+    `seed` agora alteram a construção; o tema define materiais e atmosfera sem
+    forçar sempre a mesma avenida.
+  - Uma casa de dois ou três andares é um espaço percorrível: paredes e
+    divisões em cada nível, laje em três placas deixando o poço livre,
+    escada/rampa, janelas, porta, móveis, luzes, teto ou cobertura acessível.
+    Saída, fichas e inimigos podem ficar nos pavimentos superiores, fazendo a
+    circulação vertical participar da missão em vez de ser só decoração.
+  - A instrução do Structured Output explica a semântica de cada planta e dá
+    o caso concreto de casa de dois andares. A segurança permanece igual: a IA
+    não envia coordenadas, código, URL ou ferramentas; somente escolhe valores
+    fechados e toda geometria nasce/é validada localmente. A suíte pura-Java
+    soma 573 verificações, incluindo oito impressões geométricas distintas e o
+    contrato completo da casa vertical. APK assinado v2/v3 com 325.057 bytes
+    nesta build; falta somente a conferência visual/tátil no aparelho.
+- **v0.19.0 (versionCode 38) — mapas adaptáveis, túneis reais e conversa natural.**
+  - O gerador deixou de reutilizar uma única avenida: cidade, indústria,
+    laboratório, fortaleza, ruínas e túnel têm plantas próprias, com variação
+    determinística pelo `seed`. Túnel agora cria uma laje contínua sobre 100%
+    do setor, antecâmaras, paredes de serviço, iluminação de teto e som de
+    ventilação/gotas; pedidos de metrô, mina e esgoto escolhem esse tema.
+  - A tela de geração oferece Automático, Econômico, Equilibrado, Grande e
+    S23/forte. O automático considera RAM, heap e núcleos; o perfil forte gera
+    quatro setores de 88×88 m. Portas fazem a transição e
+    `LazyLevelProvider` lê/valida/compila somente o setor solicitado, sem
+    manter toda a campanha em `RuntimeLevel[]`.
+  - Áudio ganhou passos alternados, respingos, grilos e paisagens próprias de
+    túnel/indústria. O TTS escolhe a voz pt-BR de maior qualidade instalada,
+    favorecendo variantes naturais online. NPCs guardam três turnos só em RAM;
+    a instrução da Responses API proíbe reapresentação e exige resposta direta
+    e variada, salvo quando o jogador realmente pergunta a identidade.
+  - `environment.soundscape` é uma extensão opcional e compatível do schema 2.
+    A suíte pura-Java soma 560 verificações, incluindo 96 combinações de
+    tema/tamanho/objetivo, teto integral e carregamento preguiçoso. APK assinado
+    v2/v3 com 316.865 bytes nesta build; validação visual/sonora no S23 ainda
+    deve ser feita no aparelho.
+- **v0.18.0 (versionCode 37) — NPC com voz, microfone e companhia.**
+  - Ao entrar em 3 m, cada NPC cumprimenta uma vez por voz pt-BR e começa a
+    seguir o jogador no mesmo pavimento, desviando pelos colliders. O movimento
+    é determinístico e local: não há chamada de IA por quadro.
+  - `FALAR` agora oferece pergunta digitada ou pelo reconhecedor de voz do
+    Android/Google. Após enviar, a partida continua sem tela de “pensando”; a
+    resposta chega por TTS e legenda breve. Diálogo fica apenas como fallback.
+  - Manifesto declara visibilidade dos serviços de TTS/reconhecimento, a voz é
+    encerrada no ciclo de vida e nenhum áudio é gravado pelo jogo. Suíte com
+    498 verificações; APK assinado v2/v3 com 304.571 bytes nesta build.
+- **v0.17.3 (versionCode 36) — prevenção de chave mascarada no HTTP 401.**
+  - A entrada agora recusa antes da rede `Bearer`, aspas, atribuições
+    (`OPENAI_API_KEY=...`) e cópias mascaradas com `...` ou `***`. Uma chave
+    mascarada copiada da lista pode estar em ALL e ainda ser inválida.
+  - O cliente e o cofre Android compartilham a mesma normalização, preservando
+    a chave completa byte a byte. O contrato ganhou três verificações. Suíte
+    com 491 verificações.
+- **v0.17.2 (versionCode 35) — diagnóstico preciso da chave de IA.**
+  - A mensagem de rede agora separa autenticação recusada (`HTTP 401`) de
+    acesso bloqueado (`HTTP 403`). No primeiro caso, orienta conferir a chave
+    inteira, o Project e a permissão de escrita em `/v1/responses`; no segundo,
+    região, organização e políticas do Project.
+  - Respostas de autenticação não são exibidas, pois podem repetir um trecho
+    mascarado da chave. O contrato ganhou verificações específicas para os
+    dois estados. Suíte com 488 verificações.
+- **v0.17.1 (versionCode 34) — correção do HTTP 400 na geração por IA.**
+  - O JSON Schema remoto usava palavras-chave que podem ficar fora do
+    subconjunto aceito por Structured Outputs estrito (`uniqueItems`, limites
+    de texto/lista e faixas numéricas). A API recusava a requisição antes de
+    executar o modelo. O schema enviado agora usa somente tipos, enumerações,
+    campos obrigatórios, descrições e `additionalProperties:false`.
+  - Os limites não foram removidos da segurança: `AiScenarioPlan.parse()`
+    continua recusando textos, números, listas, repetições e campos extras fora
+    do contrato. O erro HTTP 400 também passa a mostrar o detalhe seguro
+    devolvido pela API. Suíte com 486 verificações.
+- **v0.17.0 (versionCode 33) — cenários e pessoas com IA opcional segura.**
+  - A biblioteca ganhou configuração de chave e geração de cenário. O cliente
+    Java usa somente `POST https://api.openai.com/v1/responses`, com snapshot
+    fixo `gpt-5.4-mini-2026-03-17`, HTTPS obrigatório, redirects bloqueados,
+    `store:false`, resposta limitada, timeouts e no máximo 40 chamadas por
+    sessão com intervalo mínimo. Nenhuma ferramenta é enviada ao modelo.
+  - A IA não fornece coordenadas nem objetos arbitrários: preenche um JSON
+    Schema estrito de tema/tamanho/céu/objetivo/recursos/inimigos/NPC. Um
+    construtor determinístico monta somente estruturas e prefabs do catálogo;
+    `MapValidator` e `LevelCompiler` precisam aceitar o resultado antes da
+    prévia e do salvamento.
+  - Novo `npc.human`: modelo humano low-poly, collider, sombra, botão `FALAR`
+    por proximidade e campos editáveis de nome, papel, primeira fala e contexto.
+    Sem chave ele usa o texto local; com chave conversa em até três frases, sem
+    ferramenta e sem capacidade de modificar a partida. A engenheira Lia foi
+    incluída em Cidade Aurora para o fluxo funcionar imediatamente sem chave.
+  - Alpine foi deliberadamente descartado: não há shell, executável baixado,
+    WebView, serviço em segundo plano ou interpretador. A chave fica só em
+    memória por padrão; `Lembrar` cifra com AES-GCM e chave do Android Keystore.
+    Backup e HTTP claro estão desativados, e a tela da chave bloqueia captura e
+    autofill onde o Android oferece suporte.
+  - `AiScenarioTest` cobre schema, allowlist, requisição sem ferramentas,
+    extração limitada, geração, validação e compilação do NPC, além das 60
+    combinações tema/tamanho/objetivo. Suíte com 485 verificações; APK assinado
+    com 304.576 bytes nesta build.
+- **v0.16.2 (versionCode 32) — biblioteca sem mapas pequenos.**
+  - Removidos do APK `casa.json`, `patio.json` e `fortaleza.json`; o gerador
+    também apaga arquivos antigos para que eles não reapareçam. Permanecem
+    somente Complexo Ômega e Cidade Aurora como exemplos embarcados.
+  - Cada mapa próprio agora mostra `EXCLUIR` diretamente na linha, mantendo
+    a confirmação e a opção equivalente em `⋮`. Cópias já editadas nunca são
+    removidas automaticamente. A suíte soma 396 verificações.
+- **v0.16.1 (versionCode 31) — cidade 2,6× maior sem estourar orçamento.**
+  - A Cidade Aurora passou de 56×48 m para 88×80 m: avenidas prolongadas,
+    anel viário, oito volumes simples de skyline e quatro células novas nas
+    extremidades. A missão agora recolhe 12 células em até 720 s.
+  - Grade do editor ampliada de ±32 m para ±48 m (96×96 m). O mapa ficou com
+    79 estruturas, 103 prefabs, 17 inimigos, 164 colliders e malha estática
+    de 131.868 floats (~515 KiB), ainda abaixo dos avisos de 80 estruturas,
+    200 peças e 24 inimigos.
+  - São 32 postes + cinco luzes internas; o renderer continua calculando
+    iluminação apenas para as quatro luzes mais próximas. `CityMapTest`
+    cresceu para 49 contratos e a suíte soma 395 verificações.
+- **v0.16.0 (versionCode 30) — Cidade Aurora, asfalto e postes.**
+  - Novo exemplo `cidade-aurora.json`: quatro quarteirões e uma avenida em
+    cruz com asfalto procedural, linhas viárias, quatro faixas de pedestres,
+    garagem, mercado, estação alagada e prefeitura de dois andares.
+  - Objetivo de recolher oito células em 540 s; a rota usa dois terminais em
+    sequência, dois portões, cinco portas automáticas, 13 inimigos e obriga
+    subir pela escada externa até o gabinete no primeiro andar.
+  - Novo material `asphalt` no formato/editor/shader. Novo prefab procedural
+    `prop.lamp.street`: base, poste, braço, foco emissivo, collider estreito e
+    luz pontual a 3,35 m via `lightOffsetY`. Dezesseis postes e cinco luzes
+    internas iluminam o mapa ao entardecer.
+  - `CityMapTest` fixa 32 contratos da cidade; com os contratos do novo
+    prefab e de sua inserção no editor, a suíte soma 378 verificações.
+- **v0.15.0 (versionCode 29) — ANDARES editáveis sobre tetos.**
+  - O painel ganhou `Andar ativo`: alterna entre elevações descobertas, aceita
+    Y personalizado e abre um novo nível exatamente no topo do teto
+    selecionado. A planta mostra só o pavimento ativo; a laje compartilhada
+    aparece nos dois lados.
+  - Piso, parede, bloco, teto por pontos/retângulo, prefab e início/saída
+    nascem relativos à base do andar. Seleção, lista de objetos, encaixe,
+    vãos, balde de pintura, duplicação e enquadramento não misturam objetos
+    sobrepostos de pavimentos diferentes. A lista exibe o Y e troca de andar
+    automaticamente ao abrir um objeto.
+  - O runtime passou a considerar Y em saída, água/lava, interação com
+    terminais e proximidade de portas automáticas; preserva os arrays legados
+    para mapas no térreo. Ligação automática porta↔terminal também não cruza
+    lajes.
+  - `StoryLevels` concentra as regras puras sem mudar o schema. Novos testes
+    cobrem laje compartilhada, ferramentas sobrepostas, altura de peças,
+    vínculo de portas, perigos, escada até a laje e saída vertical; suíte com
+    342 verificações.
+- **v0.14.1 (versionCode 28) — mapa-vitrine Complexo Ômega.**
+  - Novo exemplo grande `complexo-omega.json`: 34 estruturas, 96 prefabs,
+    21 vãos, 18 inimigos, 13 luzes e todos os materiais/peças estáticas.
+  - Objetivo de coletar nove núcleos em 600 s: hangar, água, reator,
+    laboratório, telhado, plataformas, torre e cofre. Três terminais em
+    sequência controlam três portões; há mais quatro portas automáticas.
+  - Usa as quatro escadas/rampas, paredes diagonais com portais e pintura
+    por lado, água/lava, chefe, torretas, kamikazes, ondas dormentes e toda
+    a variedade de suprimentos. `ElaborateMapTest` mantém 16 contratos da
+    vitrine; a suíte completa agora soma 312 verificações.
+- **v0.14.0 (versionCode 27) — pacote de jogabilidade, editor e troca.**
+  - Schema 2 com `objective`, materiais e travas; `MapMigration` mantém
+    mapas schema 1. Autosave periódico e renomear na biblioteca.
+  - Objetivos: saída, eliminar todos, coletar fichas e sobreviver, todos
+    com tempo-limite opcional; recordes por mapa, precisão e 1–3 estrelas.
+  - Runtime generalizado para listas de terminais/portas com
+    `controllerId` e sequência `order`; porta automática deslizante com
+    histerese. Novos inimigos: torreta, kamikaze e chefe; pickup de ficha
+    e munição especial.
+  - Editor: prévia 3D orbital `WHEN_DIRTY`, duplicação, seleção retangular
+    para mover cômodo, travas, enquadramento/lista de objetos, RGB livre,
+    objetivo/material/lógica editáveis e contador visível de limites.
+    Regras foram extraídas para `editor/tools/{GroupSelection,PaintTool,
+    OpeningTool,PrefabPlacementTool}`.
+  - Render: até quatro luzes pontuais, tijolo/madeira/xadrez/metal/água/
+    lava no fragment shader, sombras blob e vãos/pintura por lado também
+    em paredes diagonais. Água reduz velocidade; lava causa dano.
+  - Troca: JSON em `/sdcard/TermIa/troca` (fallback SAF), importar arquivo
+    ou código `CJ2:`, compartilhamento e QR offline validado com ZXing.
+    "Minha campanha" persiste playlist de mapas e soma o tempo.
+  - Acabamento: tutorial de cinco balões, pássaros diurnos/vento noturno
+    gerados em PCM e `scripts/test-device.sh` para smoke test real de
+    GLES + gestos. `test-core.sh` cobre também objetivo, arma, ferramentas,
+    diagonal, codec e QR.
 - **v0.13.0 (versionCode 26) — PAREDES POR PONTOS com DIAGONAIS.**
   - "Desenho por pontos" ganhou 3º modo: "Paredes (linha de pontos)".
     Toque marca os pontos; tocar no ÚLTIMO termina a linha aberta,

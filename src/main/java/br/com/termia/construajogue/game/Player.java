@@ -51,9 +51,11 @@ public final class Player {
             float yaw = camera.yaw();
             float sin = (float) Math.sin(yaw);
             float cos = (float) Math.cos(yaw);
+            float speed = SPEED * level.speedMultiplierAt(
+                    pos[0], pos[1], pos[2]);
             // frente = (sin, 0, -cos); direita = (cos, 0, sin)
-            float dx = (sin * jz + cos * jx) * SPEED * dt;
-            float dz = (-cos * jz + sin * jx) * SPEED * dt;
+            float dx = (sin * jz + cos * jx) * speed * dt;
+            float dz = (-cos * jz + sin * jx) * speed * dt;
             float[][] boxes = level.colliders();
             Collision.moveHorizontal(pos, 0, dx, RADIUS, HEIGHT, STEP, boxes);
             Collision.moveHorizontal(pos, 2, dz, RADIUS, HEIGHT, STEP, boxes);

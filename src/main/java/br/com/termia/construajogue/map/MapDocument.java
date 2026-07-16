@@ -11,7 +11,7 @@ import java.util.List;
  */
 public final class MapDocument {
 
-    public static final int SCHEMA = 1;
+    public static final int SCHEMA = 2;
 
     public String id;
     public String name = "";
@@ -21,6 +21,11 @@ public final class MapDocument {
     public float fogFar = 30f;
     /** Céu: "none" (sem skybox), "day", "dusk" ou "night". */
     public String sky = "none";
+    /** Áudio ambiente: auto, outdoor, tunnel ou industrial. */
+    public String soundscape = "auto";
+
+    /** Regra de vitória. Ausente em mapas antigos = chegar à saída. */
+    public ObjectiveSpec objective = new ObjectiveSpec();
 
     public final List<StructureObject> structures = new ArrayList<>();
     public final List<PrefabInstance> prefabs = new ArrayList<>();

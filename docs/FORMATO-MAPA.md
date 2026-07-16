@@ -1,101 +1,133 @@
-# Formato do mapa
+# Formato do mapa — schema 2
 
-## Princípios
-
-- JSON legível e versionado;
-- metros e Y para cima;
-- IDs UUID;
-- estruturas, prefabs e marcadores separados;
-- documento guarda intenção; malhas/colliders são derivados.
-
-## Esboço do schema 1
+O documento é JSON legível, usa metros (Y para cima) e guarda intenção de
+edição. Malhas, normais, VBOs, colliders e estado da partida são derivados e
+nunca são salvos.
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "id": "uuid-mapa",
   "name": "Minha arena",
+  "objective": {
+    "type": "collect",
+    "target": 3,
+    "timeLimitSeconds": 90,
+    "twoStarSeconds": 60,
+    "threeStarSeconds": 35
+  },
   "environment": {
     "ambient": 0.35,
     "fog": [0.04, 0.05, 0.07],
-    "fogFar": 30
+    "fogFar": 30,
+    "sky": "night",
+    "soundscape": "tunnel"
   },
   "structures": [
     {
       "id": "uuid-piso",
-      "kind": "floor",
-      "transform": {"x": 0, "y": -0.15, "z": 0, "yaw": 0},
-      "height": 0.15,
-      "polygon": [-8, -8, 8, -8, 8, 8, -8, 8]
+      "kind": "block",
+      "role": "floor",
+      "material": "checker",
+      "locked": true,
+      "transform": {"x": 0, "y": -0.15, "z": 0},
+      "half": [8, 0.15, 8],
+      "color": [0.3, 0.33, 0.38]
     },
     {
       "id": "uuid-parede",
-      "kind": "wall",
-      "transform": {"x": 0, "y": 0, "z": 0, "yaw": 0},
-      "height": 3,
-      "thickness": 0.15,
-      "path": [-8, -8, 8, -8, 8, 8],
-      "openings": []
+      "kind": "block",
+      "role": "wall",
+      "transform": {"x": 0, "y": 1.5, "z": -8},
+      "half": [8, 1.5, 0.15],
+      "color": [0.46, 0.48, 0.55],
+      "color2": [0.75, 0.25, 0.2],
+      "openings": [{
+        "id": "uuid-vao", "type": "door", "offset": 0,
+        "width": 1, "height": 2.1
+      }]
     }
   ],
-  "prefabs": [
-    {
-      "id": "uuid-escada",
-      "prefabId": "stairs.straight.small",
-      "transform": {"x": -3, "y": 0, "z": 1, "yaw": 90},
-      "scale": 1
-    },
-    {
-      "id": "uuid-drone",
-      "prefabId": "enemy.drone",
-      "transform": {"x": 2, "y": 1.7, "z": 0, "yaw": 0},
-      "properties": {"dormant": false, "patrolX": -2, "patrolZ": 0}
+  "prefabs": [{
+    "id": "uuid-portao",
+    "prefabId": "door.gate",
+    "transform": {"x": 0, "y": 1.4, "z": 0},
+    "properties": {
+      "halfX": 1.5, "halfY": 1.4, "halfZ": 0.4,
+      "controllerId": "uuid-terminal"
     }
-  ],
+  }],
   "markers": [
-    {
-      "id": "uuid-spawn",
-      "type": "player_spawn",
-      "x": 0, "y": 0, "z": 6, "yaw": 180
-    },
-    {
-      "id": "uuid-exit",
-      "type": "exit",
-      "x": 0, "y": 0, "z": -6, "radius": 1.2
-    }
+    {"id": "uuid-spawn", "type": "player_spawn", "x": 0, "y": 0,
+      "z": 6, "yaw": 180},
+    {"id": "uuid-exit", "type": "exit", "x": 0, "y": 0,
+      "z": -6, "radius": 1.2}
   ]
 }
 ```
 
-Estruturas desenháveis: `floor`, `wall`, `ceiling`, `opening` (fases 2+)
-e `block` (fase 1, já implementado).
+## Campos
 
-## Implementado na Fase 1 (schema 1 atual)
+- `objective.type`: `reach_exit`, `eliminate_all`, `collect` ou `survive`.
+  `target` vale para fichas; `durationSeconds` para sobreviver;
+  `timeLimitSeconds` é opcional para qualquer tipo. Metas de estrelas são
+  opcionais.
+- `environment.sky`: `none`, `day`, `dusk` ou `night`.
+- `environment.soundscape`: campo opcional `auto`, `outdoor`, `tunnel` ou
+  `industrial`. Ausente/`auto` preserva o ambiente externo dos mapas antigos.
+- Estruturas: `kind` é `block` ou `poly`; `role` é `floor`, `wall`,
+  `ceiling` ou `block`. Em `poly`, `polygon` contém pares X,Z absolutos.
+- Materiais: `plain`, `brick`, `wood`, `checker`, `metal`, `asphalt`, `water`
+  e `lava`. Asfalto recebe granulação procedural; água reduz a velocidade e
+  lava causa dano. `color2`/`color3` pintam os dois lados de paredes retas ou
+  diagonais.
+- Vãos: `door`, `portal` ou `window`; `offset` percorre o eixo da parede,
+  inclusive diagonal. `sill` é o peitoril.
+- `locked` pode existir em estrutura, prefab, marcador ou vão e afeta só o
+  editor.
+- Prefabs guardam `prefabId`, transformação, escala e apenas propriedades
+  permitidas pelo catálogo. Patrulha usa `patrolX`/`patrolZ`; luminárias
+  podem deslocar a posição da luz em Y com `lightOffsetY`.
+- `npc.human` é uma pessoa amigável. Suas propriedades textuais são `name`
+  (48 caracteres), `role` (80), `greeting` (240) e `background` (600). Elas
+  são dados narrativos; nunca viram código, comando ou nome de classe. O NPC
+  funciona com fala local mesmo quando a integração de IA está desligada. O
+  papel e o contexto também permitem derivar localmente uma personalidade
+  estável para o estilo da conversa e pequenas variações de ritmo/tom no TTS;
+  isso não acrescenta campo ao JSON.
+- Há exatamente um `player_spawn`. Uma `exit` é obrigatória somente para
+  `reach_exit`. Portas e terminais podem ser múltiplos; `controllerId` liga
+  um portão a um terminal e `order` cria sequência de terminais.
 
-- Estrutura `block`: paralelepípedo alinhado aos eixos. `transform` é o
-  CENTRO, `"half": [hx, hy, hz]` são meias dimensões e `"color": [r, g, b]`
-  a cor 0..1. Meias dimensões (e não dimensões totais) para reproduzir
-  bit a bit os níveis legados sem arredondamento de float.
-- Inimigos (`enemy.drone`, `enemy.drone.wave`, `enemy.mutant`):
-  propriedades `patrolX`/`patrolZ` = segundo ponto da patrulha
-  (padrão: parado na posição inicial).
-- `door.gate`: `transform` no centro, propriedades `halfX/halfY/halfZ`
-  (meias dimensões) e `controllerId` = id da instância do terminal.
-- Restrições da fase: exatamente 1 `player_spawn` e 1 `exit`; no máximo
-  1 terminal e 1 porta (limite atual do RuntimeLevel).
-- Números no JSON preservam o token (classe `Json.Num`) — a leitura usa
-  `Float.parseFloat` direto, sem passar por double.
-- `assets/maps/arena.json` é gerado por `LegacyTxtConverter` a partir de
-  `assets/levels/arena.txt`; `scripts/test-core.sh` falha se divergirem.
+## Andares e coordenada Y
 
-Famílias de prefab: `stairs.*`, `ramp.*`, `platform.*`, `obstacle.*`,
-`furniture.*`, `door.*`, `terminal.*`, `enemy.*`, `pickup.*`.
+Andares não exigem um campo novo: todas as transformações já usam coordenadas
+absolutas em metros. O editor deriva cada pavimento da geometria e trabalha
+com uma `baseY` ativa:
 
-Marcadores invisíveis: `player_spawn`, `exit`, `patrol_point`.
+- piso: o topo fica em `baseY`;
+- parede/bloco: a base fica em `baseY`;
+- teto padrão: a face inferior fica em `baseY + 3,00` e o topo da laje em
+  `baseY + 3,30`;
+- peças e marcadores somam sua altura local à `baseY`.
 
-Porta controlada referencia a instância do terminal por `controllerId`.
-O mapa salva `prefabId`, mas não copia a definição interna da peça.
+Assim, um teto térreo com `transform.y = 3.15` e `half[1] = 0.15` sustenta um
+novo pavimento em `Y = 3.30`. Uma parede criada sobre ele terá centro em
+`Y = 4.80`. A própria laje aparece tanto no andar que ela cobre quanto no
+andar apoiado sobre ela.
 
-Não salvar triângulos, normais, VBO, AABB derivada, seleção, cache de raycast
-ou estado temporário da partida.
+Início, saída, água/lava, terminais e portas respeitam Y no runtime. Uma saída
+ou porta automática não é acionada por um jogador alinhado em X/Z, mas em
+outro pavimento. Mapas antigos com saída em Y zero mantêm o formato runtime
+legado e o mesmo comportamento.
 
+## Compatibilidade e troca
+
+`MapMigration` converte schema 1 para schema 2 ao ler; o próximo salvamento
+grava o formato atual. A importação sempre dá um novo ID ao mapa, evitando
+sobrescrever conteúdo local. O mesmo JSON pode ser exportado como arquivo ou
+compactado no código `CJ2:`/QR.
+
+`assets/maps/arena.json` é gerado por `LegacyTxtConverter`; não deve ser
+editado à mão. `scripts/test-core.sh` compara o arquivo gerado bit a bit com
+o nível legado.

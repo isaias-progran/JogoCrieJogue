@@ -6,8 +6,8 @@ package br.com.termia.construajogue.prefab;
  * caixas visuais {cx,cy,cz,hx,hy,hz,r,g,b}; `colliders` são as caixas
  * de colisão {cx,cy,cz,hx,hy,hz} — normalmente uma só, mais simples que
  * o visual (ex.: mesa colide como um bloco, sem passar por baixo).
- * Cores > 1 fazem a cúpula das luminárias parecer acesa (o shader
- * multiplica; não há luz dinâmica de verdade).
+ * Cores > 1 fazem a cúpula das luminárias parecer acesa; prefabs
+ * `prop.lamp.*` também alimentam as luzes pontuais do runtime.
  */
 public final class PrefabMeshFactory {
 
@@ -108,6 +108,17 @@ public final class PrefabMeshFactory {
                 return new float[][]{
                         box(0, -0.20f, 0, 0.012f, 0.20f, 0.012f, GRAFITE),
                         box(0, -0.48f, 0, 0.09f, 0.08f, 0.09f, GLOW)};
+            case "prop.lamp.street":
+                // Poste urbano de 3,5 m: braço e luminária apontam para -Z.
+                return new float[][]{
+                        box(0, 0.12f, 0, 0.22f, 0.12f, 0.22f, CONCRETE),
+                        box(0, 1.86f, 0, 0.055f, 1.68f, 0.055f, GRAFITE),
+                        box(0, 3.52f, -0.25f,
+                                0.055f, 0.055f, 0.30f, GRAFITE),
+                        box(0, 3.46f, -0.57f,
+                                0.19f, 0.09f, 0.14f, METAL),
+                        box(0, 3.35f, -0.57f,
+                                0.15f, 0.025f, 0.10f, GLOW)};
             case "furniture.sink.kitchen":
                 return new float[][]{
                         box(0, 0.44f, 0, 0.60f, 0.44f, 0.30f, WOOD_DARK),
@@ -233,6 +244,9 @@ public final class PrefabMeshFactory {
                 return new float[][]{{0, 0.80f, 0, 0.14f, 0.80f, 0.14f}};
             case "prop.lamp.ceiling":
                 return new float[][]{};
+            case "prop.lamp.street":
+                return new float[][]{{0, 1.75f, 0,
+                        0.14f, 1.75f, 0.14f}};
             case "furniture.sink.kitchen":
                 return new float[][]{{0, 0.46f, 0, 0.62f, 0.46f, 0.31f}};
             case "furniture.sink.bath":

@@ -83,7 +83,7 @@ final class ControlOverlay {
 
     void draw(Canvas canvas, boolean moving, float anchorX, float anchorY,
               float knobX, float knobY, boolean firing,
-              boolean interactVisible) {
+              boolean interactVisible, String interactLabel) {
         if (moving) {
             canvas.drawCircle(anchorX, anchorY, maxRadius, ringPaint);
             canvas.drawCircle(knobX, knobY, knobRadius, knobPaint);
@@ -97,7 +97,8 @@ final class ControlOverlay {
         button(canvas, jumpX, jumpY, jumpRadius, "PULO", buttonPaint);
         if (interactVisible) {
             button(canvas, interactX, interactY, interactRadius,
-                    "ATIVAR", knobPaint);
+                    interactLabel == null ? "ATIVAR" : interactLabel,
+                    knobPaint);
         }
     }
 

@@ -156,6 +156,51 @@ public final class WallOpeningTest {
         Check.that(Math.abs(stubsB[0] - 0.15f) < 1e-4f,
                 "wb corta em z=0,15 se pintada");
 
+        // parede diagonal: o mesmo vão recorta visual e collider; os dois
+        // lados mantêm cores diferentes.
+        MapDocument diagonalDoc = new MapDocument();
+        diagonalDoc.id = "diagonal";
+        diagonalDoc.name = "diagonal";
+        diagonalDoc.structures.add(floor);
+        StructureObject diagonal = new StructureObject("wd",
+                StructureObject.KIND_POLY);
+        diagonal.role = StructureObject.ROLE_WALL;
+        diagonal.transform.y = 1.5f;
+        diagonal.half = new float[]{0f, 1.5f, 0f};
+        diagonal.polygon = new float[]{-3.1f, -2.9f, 2.9f, 3.1f,
+                3.1f, 2.9f, -2.9f, -3.1f};
+        diagonal.color = new float[]{0.4f, 0.4f, 0.4f};
+        diagonal.color2 = new float[]{0.9f, 0.1f, 0.1f};
+        diagonal.color3 = new float[]{0.1f, 0.1f, 0.9f};
+        diagonal.syncPolyBounds();
+        WallOpening diagonalDoor = new WallOpening("dd", WallOpening.DOOR);
+        diagonalDoor.width = 1.4f;
+        diagonalDoor.height = 2.1f;
+        diagonal.openings.add(diagonalDoor);
+        diagonalDoc.structures.add(diagonal);
+        diagonalDoc.markers.add(spawn);
+        diagonalDoc.markers.add(exit);
+        Check.that(!MapValidator.hasError(MapValidator.validate(
+                diagonalDoc, catalog)), "vão diagonal válido");
+        br.com.termia.construajogue.runtime.RuntimeLevel diagonalLevel =
+                LevelCompiler.compile(diagonalDoc, catalog);
+        boolean blockedCenter = false;
+        for (float[] box : diagonalLevel.colliders()) {
+            if (0f > box[0] && 0f < box[3]
+                    && 1f > box[1] && 1f < box[4]
+                    && 0f > box[2] && 0f < box[5]) {
+                blockedCenter = true;
+            }
+        }
+        Check.that(!blockedCenter, "porta diagonal atravessável");
+        boolean redSide = false, blueSide = false;
+        float[] diagonalVertices = diagonalLevel.vertexData();
+        for (int i = 6; i < diagonalVertices.length; i += 9) {
+            redSide |= Math.abs(diagonalVertices[i] - 0.9f) < 0.01f;
+            blueSide |= Math.abs(diagonalVertices[i + 2] - 0.9f) < 0.01f;
+        }
+        Check.that(redSide && blueSide, "lados diagonais pintados");
+
         // vão sobreposto e vão fora da parede são recusados
         WallOpening bad = new WallOpening("b", WallOpening.DOOR);
         bad.offset = -1.2f;

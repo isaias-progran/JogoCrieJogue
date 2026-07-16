@@ -28,6 +28,7 @@ public final class PrefabCatalogTest {
                 {"pickup.ammo", PrefabDefinition.BEHAVIOR_PICKUP_AMMO},
                 {"terminal.wall", PrefabDefinition.BEHAVIOR_TERMINAL},
                 {"door.gate", PrefabDefinition.BEHAVIOR_DOOR},
+                {"npc.human", PrefabDefinition.BEHAVIOR_NPC_HUMAN},
         };
         for (String[] pair : expected) {
             PrefabDefinition def = catalog.find(pair[0]);
@@ -43,6 +44,8 @@ public final class PrefabCatalogTest {
                 "kit não permite patrolX");
         Check.that(catalog.find("door.gate").allowsProperty("controllerId"),
                 "porta permite controllerId");
+        Check.that(catalog.find("npc.human").allowsProperty("greeting"),
+                "pessoa permite editar sua fala");
         Check.that(catalog.find("nao.existe") == null, "id inexistente");
 
         // toda peça estática do catálogo tem malha, collider e pegada

@@ -4,9 +4,11 @@ import br.com.termia.construajogue.engine.Collision;
 import br.com.termia.construajogue.geometry.Triangulator;
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.ObjectiveSpec;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
 import br.com.termia.construajogue.map.WallOpening;
+import br.com.termia.construajogue.map.WallGeometry;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.prefab.PrefabMeshFactory;
@@ -20,9 +22,8 @@ import java.util.Set;
 
 /**
  * Regras da seção 7 do PLANO aplicáveis à Fase 1 (mapas de blocos +
- * prefabs). Erros bloqueiam o teste; avisos não. Fase 1 exige exatamente
- * um início e uma saída e aceita no máximo um terminal e uma porta
- * (limite atual do RuntimeLevel).
+ * prefabs). Erros bloqueiam o teste; avisos não. Portas e terminais são
+ * múltiplos e ligados por controllerId.
  */
 public final class MapValidator {
 
@@ -44,6 +45,24 @@ public final class MapValidator {
         checkNumber(issues, "ambiente", doc.ambient);
         checkNumber(issues, "neblina", doc.fogFar);
         checkFloats(issues, "cor da neblina", doc.fogColor, 3);
+        checkColor(issues, "cor da neblina", doc.fogColor);
+        if (doc.ambient < 0f || doc.ambient > 1f) {
+            error(issues, "ambiente.faixa", "luz ambiente deve ficar entre 0 e 1");
+        }
+        if (doc.fogFar <= 0f) {
+            error(issues, "neblina.faixa", "alcance da neblina deve ser positivo");
+        }
+        if (!"none".equals(doc.sky) && !"day".equals(doc.sky)
+                && !"dusk".equals(doc.sky) && !"night".equals(doc.sky)) {
+            error(issues, "ceu.tipo", "tipo de céu desconhecido: " + doc.sky);
+        }
+        if (!"auto".equals(doc.soundscape)
+                && !"outdoor".equals(doc.soundscape)
+                && !"tunnel".equals(doc.soundscape)
+                && !"industrial".equals(doc.soundscape)) {
+            error(issues, "som.tipo", "paisagem sonora desconhecida: "
+                    + doc.soundscape);
+        }
 
         if (doc.structures.isEmpty()) {
             error(issues, "estrutura.nenhuma",
@@ -52,14 +71,21 @@ public final class MapValidator {
         for (StructureObject s : doc.structures) {
             String label = "estrutura " + shortId(s.id);
             checkId(issues, ids, s.id, label);
+            if (!knownMaterial(s.material)) {
+                error(issues, "material.desconhecido", label
+                        + ": material '" + s.material + "' não existe");
+            }
             if (StructureObject.KIND_POLY.equals(s.kind)) {
-                if (s.polygon == null || s.polygon.length < 6) {
+                if (s.polygon == null || s.polygon.length < 6
+                        || (s.polygon.length & 1) != 0) {
                     error(issues, "contorno.pontos",
-                            label + ": contorno precisa de 3+ pontos");
+                            label + ": contorno precisa de pares x/z para 3+ pontos");
                     continue;
                 }
                 checkFloats(issues, label + " (contorno)", s.polygon,
                         s.polygon.length);
+                checkFloats(issues, label + " (posição)", new float[]{
+                        s.transform.x, s.transform.y, s.transform.z}, 3);
                 if (Triangulator.selfIntersects(s.polygon)) {
                     error(issues, "contorno.cruzado",
                             label + ": o contorno cruza a si mesmo");
@@ -73,6 +99,18 @@ public final class MapValidator {
                             label + ": espessura deve ser positiva");
                 }
                 checkFloats(issues, label + " (cor)", s.color, 3);
+                checkColor(issues, label + " (cor)", s.color);
+                if (s.color2 != null) {
+                    checkFloats(issues, label + " (cor do lado)", s.color2, 3);
+                    checkColor(issues, label + " (cor do lado)", s.color2);
+                }
+                if (s.color3 != null) {
+                    checkFloats(issues, label + " (cor do lado)", s.color3, 3);
+                    checkColor(issues, label + " (cor do lado)", s.color3);
+                }
+                if (s.half != null && !s.openings.isEmpty()) {
+                    checkOpenings(issues, ids, s, label);
+                }
                 continue;
             }
             if (!StructureObject.KIND_BLOCK.equals(s.kind)) {
@@ -85,11 +123,14 @@ public final class MapValidator {
                     s.transform.x, s.transform.y, s.transform.z}, 3);
             checkFloats(issues, label + " (meias dimensões)", s.half, 3);
             checkFloats(issues, label + " (cor)", s.color, 3);
+            checkColor(issues, label + " (cor)", s.color);
             if (s.color2 != null) {
                 checkFloats(issues, label + " (cor do lado)", s.color2, 3);
+                checkColor(issues, label + " (cor do lado)", s.color2);
             }
             if (s.color3 != null) {
                 checkFloats(issues, label + " (cor do lado)", s.color3, 3);
+                checkColor(issues, label + " (cor do lado)", s.color3);
             }
             if (s.half != null && (s.half[0] <= 0f || s.half[1] <= 0f
                     || s.half[2] <= 0f)) {
@@ -102,6 +143,7 @@ public final class MapValidator {
         }
 
         int enemies = 0;
+        int objectiveTokens = 0;
         int itemsAndMarkers = doc.markers.size();
         List<PrefabInstance> doors = new ArrayList<>();
         List<PrefabInstance> terminals = new ArrayList<>();
@@ -116,15 +158,39 @@ public final class MapValidator {
             }
             label = def.name + " " + shortId(p.id);
             checkFloats(issues, label + " (posição)", new float[]{
-                    p.transform.x, p.transform.y, p.transform.z}, 3);
+                    p.transform.x, p.transform.y, p.transform.z,
+                    p.transform.yaw}, 4);
+            checkNumber(issues, label + " (escala)", p.scale);
+            if (p.scale <= 0f) {
+                error(issues, "peca.escala", label
+                        + ": escala deve ser positiva");
+            }
             for (Map.Entry<String, Object> entry : p.properties.entrySet()) {
                 if (!def.allowsProperty(entry.getKey())) {
                     error(issues, "peca.propriedade", label
                             + ": propriedade '" + entry.getKey()
                             + "' não permitida");
                 }
-                if (entry.getValue() instanceof Float
-                        && !finite((Float) entry.getValue())) {
+                boolean textProperty = "controllerId".equals(entry.getKey())
+                        || (PrefabDefinition.BEHAVIOR_NPC_HUMAN
+                        .equals(def.behavior)
+                        && isNpcTextProperty(entry.getKey()));
+                if (textProperty && (!(entry.getValue() instanceof String)
+                        || blank((String) entry.getValue()))) {
+                    error(issues, "peca.propriedade", label
+                            + ": propriedade '" + entry.getKey()
+                            + "' deve ser um texto válido");
+                } else if (textProperty && ((String) entry.getValue()).length()
+                        > npcTextLimit(entry.getKey())) {
+                    error(issues, "peca.propriedade", label
+                            + ": texto '" + entry.getKey() + "' é longo demais");
+                } else if (!textProperty
+                        && !(entry.getValue() instanceof Number)) {
+                    error(issues, "peca.propriedade", label
+                            + ": propriedade '" + entry.getKey()
+                            + "' deve ser numérica");
+                } else if (entry.getValue() instanceof Number
+                        && !finite(((Number) entry.getValue()).floatValue())) {
                     error(issues, "peca.numero", label
                             + ": propriedade '" + entry.getKey()
                             + "' com número inválido");
@@ -134,16 +200,28 @@ public final class MapValidator {
                 case PrefabDefinition.BEHAVIOR_DRONE:
                 case PrefabDefinition.BEHAVIOR_DRONE_DORMANT:
                 case PrefabDefinition.BEHAVIOR_MUTANT:
+                case PrefabDefinition.BEHAVIOR_TURRET:
+                case PrefabDefinition.BEHAVIOR_KAMIKAZE:
+                case PrefabDefinition.BEHAVIOR_BOSS:
                     enemies++;
+                    break;
+                case PrefabDefinition.BEHAVIOR_NPC_HUMAN:
+                    itemsAndMarkers++;
                     break;
                 case PrefabDefinition.BEHAVIOR_PICKUP_HEALTH:
                 case PrefabDefinition.BEHAVIOR_PICKUP_AMMO:
+                case PrefabDefinition.BEHAVIOR_PICKUP_SPECIAL:
+                    itemsAndMarkers++;
+                    break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_TOKEN:
+                    objectiveTokens++;
                     itemsAndMarkers++;
                     break;
                 case PrefabDefinition.BEHAVIOR_TERMINAL:
                     terminals.add(p);
                     break;
                 case PrefabDefinition.BEHAVIOR_DOOR:
+                case PrefabDefinition.BEHAVIOR_AUTO_DOOR:
                     doors.add(p);
                     break;
                 case PrefabDefinition.BEHAVIOR_STATIC:
@@ -157,29 +235,56 @@ public final class MapValidator {
             }
         }
 
-        if (terminals.size() > 1) {
-            error(issues, "terminal.varios",
-                    "só um terminal por mapa na fase atual");
+        Set<Integer> terminalOrders = new HashSet<>();
+        int highestTerminalOrder = 0;
+        for (PrefabInstance terminal : terminals) {
+            int order = Math.round(terminal.floatProperty("order", 0f));
+            float rawOrder = terminal.floatProperty("order", 0f);
+            if (Math.abs(rawOrder - order) > 0.001f) {
+                error(issues, "terminal.ordem", "ordem do terminal deve "
+                        + "ser um número inteiro");
+            }
+            if (order < 0) {
+                error(issues, "terminal.ordem", "terminal "
+                        + shortId(terminal.id) + ": ordem deve ser positiva");
+            } else if (order > 0 && !terminalOrders.add(order)) {
+                error(issues, "terminal.ordem", "ordem de terminal "
+                        + order + " repetida");
+            }
+            highestTerminalOrder = Math.max(highestTerminalOrder, order);
         }
-        if (doors.size() > 1) {
-            error(issues, "porta.varias",
-                    "só uma porta por mapa na fase atual");
+        for (int order = 1; order <= highestTerminalOrder; order++) {
+            if (!terminalOrders.contains(order)) {
+                error(issues, "terminal.ordem", "sequência de terminais "
+                        + "não tem a ordem " + order);
+            }
         }
         for (PrefabInstance door : doors) {
-            String controller = door.stringProperty("controllerId");
-            PrefabInstance target = doc.findInstance(controller);
-            PrefabDefinition targetDef = target == null ? null
-                    : catalog.find(target.prefabId);
-            if (targetDef == null || !PrefabDefinition.BEHAVIOR_TERMINAL
-                    .equals(targetDef.behavior)) {
-                error(issues, "porta.terminal", "porta " + shortId(door.id)
-                        + " não aponta para um terminal existente");
+            PrefabDefinition doorDef = catalog.find(door.prefabId);
+            if (doorDef != null && PrefabDefinition.BEHAVIOR_DOOR
+                    .equals(doorDef.behavior)) {
+                String controller = door.stringProperty("controllerId");
+                PrefabInstance target = doc.findInstance(controller);
+                PrefabDefinition targetDef = target == null ? null
+                        : catalog.find(target.prefabId);
+                if (targetDef == null || !PrefabDefinition.BEHAVIOR_TERMINAL
+                        .equals(targetDef.behavior)) {
+                    error(issues, "porta.terminal", "porta "
+                            + shortId(door.id)
+                            + " não aponta para um terminal existente");
+                }
             }
             if (door.floatProperty("halfX", 0f) <= 0f
                     || door.floatProperty("halfY", 0f) <= 0f
                     || door.floatProperty("halfZ", 0f) <= 0f) {
                 error(issues, "porta.dimensao", "porta " + shortId(door.id)
                         + ": halfX/halfY/halfZ devem ser positivos");
+            }
+        }
+        for (PrefabInstance p : doc.prefabs) {
+            if (p.prefabId.startsWith("prop.lamp.")
+                    && p.floatProperty("lightRadius", 6f) <= 0f) {
+                error(issues, "luz.raio", "raio da luminária deve ser positivo");
             }
         }
 
@@ -199,6 +304,9 @@ public final class MapValidator {
                     error(issues, "saida.raio",
                             "a saída precisa de raio positivo");
                 }
+            } else {
+                error(issues, "marcador.tipo", "tipo de marcador desconhecido: "
+                        + m.type);
             }
         }
         if (spawns != 1) {
@@ -206,11 +314,17 @@ public final class MapValidator {
                     ? "o mapa precisa de um início"
                     : "o mapa tem mais de um início");
         }
-        if (exits != 1) {
+        String objective = doc.objective == null
+                ? ObjectiveSpec.REACH_EXIT : doc.objective.type;
+        if (ObjectiveSpec.REACH_EXIT.equals(objective) && exits != 1) {
             error(issues, "saida.unica", exits == 0
-                    ? "o mapa precisa de uma saída"
-                    : "só uma saída por mapa na fase atual");
+                    ? "o objetivo exige uma saída"
+                    : "só uma saída por mapa");
+        } else if (!ObjectiveSpec.REACH_EXIT.equals(objective) && exits > 1) {
+            error(issues, "saida.unica", "só uma saída por mapa");
         }
+
+        validateObjective(issues, doc, enemies, objectiveTokens);
 
         if (spawn != null) {
             checkSpawnFree(issues, doc, spawn);
@@ -268,7 +382,7 @@ public final class MapValidator {
     private static void checkOpenings(List<ValidationIssue> issues,
                                       Set<String> ids, StructureObject s,
                                       String label) {
-        float halfLen = Math.max(s.half[0], s.half[2]);
+        float halfLen = WallGeometry.halfLength(s);
         float wallHeight = s.half[1] * 2f;
         List<WallOpening> sorted = new ArrayList<>(s.openings);
         sorted.sort((a, c) -> Float.compare(a.offset, c.offset));
@@ -327,6 +441,91 @@ public final class MapValidator {
                                     String label, float value) {
         if (!finite(value)) {
             error(issues, "numero.invalido", label + ": número inválido");
+        }
+    }
+
+    private static void checkColor(List<ValidationIssue> issues,
+                                   String label, float[] color) {
+        if (color == null || color.length != 3) return;
+        for (float component : color) {
+            if (component < 0f || component > 1f) {
+                error(issues, "cor.faixa", label
+                        + ": componentes devem ficar entre 0 e 1");
+                return;
+            }
+        }
+    }
+
+    private static boolean knownMaterial(String material) {
+        String value = material == null ? "plain" : material;
+        return "plain".equals(value) || "brick".equals(value)
+                || "wood".equals(value) || "checker".equals(value)
+                || "metal".equals(value) || "water".equals(value)
+                || "lava".equals(value) || "asphalt".equals(value);
+    }
+
+    private static boolean isNpcTextProperty(String name) {
+        return "name".equals(name) || "role".equals(name)
+                || "greeting".equals(name) || "background".equals(name);
+    }
+
+    private static int npcTextLimit(String name) {
+        if ("name".equals(name)) return 48;
+        if ("role".equals(name)) return 80;
+        if ("greeting".equals(name)) return 240;
+        if ("background".equals(name)) return 600;
+        // controllerId e qualquer futuro texto restrito continuam pequenos.
+        return 128;
+    }
+
+    private static void validateObjective(List<ValidationIssue> issues,
+                                          MapDocument doc, int enemies,
+                                          int tokens) {
+        ObjectiveSpec o = doc.objective == null
+                ? new ObjectiveSpec() : doc.objective;
+        if (!ObjectiveSpec.REACH_EXIT.equals(o.type)
+                && !ObjectiveSpec.ELIMINATE_ALL.equals(o.type)
+                && !ObjectiveSpec.COLLECT.equals(o.type)
+                && !ObjectiveSpec.SURVIVE.equals(o.type)) {
+            error(issues, "objetivo.tipo",
+                    "tipo de objetivo desconhecido: " + o.type);
+        }
+        if (ObjectiveSpec.ELIMINATE_ALL.equals(o.type) && enemies == 0) {
+            error(issues, "objetivo.inimigos",
+                    "eliminar todos exige ao menos um inimigo");
+        }
+        if (ObjectiveSpec.COLLECT.equals(o.type)) {
+            if (o.target <= 0) {
+                error(issues, "objetivo.alvo",
+                        "coletar exige quantidade maior que zero");
+            } else if (tokens < o.target) {
+                error(issues, "objetivo.fichas", "há " + tokens
+                        + " fichas, mas o objetivo pede " + o.target);
+            }
+        }
+        if (ObjectiveSpec.SURVIVE.equals(o.type)
+                && o.durationSeconds <= 0f) {
+            error(issues, "objetivo.duracao",
+                    "sobreviver exige duração maior que zero");
+        }
+        if (ObjectiveSpec.SURVIVE.equals(o.type)
+                && o.timeLimitSeconds > 0f
+                && o.timeLimitSeconds <= o.durationSeconds) {
+            error(issues, "objetivo.tempo",
+                    "o tempo-limite deve ser maior que a sobrevivência");
+        }
+        checkNumber(issues, "objetivo", o.durationSeconds);
+        checkNumber(issues, "objetivo", o.timeLimitSeconds);
+        checkNumber(issues, "objetivo", o.twoStarSeconds);
+        checkNumber(issues, "objetivo", o.threeStarSeconds);
+        if (o.timeLimitSeconds < 0f || o.twoStarSeconds < 0f
+                || o.threeStarSeconds < 0f) {
+            error(issues, "objetivo.tempo", "tempos não podem ser negativos");
+        }
+        if (o.twoStarSeconds > 0f && o.threeStarSeconds > 0f
+                && o.threeStarSeconds > o.twoStarSeconds) {
+            error(issues, "objetivo.estrelas",
+                    "meta de 3 estrelas deve ser menor que a de 2");
         }
     }
 

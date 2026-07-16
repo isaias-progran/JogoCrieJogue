@@ -91,8 +91,9 @@ public final class Mutant implements Enemy {
 
         y = standingY;
         float dx = px - x;
+        float dy = py - (y + 0.55f);
         float dz = pz - z;
-        float dist = (float) Math.hypot(dx, dz);
+        float dist = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         boolean sees = playerAlive && dist < SIGHT_RANGE
                 && lineOfSight(px, py, pz, boxes);
         if (sees) {

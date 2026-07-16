@@ -23,6 +23,34 @@
       "properties": ["patrolX", "patrolZ"]
     },
     {
+      "id": "enemy.turret",
+      "name": "Torreta fixa",
+      "category": "jogo",
+      "behavior": "turret",
+      "properties": []
+    },
+    {
+      "id": "enemy.kamikaze",
+      "name": "Drone kamikaze",
+      "category": "jogo",
+      "behavior": "kamikaze",
+      "properties": ["patrolX", "patrolZ"]
+    },
+    {
+      "id": "enemy.boss",
+      "name": "Drone chefe",
+      "category": "jogo",
+      "behavior": "boss",
+      "properties": ["patrolX", "patrolZ"]
+    },
+    {
+      "id": "npc.human",
+      "name": "Pessoa amigável",
+      "category": "jogo",
+      "behavior": "npc_human",
+      "properties": ["name", "role", "greeting", "background"]
+    },
+    {
       "id": "pickup.health",
       "name": "Kit médico",
       "category": "jogo",
@@ -37,11 +65,25 @@
       "properties": []
     },
     {
+      "id": "pickup.token",
+      "name": "Ficha de objetivo",
+      "category": "jogo",
+      "behavior": "pickup_token",
+      "properties": []
+    },
+    {
+      "id": "pickup.special",
+      "name": "Munição especial",
+      "category": "jogo",
+      "behavior": "pickup_special",
+      "properties": []
+    },
+    {
       "id": "terminal.wall",
       "name": "Terminal",
       "category": "jogo",
       "behavior": "terminal",
-      "properties": []
+      "properties": ["order"]
     },
     {
       "id": "door.gate",
@@ -49,6 +91,13 @@
       "category": "jogo",
       "behavior": "door",
       "properties": ["halfX", "halfY", "halfZ", "controllerId"]
+    },
+    {
+      "id": "door.auto",
+      "name": "Porta automática",
+      "category": "jogo",
+      "behavior": "auto_door",
+      "properties": ["halfX", "halfY", "halfZ"]
     },
     {
       "id": "furniture.table",
@@ -118,14 +167,21 @@
       "name": "Luminária de pé",
       "category": "objetos",
       "behavior": "static",
-      "properties": []
+      "properties": ["lightR", "lightG", "lightB", "lightRadius"]
     },
     {
       "id": "prop.lamp.ceiling",
       "name": "Lâmpada de teto",
       "category": "objetos",
       "behavior": "static",
-      "properties": []
+      "properties": ["lightR", "lightG", "lightB", "lightRadius"]
+    },
+    {
+      "id": "prop.lamp.street",
+      "name": "Poste urbano iluminado",
+      "category": "objetos",
+      "behavior": "static",
+      "properties": ["lightR", "lightG", "lightB", "lightRadius", "lightOffsetY"]
     },
     {
       "id": "furniture.sink.kitchen",

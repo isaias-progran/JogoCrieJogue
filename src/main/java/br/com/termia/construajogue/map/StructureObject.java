@@ -1,10 +1,9 @@
 package br.com.termia.construajogue.map;
 
 /**
- * Estrutura desenhada pelo usuário. Fase 1 suporta apenas `block`
- * (paralelepípedo alinhado aos eixos: transform = centro, half = meias
- * dimensões — sem conversão para reproduzir bit a bit os níveis legados).
- * Fases seguintes acrescentam floor/wall/ceiling com polygon/path.
+ * Estrutura desenhada pelo usuário: `block` alinhado aos eixos ou laje
+ * `poly`. transform = centro e half = meias dimensões; isso também mantém
+ * os níveis legados bit a bit.
  */
 public final class StructureObject {
 
@@ -22,6 +21,10 @@ public final class StructureObject {
     public String kind;
     /** Opcional (mapas convertidos não têm); só o editor usa. */
     public String role;
+    /** Material procedural: plain, brick, wood, checker, metal, water/lava. */
+    public String material = "plain";
+    /** Trava persistente do editor; não altera a compilação do mapa. */
+    public boolean locked;
     public Transform transform = new Transform();
     /** Meias dimensões {hx, hy, hz} para `block`. */
     public float[] half;
