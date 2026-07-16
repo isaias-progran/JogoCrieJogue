@@ -8,6 +8,27 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.0 (versionCode 45) — setores distintos e malha viária pela rota.**
+  - Campanhas multi-setor saíam clones: o modelo não sabia da divisão e
+    mandava 1–2 zones, `zoneAt` repetia por floorMod e o construtor aplicava
+    os mesmos features em todo setor (16 usos de random em 1326 linhas =
+    jitter cosmético). Agora a instrução exige 4–6 zones DISTINTAS para
+    cidade/mundo enorme; setor além das zones descritas gira a planta
+    (`rotatedLayout`: street→courtyard→campus→hub→maze→linear) e
+    água/lava alternam por paridade de setor.
+  - A rota passou a comandar a malha viária da cidade (antes era só faixa
+    decorativa): `direct` = avenida, `branching` = avenida com transversais
+    desobstruídas, `loop` = avenidas gêmeas com quadra central (circulável),
+    `maze` = avenida em cruz com quadras nos quatro quadrantes — o desenho
+    da Cidade Aurora, usada como referência de complexidade. Cidade ganha
+    faixa central tracejada, faixas de pedestres no cruzamento (maze) e
+    volumes de skyline nos cantos dos setores huge.
+  - Segurança intacta: a IA continua só escolhendo valores fechados do
+    schema; toda geometria nova nasce no construtor local e passa pelo
+    mesmo validador. Suíte com 598 verificações (8 novas: setores não
+    clonados, perigos alternados, três malhas distintas, faixa central e
+    instrução); APK assinado com 329.153 bytes nesta build. Falta validar
+    no aparelho com uma chave real.
 - **v0.21.3 (versionCode 44) — desenho da planta extraído para PlanRenderer.**
   - `PlanEditorView` caiu de 2264 para 1695 linhas: o bloco de desenho
     inteiro (grade, estruturas, vãos, peças, rotas, contorno, alças, cotas)

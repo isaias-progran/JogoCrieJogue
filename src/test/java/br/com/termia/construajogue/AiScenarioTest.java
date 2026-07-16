@@ -80,6 +80,8 @@ public final class AiScenarioTest {
                 "armazenamento remoto é desativado");
         Check.that(!root.containsKey("tools"),
                 "requisição não entrega ferramentas à IA");
+        Check.that(request.contains("nunca repita zones iguais"),
+                "instrução exige zonas distintas para os setores");
         Map<?, ?> text = (Map<?, ?>) root.get("text");
         Map<?, ?> format = (Map<?, ?>) text.get("format");
         Check.equal(format.get("type"), "json_schema",
@@ -286,6 +288,36 @@ public final class AiScenarioTest {
         Check.equal(lazyLoads.get(), 1,
                 "campanha não pré-carrega os outros três setores");
 
+        Check.that(!geometry(sectors.get(0)).equals(geometry(sectors.get(2))),
+                "setor além das zones descritas não clona a planta");
+        Check.that(!geometry(sectors.get(1)).equals(geometry(sectors.get(3))),
+                "quarto setor também sai diferente do segundo");
+        Check.that(usesMaterial(sectors.get(0), "water")
+                        && !usesMaterial(sectors.get(0), "lava"),
+                "perigos alternam: água abre a campanha sem lava");
+        Check.that(usesMaterial(sectors.get(1), "lava")
+                        && !usesMaterial(sectors.get(1), "water"),
+                "perigos alternam: lava aparece no segundo setor");
+
+        MapDocument directCity = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan().replace(
+                        "\"route\":\"branching\"", "\"route\":\"direct\"")));
+        MapDocument loopCity = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan().replace(
+                        "\"route\":\"branching\"", "\"route\":\"loop\"")));
+        MapDocument crossCity = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan().replace(
+                        "\"route\":\"branching\"", "\"route\":\"maze\"")));
+        Check.that(!geometry(directCity).equals(geometry(loopCity)),
+                "rota loop vira avenidas gêmeas, não a mesma rua");
+        Check.that(!geometry(directCity).equals(geometry(crossCity)),
+                "rota maze vira avenida em cruz com quadras");
+        int dashes = 0;
+        for (StructureObject s : directCity.structures) {
+            if (s.half[0] == 0.12f) dashes++;
+        }
+        Check.that(dashes >= 4, "cidade ganha faixa central tracejada");
+
         AiScenarioPlan tunnelPlan = AiScenarioPlan.parse(validPlan().replace(
                 "\"setting\":\"city\"", "\"setting\":\"tunnel\""));
         MapDocument tunnel = AiScenarioBuilder.build(tunnelPlan);
@@ -421,6 +453,26 @@ public final class AiScenarioTest {
         }
 
         Check.done("AiScenarioTest");
+    }
+
+    /** Impressão da geometria: papel, material e caixa de cada estrutura. */
+    private static String geometry(MapDocument doc) {
+        StringBuilder out = new StringBuilder();
+        for (StructureObject s : doc.structures) {
+            out.append(s.role).append(':').append(s.material).append(':')
+                    .append(s.transform.x).append(',')
+                    .append(s.transform.z).append(',')
+                    .append(s.half[0]).append(',').append(s.half[2])
+                    .append(';');
+        }
+        return out.toString();
+    }
+
+    private static boolean usesMaterial(MapDocument doc, String material) {
+        for (StructureObject s : doc.structures) {
+            if (material.equals(s.material)) return true;
+        }
+        return false;
     }
 
     private static String validPlan() {

@@ -72,11 +72,14 @@ public final class AiScenarioBuilder {
                 && !isUnderground(plan)) {
             streetLights(doc, half, profile.rows() * 2);
         }
-        if (plan.hasFeature("water")) {
+        // Em campanha os perigos alternam entre setores em vez de clonar.
+        if (plan.hasFeature("water")
+                && (totalSectors == 1 || sector % 2 == 0)) {
             hazard(doc, "water", isUnderground(plan)
                     ? -2.25f : -half + 3.2f, -half * 0.25f);
         }
-        if (plan.hasFeature("lava")) {
+        if (plan.hasFeature("lava")
+                && (totalSectors == 1 || sector % 2 == 1)) {
             hazard(doc, "lava", isUnderground(plan)
                     ? 2.25f : half - 3.2f, -half * 0.35f);
         }
@@ -200,6 +203,9 @@ public final class AiScenarioBuilder {
             return;
         }
         String layout = layoutForZone(plan.layout, zone);
+        if (sector >= plan.zones.size()) {
+            layout = rotatedLayout(layout, sector / plan.zones.size());
+        }
         if ("single_building".equals(layout)
                 || "vertical".equals(layout)) {
             buildFocalBuilding(doc, plan, profile, zone);
@@ -233,6 +239,21 @@ public final class AiScenarioBuilder {
                                         AiScenarioPlan.Zone zone) {
         if ("tunnel".equals(zone.kind)) return "underground";
         return requested;
+    }
+
+    /**
+     * Setor além das zones descritas pela IA não repete a planta: gira
+     * entre as plantas abertas para a campanha ter cenários distintos.
+     */
+    private static String rotatedLayout(String layout, int wrap) {
+        String[] open = {"street", "courtyard", "campus", "hub",
+                "maze", "linear"};
+        for (int i = 0; i < open.length; i++) {
+            if (open[i].equals(layout)) {
+                return open[(i + wrap) % open.length];
+            }
+        }
+        return open[Math.floorMod(wrap - 1, open.length)];
     }
 
     private static void buildThemedStreet(MapDocument doc,
@@ -751,22 +772,115 @@ public final class AiScenarioBuilder {
         return "metal";
     }
 
+    /** A rota escolhe a malha viária: reta, avenidas gêmeas ou cruzamentos. */
     private static void buildCity(MapDocument doc, AiScenarioPlan plan,
                                   AiScenarioProfile profile, Random random) {
-        int buildings = Math.min(profile.rows() * 2,
-                Math.max(1, plan.buildingCount));
-        int rows = (buildings + 1) / 2;
         float half = profile.halfSize();
         float roomX = "huge".equals(profile.sectorSize()) ? 7.2f
                 : "large".equals(profile.sectorSize()) ? 6.5f
                 : "medium".equals(profile.sectorSize()) ? 5.2f : 4.0f;
         float roomZ = "huge".equals(profile.sectorSize()) ? 3.65f
                 : "large".equals(profile.sectorSize()) ? 3.2f : 2.6f;
+        if ("loop".equals(plan.route) && half >= 24f) {
+            buildTwinAvenues(doc, plan, profile, random,
+                    half, roomX, roomZ);
+        } else if ("maze".equals(plan.route) && half >= 20f) {
+            buildCrossQuarters(doc, plan, profile, random,
+                    half, roomX, roomZ);
+        } else {
+            buildAvenue(doc, plan, profile, random, half, roomX, roomZ,
+                    "branching".equals(plan.route));
+        }
+        if ("city".equals(plan.setting)) {
+            roadCenterLine(doc, half);
+            if ("huge".equals(profile.sectorSize())) {
+                skylineVolumes(doc, half, random);
+            }
+        }
+    }
+
+    /**
+     * maze na cidade: avenida em cruz com quadras nos quatro quadrantes,
+     * o desenho da Cidade Aurora — referência de complexidade do app.
+     */
+    private static void buildCrossQuarters(MapDocument doc,
+                                           AiScenarioPlan plan,
+                                           AiScenarioProfile profile,
+                                           Random random, float half,
+                                           float roomX, float roomZ) {
+        int buildings = Math.min(profile.rows() * 2,
+                Math.max(4, plan.buildingCount));
         float roadHalf = 3.2f;
+        for (int index = 0; index < buildings; index++) {
+            int quadrant = index % 4;
+            int ring = index / 4;
+            float qx = quadrant % 2 == 0 ? -1f : 1f;
+            float qz = quadrant < 2 ? -1f : 1f;
+            float hx = roomX * (0.78f + random.nextFloat() * 0.12f);
+            float hz = roomZ * (0.88f + random.nextFloat() * 0.18f);
+            float cx = qx * (roadHalf + hx + 0.4f);
+            float cz = qz * (roadHalf + hz + 0.8f
+                    + ring * (hz * 2f + 2.4f));
+            if (Math.abs(cz) + hz > half - 1.2f) continue;
+            addRoom(doc, cx, cz, hx, hz, (int) -qx, plan, index, random);
+        }
+        if ("city".equals(plan.setting)) {
+            crosswalks(doc, roadHalf);
+        }
+    }
+
+    /** Faixas de pedestres nas bocas do cruzamento, como na Aurora. */
+    private static void crosswalks(MapDocument doc, float roadHalf) {
+        float[] white = {0.88f, 0.88f, 0.86f};
+        for (int approach = 0; approach < 2; approach++) {
+            float z = (approach == 0 ? -1f : 1f) * (roadHalf + 1.2f);
+            for (int stripe = -1; stripe <= 1; stripe++) {
+                block(doc, StructureObject.ROLE_FLOOR, "plain",
+                        stripe * 1.1f, 0.02f, z, 0.38f, 0.02f, 0.55f,
+                        white);
+            }
+        }
+    }
+
+    /** Volumes simples de skyline nos cantos: cidade grande tem horizonte. */
+    private static void skylineVolumes(MapDocument doc, float half,
+                                       Random random) {
+        float edge = half - 3.4f;
+        for (int corner = 0; corner < 4; corner++) {
+            float sx = corner % 2 == 0 ? -edge : edge;
+            float sz = corner < 2 ? -edge : edge;
+            float height = 6.5f + random.nextFloat() * 3.5f;
+            block(doc, StructureObject.ROLE_BLOCK, "metal",
+                    sx, height / 2f, sz, 2.4f, height / 2f, 2.4f,
+                    new float[]{0.16f, 0.19f, 0.24f});
+        }
+    }
+
+    private static void buildAvenue(MapDocument doc, AiScenarioPlan plan,
+                                    AiScenarioProfile profile, Random random,
+                                    float half, float roomX, float roomZ,
+                                    boolean crossings) {
+        int buildings = Math.min(profile.rows() * 2,
+                Math.max(1, plan.buildingCount));
+        int rows = (buildings + 1) / 2;
+        float roadHalf = 3.2f;
+        float crossA = -Math.min(half * 0.26f, 7f);
+        float crossB = Math.min(half * 0.20f, 5f);
         for (int row = 0; row < rows; row++) {
             float z = rowPosition(row, rows, half, 6.2f, 7.2f);
             if (row > 0 && row + 1 < rows) {
                 z += (random.nextFloat() - 0.5f) * 1.4f;
+            }
+            if (crossings) {
+                // Transversais do branching viram ruas de verdade: o
+                // quarteirão sai da faixa em vez de bloquear o cruzamento.
+                float clear = roomZ + 1.6f;
+                if (Math.abs(z - crossA) < clear) {
+                    z = crossA + (z >= crossA ? clear : -clear);
+                }
+                if (Math.abs(z - crossB) < clear) {
+                    z = crossB + (z >= crossB ? clear : -clear);
+                }
             }
             float leftX = roomX * (0.90f + random.nextFloat() * 0.10f);
             float rightX = roomX * (0.90f + random.nextFloat() * 0.10f);
@@ -781,6 +895,51 @@ public final class AiScenarioBuilder {
                 addRoom(doc, roadHalf + rightX, z, rightX, rightZ,
                         1, plan, leftIndex + 1, random);
             }
+        }
+    }
+
+    /** loop: duas avenidas paralelas com quadra central — dá para circular. */
+    private static void buildTwinAvenues(MapDocument doc, AiScenarioPlan plan,
+                                         AiScenarioProfile profile,
+                                         Random random, float half,
+                                         float roomX, float roomZ) {
+        int buildings = Math.min(profile.rows() * 3,
+                Math.max(3, plan.buildingCount));
+        int rows = (buildings + 2) / 3;
+        float roadHalf = 3.2f;
+        float span = Math.min(half * 0.45f, roomX * 2f + roadHalf * 2.4f);
+        for (int row = 0; row < rows; row++) {
+            float z = rowPosition(row, rows, half, 6.2f, 7.2f);
+            if (row > 0 && row + 1 < rows) {
+                z += (random.nextFloat() - 0.5f) * 1.4f;
+            }
+            for (int col = 0; col < 3; col++) {
+                int index = row * 3 + col;
+                if (index >= buildings) break;
+                float hx = roomX * (0.72f + random.nextFloat() * 0.10f);
+                float hz = roomZ * (0.88f + random.nextFloat() * 0.18f);
+                float cx = col == 0 ? -(span + roadHalf + hx)
+                        : col == 2 ? span + roadHalf + hx : 0f;
+                int side = col == 0 ? -1
+                        : col == 2 ? 1 : (row % 2 == 0 ? -1 : 1);
+                if (col == 1) {
+                    hx = Math.min(hx, span - roadHalf - 0.6f);
+                    if (hx < 1.6f) continue;
+                }
+                addRoom(doc, cx, z, hx, hz, side, plan, index, random);
+            }
+        }
+    }
+
+    /** Faixa central tracejada da avenida, como na Cidade Aurora. */
+    private static void roadCenterLine(MapDocument doc, float half) {
+        float reach = half - 6.5f;
+        int dashes = Math.max(4, (int) (reach / 4f));
+        for (int i = 0; i < dashes; i++) {
+            float z = -reach + (2f * reach) * i / (dashes - 1f);
+            block(doc, StructureObject.ROLE_FLOOR, "plain",
+                    0f, 0.02f, z, 0.12f, 0.02f, 1.1f,
+                    new float[]{0.92f, 0.90f, 0.78f});
         }
     }
 
