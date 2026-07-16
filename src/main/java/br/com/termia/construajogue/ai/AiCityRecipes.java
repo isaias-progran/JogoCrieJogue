@@ -54,10 +54,42 @@ final class AiCityRecipes {
         }
         if ("city".equals(plan.setting)) {
             roadCenterLine(doc, half);
+            if ("maze".equals(plan.route) && half >= 20f) {
+                crossCenterLine(doc, half);
+            }
+            if (half >= 28f) {
+                ringRoadMarks(doc, half);
+            }
             if ("huge".equals(profile.sectorSize())) {
                 skylineVolumes(doc, half, random);
             }
         }
+    }
+
+    /** Linha tracejada da avenida perpendicular do cruzamento. */
+    private static void crossCenterLine(MapDocument doc, float half) {
+        float reach = half - 6.5f;
+        int dashes = Math.max(4, (int) (reach / 4f));
+        for (int i = 0; i < dashes; i++) {
+            float x = -reach + (2f * reach) * i / (dashes - 1f);
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
+                    x, 0.02f, 0f, 1.1f, 0.02f, 0.12f,
+                    new float[]{0.92f, 0.90f, 0.78f});
+        }
+    }
+
+    /** Anel viário marcado no asfalto, como o da Cidade Aurora. */
+    private static void ringRoadMarks(MapDocument doc, float half) {
+        float r = half - 5.2f;
+        float[] paint = {0.30f, 0.33f, 0.38f};
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
+                0f, 0.015f, -r, r, 0.015f, 0.14f, paint);
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
+                0f, 0.015f, r, r, 0.015f, 0.14f, paint);
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
+                -r, 0.015f, 0f, 0.14f, 0.015f, r, paint);
+        AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
+                r, 0.015f, 0f, 0.14f, 0.015f, r, paint);
     }
 
     /**
@@ -83,21 +115,25 @@ final class AiCityRecipes {
             float cz = qz * (roadHalf + hz + 0.8f
                     + ring * (hz * 2f + 2.4f));
             if (Math.abs(cz) + hz > half - 1.2f) continue;
-            addRoom(doc, cx, cz, hx, hz, (int) -qx, plan, index, random);
+            AiCityBlocks.addCityBlock(doc, plan, cx, cz, hx, hz,
+                    (int) -qx, index, random, half);
         }
         if ("city".equals(plan.setting)) {
             crosswalks(doc, roadHalf);
         }
     }
 
-    /** Faixas de pedestres nas bocas do cruzamento, como na Aurora. */
+    /** Faixas de pedestres nas quatro bocas do cruzamento, como na Aurora. */
     static void crosswalks(MapDocument doc, float roadHalf) {
         float[] white = {0.88f, 0.88f, 0.86f};
         for (int approach = 0; approach < 2; approach++) {
-            float z = (approach == 0 ? -1f : 1f) * (roadHalf + 1.2f);
+            float edge = (approach == 0 ? -1f : 1f) * (roadHalf + 1.2f);
             for (int stripe = -1; stripe <= 1; stripe++) {
                 AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
-                        stripe * 1.1f, 0.02f, z, 0.38f, 0.02f, 0.55f,
+                        stripe * 1.1f, 0.02f, edge, 0.38f, 0.02f, 0.55f,
+                        white);
+                AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "plain",
+                        edge, 0.02f, stripe * 1.1f, 0.55f, 0.02f, 0.38f,
                         white);
             }
         }
@@ -149,12 +185,12 @@ final class AiCityRecipes {
             float rightZ = roomZ * (0.88f + random.nextFloat() * 0.18f);
             int leftIndex = row * 2;
             if (leftIndex < buildings) {
-                addRoom(doc, -(roadHalf + leftX), z, leftX, leftZ,
-                        -1, plan, leftIndex, random);
+                AiCityBlocks.addCityBlock(doc, plan, -(roadHalf + leftX), z,
+                        leftX, leftZ, -1, leftIndex, random, half);
             }
             if (leftIndex + 1 < buildings) {
-                addRoom(doc, roadHalf + rightX, z, rightX, rightZ,
-                        1, plan, leftIndex + 1, random);
+                AiCityBlocks.addCityBlock(doc, plan, roadHalf + rightX, z,
+                        rightX, rightZ, 1, leftIndex + 1, random, half);
             }
         }
     }
@@ -187,7 +223,8 @@ final class AiCityRecipes {
                     hx = Math.min(hx, span - roadHalf - 0.6f);
                     if (hx < 1.6f) continue;
                 }
-                addRoom(doc, cx, z, hx, hz, side, plan, index, random);
+                AiCityBlocks.addCityBlock(doc, plan, cx, z, hx, hz,
+                        side, index, random, half);
             }
         }
     }

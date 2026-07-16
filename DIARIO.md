@@ -8,6 +8,21 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.23.1 (versionCode 56) — quarteirões com arquétipos, rumo à Aurora.**
+  - Feedback do aparelho: setores variam, mas a cidade gerada ainda não
+    chega ao exemplo embarcado. Novo `ai/AiCityBlocks`: rodízio
+    determinístico de arquétipos por quarteirão — loja (addRoom),
+    garagem de portão largo com caixotes, SOBRADO com escada externa até
+    sala no telhado (mesmo padrão laje+escada do deck validado pelo
+    StairsTest) e mercado de dois portais com corredores de estantes.
+    Vale para as três malhas (avenida, gêmeas, cruz).
+  - Malha viária completa no estilo Aurora: faixas de pedestres nas
+    QUATRO bocas do cruzamento, linha central também na avenida
+    perpendicular (maze) e anel viário marcado no asfalto (half>=28).
+  - Suíte com 624 verificações (3 novas: escada externa presente, sala
+    no telhado acima de 4 m e 12+ faixas). Conferir no aparelho: cidade
+    maze deve ter garagem/mercado/sobrado distintos e subida jogável ao
+    telhado.
 - **v0.23.0 (versionCode 55) — o kind da zone comanda a planta do setor.**
   - Feedback real do aparelho (v0.22.9): 4 setores com arquitetura
     idêntica, mudando só cores. Causa: a instrução nova faz o modelo

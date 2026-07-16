@@ -317,6 +317,17 @@ public final class AiScenarioTest {
             if (s.half[0] == 0.12f) dashes++;
         }
         Check.that(dashes >= 4, "cidade ganha faixa central tracejada");
+        Check.that(usesPrefab(crossCity, "stairs.floor"),
+                "rodízio de quarteirões ergue sobrado com escada externa");
+        boolean rooftopRoom = false;
+        int crossStripes = 0;
+        for (StructureObject s : crossCity.structures) {
+            if (s.transform.y > 4f) rooftopRoom = true;
+            if (s.half[0] == 0.38f || s.half[2] == 0.38f) crossStripes++;
+        }
+        Check.that(rooftopRoom, "sobrado tem sala acessível no telhado");
+        Check.that(crossStripes >= 12,
+                "faixas de pedestres nas quatro bocas do cruzamento");
 
         MapDocument directHub = AiScenarioBuilder.build(
                 AiScenarioPlan.parse(validPlan()
