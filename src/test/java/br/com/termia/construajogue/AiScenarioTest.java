@@ -401,6 +401,13 @@ public final class AiScenarioTest {
         Check.that(!geometry(lineRuins).equals(geometry(ringRuins)),
                 "ruínas com loop circundam um vazio central");
 
+        Check.that(usesPrefab(directCity, "pickup.weapon.shotgun")
+                        && usesPrefab(directCity, "pickup.weapon.smg"),
+                "armas escolhidas pela IA aparecem no mapa");
+        Check.fails(() -> AiScenarioPlan.parse(validPlan().replace(
+                        "\"weapons\":[\"shotgun\",\"smg\"]",
+                        "\"weapons\":[\"bazooka\"]")),
+                "arma fora da lista é recusada antes de construir");
         Check.that(usesPrefab(directCity, "furniture.shelf"),
                 "zona de loja mobilia os cômodos com estantes");
         MapDocument parkCity = AiScenarioBuilder.build(
@@ -674,6 +681,7 @@ public final class AiScenarioTest {
                 + "\"indoor_lights\",\"diagonal_walls\",\"bridge\"],"
                 + "\"enemies\":[\"drone\",\"mutant\",\"turret\","
                 + "\"kamikaze\",\"boss\"],"
+                + "\"weapons\":[\"shotgun\",\"smg\"],"
                 + "\"zones\":["
                 + "{\"kind\":\"shop\",\"size\":\"medium\","
                 + "\"floors\":1,\"purpose\":\"exploration\"},"
@@ -707,6 +715,7 @@ public final class AiScenarioTest {
                 + "\"features\":[\"stairs\",\"windows\",\"furniture\","
                 + "\"indoor_lights\",\"automatic_doors\",\"supplies\"],"
                 + "\"enemies\":[\"drone\",\"mutant\"],"
+                + "\"weapons\":[],"
                 + "\"zones\":[{\"kind\":\"house\","
                 + "\"size\":\"large\",\"floors\":2,"
                 + "\"purpose\":\"exploration\"}],"

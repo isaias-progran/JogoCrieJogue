@@ -8,6 +8,23 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.24.0 (versionCode 58) — arsenal: metralhadora, escopeta e rifle.**
+  - `WeaponSpec` (pistola 12/0,32s/dano 1; metralhadora 30/0,11s/1;
+    escopeta 6/0,85s/3 — derruba drone num tiro; rifle 5/1,05s/4 —
+    derruba mutante num tiro). `Weapon.equip()` troca a arma com pente e
+    reserva próprios; a bala especial agora soma +2 ao dano da arma
+    (pistola especial continua 3, como antes).
+  - Armas entram no mapa como pickups do catálogo (42 peças):
+    `pickup.weapon.smg/shotgun/rifle` — novo behavior no compilador,
+    validador, runtime (ITEM_WEAPON_*), pegar troca a arma na hora com
+    aviso no HUD; visual reutiliza a malha de munição com tinta dourada.
+    Também posicionáveis no editor (PEÇA…) e nos mapas trocados.
+  - IA: campo `weapons` no schema estrito (lista fechada de 0-3 entre
+    smg/shotgun/rifle — livre escolha em lista, sem abrir a segurança);
+    a instrução manda combinar com o clima do pedido; o construtor
+    espalha os pickups pelo caminho. Arma fora da lista é recusada antes
+    da rede. Suíte com 633 verificações (9 novas). Validar no aparelho:
+    gerar mapa pedindo "escopeta escondida", pegar e sentir cadência.
 - **v0.23.2 (versionCode 57) — versão visível na biblioteca.**
   - Usuário instalou e "continua a mesma coisa": não havia como saber
     qual versão estava rodando (o app não exibia versão em lugar

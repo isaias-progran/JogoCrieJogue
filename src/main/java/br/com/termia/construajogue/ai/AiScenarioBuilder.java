@@ -533,6 +533,12 @@ public final class AiScenarioBuilder {
     private static void addPickups(MapDocument doc, AiScenarioPlan plan,
                                    AiScenarioProfile profile) {
         float half = profile.halfSize();
+        for (int i = 0; i < plan.weapons.size(); i++) {
+            // Armas extras ficam pelo caminho, afastadas do spawn.
+            float z = -half * 0.35f + i * half * 0.45f;
+            AiGeometry.prefab(doc, "pickup.weapon." + plan.weapons.get(i),
+                    (i & 1) == 0 ? 2.2f : -2.2f, 0.5f, z);
+        }
         if (ObjectiveSpec.COLLECT.equals(doc.objective.type)) {
             int count = doc.objective.target;
             for (int i = 0; i < count; i++) {

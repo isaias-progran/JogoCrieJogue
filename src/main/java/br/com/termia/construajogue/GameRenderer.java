@@ -464,6 +464,9 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
                 meshes.ammo.draw();
             } else if (item[0] == RuntimeLevel.ITEM_SPECIAL) {
                 meshes.special.draw();
+            } else if (item[0] >= RuntimeLevel.ITEM_WEAPON_SMG) {
+                GLES30.glUniform3f(tintLoc, 1.5f, 1.2f, 0.5f);
+                meshes.ammo.draw();
             } else {
                 meshes.token.draw();
             }

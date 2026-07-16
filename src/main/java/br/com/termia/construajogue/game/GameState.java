@@ -372,7 +372,7 @@ public final class GameState {
             hits++;
             hud.showHitMarker();
             boolean died = false;
-            int damage = weapon.lastShotSpecial() ? 3 : 1;
+            int damage = weapon.shotDamage();
             for (int i = 0; i < damage && target.targetable(); i++) {
                 died |= target.hit(level.colliders());
             }
@@ -573,6 +573,17 @@ public final class GameState {
             } else if (item[0] == RuntimeLevel.ITEM_SPECIAL) {
                 weapon.addSpecial(6);
                 hud.setSpecial(weapon.special());
+            } else if (item[0] == RuntimeLevel.ITEM_WEAPON_SMG
+                    || item[0] == RuntimeLevel.ITEM_WEAPON_SHOTGUN
+                    || item[0] == RuntimeLevel.ITEM_WEAPON_RIFLE) {
+                WeaponSpec next =
+                        item[0] == RuntimeLevel.ITEM_WEAPON_SMG
+                                ? WeaponSpec.SMG
+                                : item[0] == RuntimeLevel.ITEM_WEAPON_SHOTGUN
+                                ? WeaponSpec.SHOTGUN : WeaponSpec.RIFLE;
+                weapon.equip(next);
+                hud.setAmmo(weapon.ammo(), weapon.reserve());
+                hud.setHint(next.label + " EQUIPADA");
             } else {
                 objective.tokenCollected();
                 hud.setObjective(objective.hudText());

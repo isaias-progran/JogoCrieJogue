@@ -119,7 +119,7 @@ public final class AiOpenAiClient {
                 + "escolha huge quando pedir cidade ou mundo enorme. Não "
                 + "presuma street: pedidos arquitetonicamente diferentes "
                 + "devem produzir layout, rota, cômodos, zonas e seed "
-                + "diferentes. Varie também objetivo, recursos e identidade "
+                + "diferentes. weapons lista até três armas extras (smg, shotgun, rifle) escondidas pelo mapa: escolha as que combinam com o clima do pedido, ou deixe a lista vazia para só a pistola. Varie também objetivo, recursos e identidade "
                 + "do NPC; não repita sempre o nome Lia. Dê ao NPC um "
                 + "temperamento claro no background: prático, calmo, firme, "
                 + "animado, parceiro ou reservado. A primeira fala deve ser "

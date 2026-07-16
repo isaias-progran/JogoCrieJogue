@@ -6,6 +6,7 @@ import br.com.termia.construajogue.game.NpcGreetingTracker;
 import br.com.termia.construajogue.game.ObjectiveTracker;
 import br.com.termia.construajogue.game.SpatialRules;
 import br.com.termia.construajogue.game.Weapon;
+import br.com.termia.construajogue.game.WeaponSpec;
 import br.com.termia.construajogue.map.ObjectiveSpec;
 import br.com.termia.construajogue.runtime.RuntimeLevel;
 import br.com.termia.construajogue.runtime.RuntimeNpc;
@@ -76,6 +77,26 @@ public final class GameplayRulesTest {
                 GameResult.SURVIVE_TWO_STAR_HEALTH - 1,
                 surviveStars).stars == 1,
                 "quase morrer vale uma estrela mesmo dentro da meta de tempo");
+
+        Weapon arsenal = new Weapon();
+        arsenal.reset();
+        check(arsenal.spec() == WeaponSpec.PISTOL && arsenal.ammo() == 12,
+                "pistola é a arma inicial");
+        arsenal.equip(WeaponSpec.SHOTGUN);
+        check(arsenal.ammo() == 6 && arsenal.reserve() == 18,
+                "escopeta equipa pente e reserva próprios");
+        check(arsenal.tryFire() && arsenal.shotDamage() == 3,
+                "escopeta derruba um drone num tiro");
+        check(!arsenal.tryFire(), "cadência da escopeta segura o 2º tiro");
+        arsenal.update(0.9f);
+        check(arsenal.tryFire(), "cadência liberada após o intervalo");
+        arsenal.equip(WeaponSpec.RIFLE);
+        arsenal.addSpecial(1);
+        check(arsenal.tryFire() && arsenal.shotDamage() == 6,
+                "bala especial soma +2 ao dano do rifle");
+        check(WeaponSpec.byId("smg") == WeaponSpec.SMG
+                        && WeaponSpec.byId("faca") == null,
+                "byId só conhece a allowlist de armas");
 
         Weapon weapon = new Weapon();
         weapon.reset();

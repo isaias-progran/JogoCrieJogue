@@ -6,21 +6,30 @@
       "name": "Drone ativo",
       "category": "jogo",
       "behavior": "drone",
-      "properties": ["patrolX", "patrolZ"]
+      "properties": [
+        "patrolX",
+        "patrolZ"
+      ]
     },
     {
       "id": "enemy.drone.wave",
       "name": "Drone dormente",
       "category": "jogo",
       "behavior": "drone_dormant",
-      "properties": ["patrolX", "patrolZ"]
+      "properties": [
+        "patrolX",
+        "patrolZ"
+      ]
     },
     {
       "id": "enemy.mutant",
       "name": "Mutante",
       "category": "jogo",
       "behavior": "mutant",
-      "properties": ["patrolX", "patrolZ"]
+      "properties": [
+        "patrolX",
+        "patrolZ"
+      ]
     },
     {
       "id": "enemy.turret",
@@ -34,21 +43,32 @@
       "name": "Drone kamikaze",
       "category": "jogo",
       "behavior": "kamikaze",
-      "properties": ["patrolX", "patrolZ"]
+      "properties": [
+        "patrolX",
+        "patrolZ"
+      ]
     },
     {
       "id": "enemy.boss",
       "name": "Drone chefe",
       "category": "jogo",
       "behavior": "boss",
-      "properties": ["patrolX", "patrolZ"]
+      "properties": [
+        "patrolX",
+        "patrolZ"
+      ]
     },
     {
       "id": "npc.human",
       "name": "Pessoa amigável",
       "category": "jogo",
       "behavior": "npc_human",
-      "properties": ["name", "role", "greeting", "background"]
+      "properties": [
+        "name",
+        "role",
+        "greeting",
+        "background"
+      ]
     },
     {
       "id": "pickup.health",
@@ -83,21 +103,32 @@
       "name": "Terminal",
       "category": "jogo",
       "behavior": "terminal",
-      "properties": ["order"]
+      "properties": [
+        "order"
+      ]
     },
     {
       "id": "door.gate",
       "name": "Portão",
       "category": "jogo",
       "behavior": "door",
-      "properties": ["halfX", "halfY", "halfZ", "controllerId"]
+      "properties": [
+        "halfX",
+        "halfY",
+        "halfZ",
+        "controllerId"
+      ]
     },
     {
       "id": "door.auto",
       "name": "Porta automática",
       "category": "jogo",
       "behavior": "auto_door",
-      "properties": ["halfX", "halfY", "halfZ"]
+      "properties": [
+        "halfX",
+        "halfY",
+        "halfZ"
+      ]
     },
     {
       "id": "furniture.table",
@@ -167,21 +198,37 @@
       "name": "Luminária de pé",
       "category": "objetos",
       "behavior": "static",
-      "properties": ["lightR", "lightG", "lightB", "lightRadius"]
+      "properties": [
+        "lightR",
+        "lightG",
+        "lightB",
+        "lightRadius"
+      ]
     },
     {
       "id": "prop.lamp.ceiling",
       "name": "Lâmpada de teto",
       "category": "objetos",
       "behavior": "static",
-      "properties": ["lightR", "lightG", "lightB", "lightRadius"]
+      "properties": [
+        "lightR",
+        "lightG",
+        "lightB",
+        "lightRadius"
+      ]
     },
     {
       "id": "prop.lamp.street",
       "name": "Poste urbano iluminado",
       "category": "objetos",
       "behavior": "static",
-      "properties": ["lightR", "lightG", "lightB", "lightRadius", "lightOffsetY"]
+      "properties": [
+        "lightR",
+        "lightG",
+        "lightB",
+        "lightRadius",
+        "lightOffsetY"
+      ]
     },
     {
       "id": "furniture.sink.kitchen",
@@ -272,6 +319,27 @@
       "name": "Rampa de andar (sobe 3 m)",
       "category": "circulação",
       "behavior": "static",
+      "properties": []
+    },
+    {
+      "id": "pickup.weapon.smg",
+      "name": "Metralhadora",
+      "category": "jogo",
+      "behavior": "pickup_weapon_smg",
+      "properties": []
+    },
+    {
+      "id": "pickup.weapon.shotgun",
+      "name": "Escopeta",
+      "category": "jogo",
+      "behavior": "pickup_weapon_shotgun",
+      "properties": []
+    },
+    {
+      "id": "pickup.weapon.rifle",
+      "name": "Rifle",
+      "category": "jogo",
+      "behavior": "pickup_weapon_rifle",
       "properties": []
     }
   ]

@@ -39,6 +39,7 @@ javac -d "$OUT" -encoding UTF-8 \
     "$SRC"/game/Mutant.java \
     "$SRC"/game/Kamikaze.java \
     "$SRC"/game/Weapon.java \
+    "$SRC"/game/WeaponSpec.java \
     "$SRC"/ai/AiScenarioPlan.java \
     "$SRC"/ai/AiScenarioProfile.java \
     "$SRC"/ai/AiScenarioBuilder.java \

@@ -211,6 +211,9 @@ public final class MapValidator {
                 case PrefabDefinition.BEHAVIOR_PICKUP_HEALTH:
                 case PrefabDefinition.BEHAVIOR_PICKUP_AMMO:
                 case PrefabDefinition.BEHAVIOR_PICKUP_SPECIAL:
+                case PrefabDefinition.BEHAVIOR_PICKUP_WEAPON_SMG:
+                case PrefabDefinition.BEHAVIOR_PICKUP_WEAPON_SHOTGUN:
+                case PrefabDefinition.BEHAVIOR_PICKUP_WEAPON_RIFLE:
                     itemsAndMarkers++;
                     break;
                 case PrefabDefinition.BEHAVIOR_PICKUP_TOKEN:

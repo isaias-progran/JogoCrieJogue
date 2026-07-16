@@ -140,6 +140,18 @@ public final class LevelCompiler {
                 case PrefabDefinition.BEHAVIOR_PICKUP_SPECIAL:
                     items.add(new float[]{RuntimeLevel.ITEM_SPECIAL, x, y, z});
                     break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_WEAPON_SMG:
+                    items.add(new float[]{
+                            RuntimeLevel.ITEM_WEAPON_SMG, x, y, z});
+                    break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_WEAPON_SHOTGUN:
+                    items.add(new float[]{
+                            RuntimeLevel.ITEM_WEAPON_SHOTGUN, x, y, z});
+                    break;
+                case PrefabDefinition.BEHAVIOR_PICKUP_WEAPON_RIFLE:
+                    items.add(new float[]{
+                            RuntimeLevel.ITEM_WEAPON_RIFLE, x, y, z});
+                    break;
                 case PrefabDefinition.BEHAVIOR_TERMINAL:
                     terminals.add(new RuntimeTerminal(p.id, x, y, z,
                             Math.max(0, Math.round(

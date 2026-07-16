@@ -14,6 +14,9 @@ public final class RuntimeLevel {
     public static final int ITEM_AMMO = 1;
     public static final int ITEM_TOKEN = 2;
     public static final int ITEM_SPECIAL = 3;
+    public static final int ITEM_WEAPON_SMG = 4;
+    public static final int ITEM_WEAPON_SHOTGUN = 5;
+    public static final int ITEM_WEAPON_RIFLE = 6;
 
     public static final int HAZARD_WATER = 1;
     public static final int HAZARD_LAVA = 2;

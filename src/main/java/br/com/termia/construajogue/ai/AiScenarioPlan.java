@@ -30,6 +30,8 @@ public final class AiScenarioPlan {
             "hub", "scattered", "linear", "vertical", "underground");
     private static final List<String> ROUTES = Arrays.asList(
             "direct", "loop", "branching", "maze", "vertical");
+    private static final List<String> WEAPONS = Arrays.asList(
+            "smg", "shotgun", "rifle");
     private static final List<String> ROOM_PATTERNS = Arrays.asList(
             "open_plan", "corridor_rooms", "central_hall", "split_rooms",
             "mixed");
@@ -69,6 +71,7 @@ public final class AiScenarioPlan {
     public final List<String> features = new ArrayList<>();
     public final List<String> enemies = new ArrayList<>();
     public final List<Zone> zones = new ArrayList<>();
+    public final List<String> weapons = new ArrayList<>();
     public String npcName;
     public String npcRole;
     public String npcGreeting;
@@ -97,8 +100,8 @@ public final class AiScenarioPlan {
         exactKeys(root, "title", "summary", "setting", "size", "sky",
                 "objective", "layout", "route", "roomPattern",
                 "roofStyle", "difficulty", "seed", "buildingCount",
-                "floors", "roomCount", "features", "enemies", "zones",
-                "npc");
+                "floors", "roomCount", "features", "enemies", "weapons",
+                "zones", "npc");
         AiScenarioPlan plan = new AiScenarioPlan();
         plan.title = string(root, "title", 3, 48);
         plan.summary = string(root, "summary", 1, 240);
@@ -117,6 +120,7 @@ public final class AiScenarioPlan {
         plan.roomCount = integer(root, "roomCount", 1, 12);
         strings(root, "features", FEATURES, 1, 16, plan.features);
         strings(root, "enemies", ENEMIES, 1, 5, plan.enemies);
+        strings(root, "weapons", WEAPONS, 0, 3, plan.weapons);
         zones(root, plan.zones);
         Object npcValue = root.get("npc");
         if (!(npcValue instanceof Map)) {
@@ -152,6 +156,7 @@ public final class AiScenarioPlan {
         props.put("roomCount", integerSchema(1, 12));
         props.put("features", arraySchema(FEATURES, 1, 16));
         props.put("enemies", arraySchema(ENEMIES, 1, 5));
+        props.put("weapons", arraySchema(WEAPONS, 0, 3));
 
         Map<String, Object> zone = objectSchema();
         Map<String, Object> zoneProps = properties(zone);
@@ -173,8 +178,8 @@ public final class AiScenarioPlan {
         require(root, "title", "summary", "setting", "size", "sky",
                 "objective", "layout", "route", "roomPattern",
                 "roofStyle", "difficulty", "seed", "buildingCount",
-                "floors", "roomCount", "features", "enemies", "zones",
-                "npc");
+                "floors", "roomCount", "features", "enemies", "weapons",
+                "zones", "npc");
         return root;
     }
 

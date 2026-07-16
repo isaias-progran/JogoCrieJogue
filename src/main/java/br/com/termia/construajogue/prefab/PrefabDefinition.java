@@ -23,6 +23,12 @@ public final class PrefabDefinition {
     public static final String BEHAVIOR_PICKUP_AMMO = "pickup_ammo";
     public static final String BEHAVIOR_PICKUP_TOKEN = "pickup_token";
     public static final String BEHAVIOR_PICKUP_SPECIAL = "pickup_special";
+    public static final String BEHAVIOR_PICKUP_WEAPON_SMG =
+            "pickup_weapon_smg";
+    public static final String BEHAVIOR_PICKUP_WEAPON_SHOTGUN =
+            "pickup_weapon_shotgun";
+    public static final String BEHAVIOR_PICKUP_WEAPON_RIFLE =
+            "pickup_weapon_rifle";
     public static final String BEHAVIOR_TERMINAL = "terminal";
     public static final String BEHAVIOR_DOOR = "door";
     public static final String BEHAVIOR_AUTO_DOOR = "auto_door";

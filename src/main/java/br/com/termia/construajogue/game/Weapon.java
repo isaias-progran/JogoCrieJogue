@@ -1,18 +1,17 @@
 package br.com.termia.construajogue.game;
 
 /**
- * Pistola: pente + reserva, cadência e recarga por tempo.
+ * Arma equipada: pente + reserva, cadência e recarga vêm da WeaponSpec.
+ * Trocar de arma zera pente/reserva para os valores da nova; a munição
+ * especial é independente e soma +2 de dano ao tiro que a consome.
  * Toda a lógica roda na thread GL dentro do laço de jogo; quem toca em
  * som/HUD é o GameRenderer, a partir dos retornos daqui.
  */
 public final class Weapon {
 
-    public static final int MAG_SIZE = 12;
-    private static final float FIRE_COOLDOWN = 0.32f;
-    private static final float RELOAD_TIME = 1.1f;
-
-    private int ammo = MAG_SIZE;
-    private int reserve = 48;
+    private WeaponSpec spec = WeaponSpec.PISTOL;
+    private int ammo = spec.magSize;
+    private int reserve = spec.startReserve;
     private int special;
     private boolean lastShotSpecial;
     private float cooldown;
@@ -20,13 +19,23 @@ public final class Weapon {
     private boolean reloading;
 
     public void reset() {
-        ammo = MAG_SIZE;
-        reserve = 48;
+        equip(WeaponSpec.PISTOL);
         special = 0;
         lastShotSpecial = false;
+    }
+
+    /** Troca a arma na hora: pente cheio da nova, sem estado pendurado. */
+    public void equip(WeaponSpec next) {
+        spec = next;
+        ammo = next.magSize;
+        reserve = next.startReserve;
         cooldown = 0f;
         reloadLeft = 0f;
         reloading = false;
+    }
+
+    public WeaponSpec spec() {
+        return spec;
     }
 
     public void addReserve(int rounds) {
@@ -45,7 +54,7 @@ public final class Weapon {
         if (reloading) {
             reloadLeft -= dt;
             if (reloadLeft <= 0f) {
-                int wanted = MAG_SIZE - ammo;
+                int wanted = spec.magSize - ammo;
                 int taken = Math.min(wanted, reserve);
                 ammo += taken;
                 reserve -= taken;
@@ -66,17 +75,22 @@ public final class Weapon {
         if (lastShotSpecial) {
             special--;
         }
-        cooldown = FIRE_COOLDOWN;
+        cooldown = spec.cooldown;
         return true;
+    }
+
+    /** Dano do último tiro: base da arma, +2 quando saiu bala especial. */
+    public int shotDamage() {
+        return spec.damage + (lastShotSpecial ? 2 : 0);
     }
 
     /** Tenta iniciar recarga; true = recarga começou. */
     public boolean startReload() {
-        if (reloading || ammo == MAG_SIZE || reserve == 0) {
+        if (reloading || ammo == spec.magSize || reserve == 0) {
             return false;
         }
         reloading = true;
-        reloadLeft = RELOAD_TIME;
+        reloadLeft = spec.reloadTime;
         return true;
     }
 
