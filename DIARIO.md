@@ -8,6 +8,18 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.25.1 (versionCode 60) — streaming: dá para VER a IA trabalhando.**
+  - Teste real do usuário: modo livre estourou o timeout (120 s fixos do
+    cliente para uma geração de minutos). Timeouts agora por rota:
+    livre 10 min, guiado 5 min, NPC 2 min; estouro vira mensagem clara
+    ("tente Luna/mini") em vez de erro seco.
+  - Modo livre pede `stream:true` e lê SSE (`postStream`/`sseDelta`):
+    o diálogo mostra fase + cronômetro + "N comandos (M caracteres)
+    recebidos", atualizado a cada segundo por Handler; recusa/falha no
+    meio do stream vira erro com mensagem segura. Guiado ganhou
+    cronômetro simples. Suíte com 674 verificações (6 novas de SSE).
+  - Validar no aparelho: gerar cidade no modo livre e ver o contador
+    subir; cancelar no meio deve abortar sem travar.
 - **v0.25.0 (versionCode 59) — modo LIVRE: a IA desenha o mapa inteiro.**
   - Pedido do usuário após diagnóstico da cidade vazia: mesmo com o plano
     perfeito, o modo guiado cobre ~9% do chão (teto de 8 prédios no

@@ -290,6 +290,22 @@ public final class AiFeatureController {
             Future<?> request = activeRequest;
             if (request != null) request.cancel(true);
         });
+        final long started = android.os.SystemClock.elapsedRealtime();
+        android.os.Handler ticker = new android.os.Handler(
+                activity.getMainLooper());
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                if (!progress.isShowing()) return;
+                long seconds = (android.os.SystemClock.elapsedRealtime()
+                        - started) / 1000;
+                progress.setMessage("Pensando e escrevendo o plano… "
+                        + seconds / 60 + "m" + String.format("%02d",
+                        seconds % 60) + "s");
+                ticker.postDelayed(this, 1000);
+            }
+        };
+        ticker.post(tick);
         activeRequest = executor.submit(() -> {
             try {
                 AiScenarioPlan plan = client.generateScenario(key, idea,
@@ -351,16 +367,38 @@ public final class AiFeatureController {
             return;
         }
         AtomicBoolean cancelled = new AtomicBoolean();
-        AlertDialog progress = busy("IA desenhando o mapa (modo livre)…",
+        AlertDialog progress = busy("IA desenhando o mapa (modo livre)",
                 () -> {
                     cancelled.set(true);
                     Future<?> request = activeRequest;
                     if (request != null) request.cancel(true);
                 });
+        // Mostra a IA trabalhando: fase + cronômetro + comandos recebidos.
+        final String[] phase = {"Conectando e raciocinando sobre o pedido…"};
+        final long started = android.os.SystemClock.elapsedRealtime();
+        android.os.Handler ticker = new android.os.Handler(
+                activity.getMainLooper());
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                if (!progress.isShowing()) return;
+                long seconds = (android.os.SystemClock.elapsedRealtime()
+                        - started) / 1000;
+                progress.setMessage(phase[0] + "\n\nTrabalhando há "
+                        + seconds / 60 + "m" + String.format("%02d",
+                        seconds % 60) + "s. Pode levar vários minutos; "
+                        + "deixe o app aberto.");
+                ticker.postDelayed(this, 1000);
+            }
+        };
+        ticker.post(tick);
         activeRequest = executor.submit(() -> {
             try {
                 String script = client.generateFreeMapScript(key, idea,
-                        scenarioModel, prefabIds);
+                        scenarioModel, prefabIds, (chars, lines) ->
+                                phase[0] = "Desenhando o mapa: " + lines
+                                        + " comandos (" + chars
+                                        + " caracteres) recebidos…");
                 AiFreeMapScript.Result parsed =
                         AiFreeMapScript.parse(script, catalog);
                 List<ValidationIssue> issues =

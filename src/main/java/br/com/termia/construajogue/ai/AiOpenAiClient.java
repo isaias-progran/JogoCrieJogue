@@ -57,9 +57,16 @@ public final class AiOpenAiClient {
         return generateScenario(apiKey, idea, MODEL);
     }
 
+    /** Plano guiado pensa e escreve pouco; ainda assim excede 2 min às vezes. */
+    private static final int SCENARIO_READ_TIMEOUT = 300000;
+    /** Modo livre escreve o mapa inteiro: pode levar vários minutos. */
+    private static final int FREE_READ_TIMEOUT = 600000;
+    private static final int NPC_READ_TIMEOUT = 120000;
+
     public AiScenarioPlan generateScenario(String apiKey, String idea,
                                            String model) throws IOException {
-        String response = post(apiKey, buildScenarioRequest(idea, model));
+        String response = post(apiKey, buildScenarioRequest(idea, model),
+                SCENARIO_READ_TIMEOUT);
         return AiScenarioPlan.parse(extractOutputText(response));
     }
 
@@ -74,7 +81,7 @@ public final class AiOpenAiClient {
             throws IOException {
         String response = post(apiKey,
                 buildNpcRequest(npc, mapName, question,
-                        recentConversation));
+                        recentConversation), NPC_READ_TIMEOUT);
         String reply = extractOutputText(response).trim()
                 .replace('\u0000', ' ');
         if (reply.length() > 800) reply = reply.substring(0, 800);
@@ -82,14 +89,20 @@ public final class AiOpenAiClient {
         return reply;
     }
 
+    /** Progresso do streaming: chamado fora da thread de UI. */
+    public interface Progress {
+        void update(int chars, int lines);
+    }
+
     /** Modo LIVRE: a IA desenha o mapa inteiro num roteiro de comandos. */
     public String generateFreeMapScript(String apiKey, String idea,
                                         String model,
-                                        List<String> prefabIds)
+                                        List<String> prefabIds,
+                                        Progress progress)
             throws IOException {
-        String response = post(apiKey,
-                buildFreeMapRequest(idea, model, prefabIds));
-        return extractOutputText(response);
+        return postStream(apiKey,
+                buildFreeMapRequest(idea, model, prefabIds),
+                FREE_READ_TIMEOUT, progress);
     }
 
     public static String buildFreeMapRequest(String idea, String model,
@@ -160,6 +173,7 @@ public final class AiOpenAiClient {
                 + "luzes, inimigos e itens espalhados pelo mapa inteiro, "
                 + "não só no centro. Mapas grandes têm 120 a 300 linhas.");
         root.put("input", "PEDIDO DO JOGADOR:\n" + prompt);
+        root.put("stream", true);
         root.put("max_output_tokens", FREE_OUTPUT_TOKENS[modelIndex]);
         if (!SCENARIO_REASONING[modelIndex].isEmpty()) {
             Map<String, Object> reasoning = new TreeMap<>();
@@ -379,19 +393,129 @@ public final class AiOpenAiClient {
         return result.toString();
     }
 
-    private static String post(String apiKey, String body) throws IOException {
+    private static String post(String apiKey, String body, int readTimeout)
+            throws IOException {
+        HttpsURLConnection connection = null;
+        try {
+            connection = send(apiKey, body, readTimeout, false);
+            return readLimited(connection.getInputStream());
+        } catch (java.net.SocketTimeoutException slow) {
+            throw timeout(readTimeout, slow);
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    /**
+     * Lê a resposta em streaming (SSE) e vai relatando o progresso, para a
+     * tela mostrar a IA trabalhando. Devolve somente o texto acumulado.
+     */
+    private static String postStream(String apiKey, String body,
+                                     int readTimeout, Progress progress)
+            throws IOException {
+        HttpsURLConnection connection = null;
+        try {
+            connection = send(apiKey, body, readTimeout, true);
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(
+                            connection.getInputStream(),
+                            StandardCharsets.UTF_8));
+            StringBuilder text = new StringBuilder();
+            int lines = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith("data:")) continue;
+                String data = line.substring(5).trim();
+                if (data.isEmpty() || "[DONE]".equals(data)) continue;
+                String delta = sseDelta(data);
+                if (delta == null) continue;
+                if (text.length() + delta.length() > MAX_RESPONSE_BYTES) {
+                    throw new IOException("resposta da API grande demais");
+                }
+                text.append(delta);
+                for (int i = 0; i < delta.length(); i++) {
+                    if (delta.charAt(i) == '\n') lines++;
+                }
+                if (progress != null) {
+                    progress.update(text.length(), lines);
+                }
+            }
+            if (text.length() == 0) {
+                throw new IOException("resposta da API sem texto");
+            }
+            return text.toString();
+        } catch (java.net.SocketTimeoutException slow) {
+            throw timeout(readTimeout, slow);
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    /**
+     * Interpreta um evento SSE da Responses API. Devolve o trecho de texto
+     * novo, null para eventos de controle, e erro para recusa/falha.
+     * Público para os testes JVM cobrirem este contrato.
+     */
+    public static String sseDelta(String data) throws IOException {
+        Object parsed;
+        try {
+            parsed = Json.parse(data);
+        } catch (RuntimeException keepAlive) {
+            return null;
+        }
+        if (!(parsed instanceof Map)) return null;
+        Map<?, ?> event = (Map<?, ?>) parsed;
+        Object type = event.get("type");
+        if ("response.output_text.delta".equals(type)) {
+            Object delta = event.get("delta");
+            return delta instanceof String ? (String) delta : null;
+        }
+        if ("response.refusal.delta".equals(type)
+                || "response.refusal.done".equals(type)) {
+            throw new IOException("a IA recusou este pedido");
+        }
+        if ("error".equals(type)) {
+            Object message = event.get("message");
+            throw new IOException(message instanceof String
+                    ? safeError(java.util.Collections.singletonMap(
+                    "message", message)) : "erro informado pela API");
+        }
+        if ("response.failed".equals(type)) {
+            Object response = event.get("response");
+            if (response instanceof Map
+                    && ((Map<?, ?>) response).get("error") instanceof Map) {
+                throw new IOException(safeError(
+                        (Map<?, ?>) ((Map<?, ?>) response).get("error")));
+            }
+            throw new IOException("a API interrompeu a geração");
+        }
+        return null;
+    }
+
+    private static IOException timeout(int readTimeout, Exception cause) {
+        return new IOException("a IA demorou além do limite ("
+                + readTimeout / 60000 + " min). Tente de novo, "
+                + "simplifique o pedido ou escolha Luna/mini.", cause);
+    }
+
+    /** Abre a conexão, envia o corpo e valida o status; o caller lê. */
+    private static HttpsURLConnection send(String apiKey, String body,
+                                           int readTimeout, boolean stream)
+            throws IOException {
         String key = normalizeApiKey(apiKey);
         HttpsURLConnection connection = null;
+        boolean ready = false;
         try {
             URL url = new URL(ENDPOINT);
             connection = (HttpsURLConnection) url.openConnection();
             connection.setInstanceFollowRedirects(false);
             connection.setConnectTimeout(15000);
-            connection.setReadTimeout(120000);
+            connection.setReadTimeout(readTimeout);
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
             connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Accept", stream
+                    ? "text/event-stream" : "application/json");
             connection.setRequestProperty("Authorization", "Bearer " + key);
             connection.setRequestProperty("User-Agent",
                     "ConstruaJogue/0.21.1 Android");
@@ -405,15 +529,14 @@ public final class AiOpenAiClient {
             if (status >= 300 && status < 400) {
                 throw new IOException("redirecionamento da API bloqueado");
             }
-            InputStream stream = status >= 200 && status < 300
-                    ? connection.getInputStream() : connection.getErrorStream();
-            String response = readLimited(stream);
             if (status < 200 || status >= 300) {
-                throw httpError(status, response);
+                throw httpError(status,
+                        readLimited(connection.getErrorStream()));
             }
-            return response;
+            ready = true;
+            return connection;
         } finally {
-            if (connection != null) connection.disconnect();
+            if (!ready && connection != null) connection.disconnect();
         }
     }
 

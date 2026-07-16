@@ -28,6 +28,7 @@ public final class AiFreeMapTest {
         }
 
         request(catalog);
+        streamEvents();
         fullScript(catalog);
         safetyNets(catalog);
 
@@ -51,6 +52,9 @@ public final class AiFreeMapTest {
                 "pedido do jogador passa direto no input");
         Check.that(!request.contains("json_schema"),
                 "modo livre não prende a saída a schema");
+        Check.that(request.contains("\"stream\":true")
+                        || request.contains("\"stream\": true"),
+                "modo livre pede streaming para mostrar progresso");
         boolean rejected = false;
         try {
             AiOpenAiClient.buildFreeMapRequest("ab", "gpt-5.6-terra", ids);
@@ -58,6 +62,34 @@ public final class AiFreeMapTest {
             rejected = true;
         }
         Check.that(rejected, "pedido curto demais é recusado antes da rede");
+    }
+
+    private static void streamEvents() throws Exception {
+        Check.equal(AiOpenAiClient.sseDelta("{\"type\":"
+                        + "\"response.output_text.delta\",\"delta\":"
+                        + "\"parede 0 0 4 0\\n\"}"),
+                "parede 0 0 4 0\n", "evento de texto devolve o trecho");
+        Check.that(AiOpenAiClient.sseDelta("{\"type\":"
+                        + "\"response.in_progress\"}") == null,
+                "evento de controle é ignorado");
+        Check.that(AiOpenAiClient.sseDelta("linha estranha") == null,
+                "dado não-JSON é ignorado sem quebrar");
+        boolean refused = false;
+        try {
+            AiOpenAiClient.sseDelta("{\"type\":"
+                    + "\"response.refusal.done\",\"refusal\":\"nao\"}");
+        } catch (java.io.IOException expected) {
+            refused = true;
+        }
+        Check.that(refused, "recusa no streaming vira erro claro");
+        boolean failed = false;
+        try {
+            AiOpenAiClient.sseDelta("{\"type\":\"response.failed\","
+                    + "\"response\":{\"error\":{\"message\":\"cota\"}}}");
+        } catch (java.io.IOException expected) {
+            failed = expected.getMessage().contains("cota");
+        }
+        Check.that(failed, "falha da API propaga a mensagem segura");
     }
 
     private static void fullScript(PrefabCatalog catalog) {
