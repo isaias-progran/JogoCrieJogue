@@ -8,6 +8,16 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.23.2 (versionCode 57) — versão visível na biblioteca.**
+  - Usuário instalou e "continua a mesma coisa": não havia como saber
+    qual versão estava rodando (o app não exibia versão em lugar
+    nenhum). A biblioteca agora mostra "v0.23.2" sob o título, via
+    PackageManager — prova definitiva do APK instalado.
+  - Badging confirmou que o APK do 📦 era o certo (56/0.23.1 com
+    AiCityBlocks no dex). Causa provável do "mesma coisa": jogar mapa
+    SALVO — mapas já gerados nunca mudam; toda melhoria de receita vale
+    só para GERAÇÕES NOVAS. Regra de teste: instalar → conferir a
+    versão na biblioteca → gerar mapa novo.
 - **v0.23.1 (versionCode 56) — quarteirões com arquétipos, rumo à Aurora.**
   - Feedback do aparelho: setores variam, mas a cidade gerada ainda não
     chega ao exemplo embarcado. Novo `ai/AiCityBlocks`: rodízio

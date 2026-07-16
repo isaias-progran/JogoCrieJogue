@@ -104,6 +104,21 @@ public final class MapLibraryView extends ScrollView {
         title.setTextSize(22f);
         column.addView(title);
 
+        // Versão visível: prova de qual APK está instalado de verdade.
+        TextView version = new TextView(activity);
+        String installed;
+        try {
+            installed = "v" + activity.getPackageManager()
+                    .getPackageInfo(activity.getPackageName(), 0)
+                    .versionName;
+        } catch (Exception missing) {
+            installed = "versão desconhecida";
+        }
+        version.setText(installed);
+        version.setTextColor(0xFF7F96A5);
+        version.setTextSize(12f);
+        column.addView(version);
+
         LinearLayout actions = new LinearLayout(activity);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, 20, 0, 20);
