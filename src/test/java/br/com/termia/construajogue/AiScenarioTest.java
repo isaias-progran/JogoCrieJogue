@@ -404,6 +404,33 @@ public final class AiScenarioTest {
                         && usesPrefab(apartmentHouse, "prop.mirror.round"),
                 "apartamento ganha TV na sala e espelho no andar de cima");
 
+        MapDocument directCampus = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"campus\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"direct\"")));
+        MapDocument ringCampus = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"campus\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"loop\"")));
+        Check.that(!geometry(directCampus).equals(geometry(ringCampus)),
+                "campus com loop vira anel com praça central");
+        MapDocument directLinear = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"linear\"")
+                        .replace("\"route\":\"branching\"",
+                                "\"route\":\"direct\"")));
+        MapDocument branchLinear = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan()
+                        .replace("\"layout\":\"street\"",
+                                "\"layout\":\"linear\"")));
+        Check.that(openingCount(branchLinear) > openingCount(directLinear),
+                "linear com branching abre caminhos paralelos");
+
         AiScenarioPlan tunnelPlan = AiScenarioPlan.parse(validPlan().replace(
                 "\"setting\":\"city\"", "\"setting\":\"tunnel\""));
         MapDocument tunnel = AiScenarioBuilder.build(tunnelPlan);
@@ -552,6 +579,14 @@ public final class AiScenarioTest {
                     .append(';');
         }
         return out.toString();
+    }
+
+    private static int openingCount(MapDocument doc) {
+        int total = 0;
+        for (StructureObject s : doc.structures) {
+            total += s.openings.size();
+        }
+        return total;
     }
 
     private static boolean usesPrefab(MapDocument doc, String prefabId) {

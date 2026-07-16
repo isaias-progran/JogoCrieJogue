@@ -8,6 +8,25 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+
+### Resumo do loop noturno (v0.22.1 → v0.22.9, 9 iterações autônomas)
+Todas as oito receitas de planta respondem à rota (cidade, praça, pátio,
+indústria, fortaleza, ruínas, campus, linear); paredes diagonais poly
+estrearam em praças e bastiões; a mobília segue a finalidade da zone.
+AiScenarioBuilder foi modularizado (1607→531 linhas + AiGeometry/City/
+Theme/Place/FocalRecipes) e EditorHost enxugado (1391→891 + EditorForms/
+EditorPickers). Suíte de 601→609 verificações, tudo commitado e pushado
+por versão. Pendências para o aparelho: diálogos e seletores do editor
+(refactor sem teste JVM) e a variedade nova de mapas gerados por IA.
+
+- **v0.22.9 (versionCode 54) — campus e linear pela rota.**
+  - `campus`: `loop` arruma os prédios em anel ao redor de uma praça
+    verde; `branching` cria correntes diagonais que se afastam do eixo;
+    `scattered` continua aleatório. `linear`: `loop` força serpentina de
+    borda a borda; `branching` abre uma segunda porta em cada câmara —
+    caminhos paralelos de verdade.
+  - Com isso as OITO receitas de planta respondem à rota. Suíte com 609
+    verificações (2 novas). Iteração 9 e última do loop noturno.
 - **v0.22.8 (versionCode 53) — seletores do editor em EditorPickers.**
   - Segunda leva: paleta de pintura (com a tabela PALETTE), cor livre,
     contorno, vão, peça, lista de objetos e MEDIDAS viraram

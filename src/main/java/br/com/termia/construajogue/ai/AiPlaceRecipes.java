@@ -50,13 +50,37 @@ final class AiPlaceRecipes {
         int rows = (count + 1) / 2;
         float hx = Math.min(4.2f, half * 0.22f);
         float hz = Math.min(3.4f, half * 0.18f);
+        // loop arruma o campus em anel com praça; branching em correntes
+        // diagonais; direct mantém as duas colunas.
+        boolean ring = "loop".equals(plan.route) && !scattered;
+        boolean chains = "branching".equals(plan.route) && !scattered;
+        if (ring) {
+            AiGeometry.block(doc, StructureObject.ROLE_FLOOR, "checker",
+                    0f, 0.025f, 0f, Math.min(4.6f, half * 0.26f), 0.025f,
+                    Math.min(4.6f, half * 0.26f),
+                    new float[]{0.44f, 0.47f, 0.42f});
+            AiGeometry.prefab(doc, "prop.plant.tall", -1.6f, 0f, 1.2f);
+            AiGeometry.prefab(doc, "prop.plant.tall", 1.6f, 0f, -1.2f);
+        }
         for (int i = 0; i < count; i++) {
             int side = (i & 1) == 0 ? -1 : 1;
             int row = i / 2;
-            float x = side * half * (scattered
-                    ? 0.34f + random.nextFloat() * 0.20f : 0.46f);
-            float z = AiGeometry.rowPosition(row, rows, half, 5.2f, 7.5f);
-            if (scattered) z += (random.nextFloat() - 0.5f) * 4f;
+            float x;
+            float z;
+            if (ring) {
+                double angle = i * (Math.PI * 2.0 / count);
+                x = (float) Math.cos(angle) * half * 0.52f;
+                z = (float) Math.sin(angle) * half * 0.52f;
+            } else if (chains) {
+                x = side * half * (0.18f + 0.42f * row
+                        / Math.max(1f, rows - 1f));
+                z = AiGeometry.rowPosition(row, rows, half, 5.2f, 7.5f);
+            } else {
+                x = side * half * (scattered
+                        ? 0.34f + random.nextFloat() * 0.20f : 0.46f);
+                z = AiGeometry.rowPosition(row, rows, half, 5.2f, 7.5f);
+                if (scattered) z += (random.nextFloat() - 0.5f) * 4f;
+            }
             addDetachedBuilding(doc, plan, plan.zoneAt(i), x, z,
                     hx * (0.82f + random.nextFloat() * 0.18f),
                     hz * (0.82f + random.nextFloat() * 0.18f), i);
@@ -134,9 +158,20 @@ final class AiPlaceRecipes {
         for (int i = 0; i < chambers; i++) {
             float z = AiGeometry.rowPosition(i, chambers, half, 5.4f, 7.4f);
             StructureObject cross = AiGeometry.wall(doc, 0f, 1.5f, z,
-                    length, 0.15f, AiGeometry.wallMaterial(plan), AiGeometry.wallColor(plan), true);
-            float doorX = (i % 3 - 1) * Math.min(3.2f, half * 0.18f);
+                    length, 0.15f, AiGeometry.wallMaterial(plan),
+                    AiGeometry.wallColor(plan), true);
+            // loop força serpentina de borda a borda; branching abre uma
+            // segunda porta criando caminhos paralelos.
+            float doorX = "loop".equals(plan.route)
+                    ? ((i & 1) == 0 ? -1f : 1f) * length * 0.55f
+                    : (i % 3 - 1) * Math.min(3.2f, half * 0.18f);
             cross.openings.add(AiGeometry.opening(doorX, 2.4f, 2.3f));
+            if ("branching".equals(plan.route)) {
+                cross.openings.add(AiGeometry.opening(
+                        -Math.max(2.6f, Math.abs(doorX) + 3.4f)
+                                * ((i & 1) == 0 ? 1f : -1f),
+                        2.1f, 2.25f));
+            }
             AiGeometry.prefab(doc, (i & 1) == 0 ? "obstacle.crate.small"
                     : "obstacle.barrel", -doorX, 0f,
                     z + Math.min(3.3f, half * 0.15f));
