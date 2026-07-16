@@ -8,6 +8,18 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.21.3 (versionCode 44) — desenho da planta extraído para PlanRenderer.**
+  - `PlanEditorView` caiu de 2264 para 1695 linhas: o bloco de desenho
+    inteiro (grade, estruturas, vãos, peças, rotas, contorno, alças, cotas)
+    virou `editor/PlanRenderer` (599 linhas), que lê o estado da view pelo
+    mesmo pacote e nunca muta documento nem seleção. Movimentação mecânica:
+    código idêntico, só com os membros qualificados (`v.`) e os paints
+    migrados. Sem mudança de comportamento pretendida.
+  - A view segue dona de toque/gestos/seleção/undo — essa metade é
+    entrelaçada e NÃO é extração rápida; fica para quando doer. Suíte com
+    590 verificações (não cobre o editor Android: a prova aqui é
+    compilação + conferência visual no aparelho); APK assinado com
+    329.152 bytes nesta build.
 - **v0.21.2 (versionCode 43) — estrelas do survive medem a vida restante.**
   - No objetivo sobreviver as metas `twoStarSeconds`/`threeStarSeconds` eram
     constantes (o tempo decorrido é sempre a própria duração): todo mapa
