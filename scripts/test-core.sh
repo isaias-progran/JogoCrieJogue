@@ -45,6 +45,8 @@ javac -d "$OUT" -encoding UTF-8 \
     "$SRC"/ai/AiGeometry.java \
     "$SRC"/ai/AiCityRecipes.java \
     "$SRC"/ai/AiThemeRecipes.java \
+    "$SRC"/ai/AiPlaceRecipes.java \
+    "$SRC"/ai/AiFocalRecipes.java \
     "$SRC"/ai/AiOpenAiClient.java \
     "$SRC"/ai/NpcPersonality.java \
     "$SRC"/ai/NpcConversationMemory.java \

@@ -8,6 +8,18 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.6 (versionCode 51) — modularização do construtor concluída.**
+  - Passos finais: `ai/AiPlaceRecipes` (198 linhas — pátio, campus,
+    praça, labirinto, linear, prédio isolado, chanfros) e
+    `ai/AiFocalRecipes` (343 — casa de 1-3 pavimentos com cascas,
+    divisões, telhado, mobília, luzes; túnel; dimensionamento
+    houseHalfX/Z/effectiveFloors). AiScenarioBuilder ficou com 531
+    linhas: dispatch por layout, ambiente, perigos, spawn/objetivo,
+    inimigos e suprimentos. Era 1607 no início da noite.
+  - Refactor puro: suíte idêntica com 607 verificações nas quatro
+    extrações. test-core.sh compila os arquivos novos. Iteração 6 do
+    loop noturno; próxima: extrair formulários do EditorHost (1393
+    linhas) ou mais contratos de teste.
 - **v0.22.5 (versionCode 50) — receitas urbanas e temáticas em arquivos próprios.**
   - Segundo passo da modularização: `ai/AiCityRecipes` (283 linhas —
     cidade, avenida, avenidas gêmeas, cruz com quadras, faixas, skyline,
