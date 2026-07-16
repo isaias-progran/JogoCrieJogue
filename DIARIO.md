@@ -8,6 +8,17 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.3 (versionCode 48) — mobília pela finalidade da zone.**
+  - `furnishStory` diferencia mais kinds: loja (estantes, balcão e
+    armário), parque/praça/pátio (plantas e cadeiras), apartamento/torre
+    (sofá+TV na sala; cama, guarda-roupa, espelho e pia no andar de cima).
+    Antes shop/park/apartment caíam todos na mobília genérica de casa.
+  - `addRoom` (cômodos da cidade/avenidas) agora mobilia pela zone via
+    `roomPurpose`: loja tem estante e balcão, galpão tem bancada e barril,
+    parque tem plantas, resto ganha mesa+cadeira. Só com o feature
+    `furniture` ligado, como nas casas.
+  - Suíte com 607 verificações (3 novas). Iteração 3 do loop noturno;
+    próxima: modularizar AiScenarioBuilder (~1700 linhas) em receitas.
 - **v0.22.2 (versionCode 47) — indústria, fortaleza e ruínas pela rota.**
   - `industrial`: `loop` ergue uma espinha central de galpões criando dois
     corredores paralelos (caixotes centrais saem para não colidir);

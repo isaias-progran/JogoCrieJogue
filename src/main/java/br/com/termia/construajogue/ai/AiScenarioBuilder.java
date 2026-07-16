@@ -464,6 +464,31 @@ public final class AiScenarioBuilder {
             prefab(doc, "furniture.shelf", x, baseY, -z);
             prefab(doc, level == 0 ? "obstacle.barrel"
                     : "furniture.cabinet", x, baseY, z);
+        } else if ("shop".equals(kind)) {
+            prefab(doc, "furniture.shelf", -x, baseY, -z);
+            prefab(doc, "furniture.shelf", x, baseY, -z);
+            prefab(doc, "furniture.table", 0f, baseY, z * 0.5f);
+            prefab(doc, "furniture.cabinet", -x, baseY, z);
+        } else if ("park".equals(kind) || "plaza".equals(kind)
+                || "courtyard".equals(kind)) {
+            prefab(doc, "prop.plant.tall", -x, baseY, -z);
+            prefab(doc, "prop.plant.tall", x, baseY, z);
+            prefab(doc, "furniture.chair", -x * 0.5f, baseY, z);
+            prefab(doc, "furniture.chair", x * 0.5f, baseY, -z);
+        } else if (("apartment".equals(kind) || "tower".equals(kind))
+                && level == 0) {
+            PrefabInstance sofa = prefab(doc, "furniture.sofa",
+                    -x, baseY, -z);
+            sofa.transform.yaw = 90f;
+            prefab(doc, "prop.tv", -x, baseY, z);
+            prefab(doc, "furniture.table", x, baseY, -z);
+            prefab(doc, "prop.plant.small", x, baseY, z);
+        } else if (("apartment".equals(kind) || "tower".equals(kind))
+                && level == 1) {
+            prefab(doc, "furniture.bed", -x, baseY, -z);
+            prefab(doc, "furniture.wardrobe", x, baseY, -z);
+            prefab(doc, "prop.mirror.round", x, baseY, z);
+            prefab(doc, "furniture.sink.bath", -x, baseY, z);
         } else if (level == 0) {
             PrefabInstance sofa = prefab(doc, "furniture.sofa",
                     -x, baseY, -z);
@@ -1213,6 +1238,32 @@ public final class AiScenarioBuilder {
             lamp.properties.put("lightRadius", 5.5f);
         } else {
             prefab(doc, "obstacle.crate.large", cx, 0f, cz);
+        }
+        if (plan.hasFeature("furniture")) {
+            roomPurpose(doc, plan.zoneAt(index).kind, cx, cz, hx, hz);
+        }
+    }
+
+    /** Mobília leve pela finalidade da zone: a loja não parece a casa. */
+    private static void roomPurpose(MapDocument doc, String kind,
+                                    float cx, float cz,
+                                    float hx, float hz) {
+        float ox = Math.min(1.9f, hx * 0.52f);
+        float oz = Math.min(1.7f, hz * 0.52f);
+        if ("shop".equals(kind)) {
+            prefab(doc, "furniture.shelf", cx - ox, 0f, cz - oz);
+            prefab(doc, "furniture.table", cx + ox, 0f, cz + oz);
+        } else if ("laboratory".equals(kind) || "warehouse".equals(kind)
+                || "station".equals(kind)) {
+            prefab(doc, "furniture.workbench", cx - ox, 0f, cz - oz);
+            prefab(doc, "obstacle.barrel", cx + ox, 0f, cz + oz);
+        } else if ("park".equals(kind) || "plaza".equals(kind)
+                || "courtyard".equals(kind)) {
+            prefab(doc, "prop.plant.tall", cx - ox, 0f, cz - oz);
+            prefab(doc, "prop.plant.small", cx + ox, 0f, cz + oz);
+        } else {
+            prefab(doc, "furniture.table", cx - ox, 0f, cz - oz);
+            prefab(doc, "furniture.chair", cx + ox, 0f, cz + oz);
         }
     }
 

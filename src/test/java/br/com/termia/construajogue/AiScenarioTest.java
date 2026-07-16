@@ -390,6 +390,20 @@ public final class AiScenarioTest {
         Check.that(!geometry(lineRuins).equals(geometry(ringRuins)),
                 "ruínas com loop circundam um vazio central");
 
+        Check.that(usesPrefab(directCity, "furniture.shelf"),
+                "zona de loja mobilia os cômodos com estantes");
+        MapDocument parkCity = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(validPlan().replace(
+                        "\"kind\":\"shop\"", "\"kind\":\"park\"")));
+        Check.that(usesPrefab(parkCity, "prop.plant.tall"),
+                "zona de parque leva plantas para dentro dos cômodos");
+        MapDocument apartmentHouse = AiScenarioBuilder.build(
+                AiScenarioPlan.parse(twoStoryHousePlan().replace(
+                        "\"kind\":\"house\"", "\"kind\":\"apartment\"")));
+        Check.that(usesPrefab(apartmentHouse, "prop.tv")
+                        && usesPrefab(apartmentHouse, "prop.mirror.round"),
+                "apartamento ganha TV na sala e espelho no andar de cima");
+
         AiScenarioPlan tunnelPlan = AiScenarioPlan.parse(validPlan().replace(
                 "\"setting\":\"city\"", "\"setting\":\"tunnel\""));
         MapDocument tunnel = AiScenarioBuilder.build(tunnelPlan);
@@ -538,6 +552,13 @@ public final class AiScenarioTest {
                     .append(';');
         }
         return out.toString();
+    }
+
+    private static boolean usesPrefab(MapDocument doc, String prefabId) {
+        for (PrefabInstance p : doc.prefabs) {
+            if (prefabId.equals(p.prefabId)) return true;
+        }
+        return false;
     }
 
     private static boolean usesMaterial(MapDocument doc, String material) {
