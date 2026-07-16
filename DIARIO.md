@@ -8,6 +8,16 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 
 ## Estado atual — 2026-07-16
+- **v0.22.7 (versionCode 52) — formulários do editor em EditorForms.**
+  - Primeira leva da quebra do EditorHost (1391→1168 linhas): andar
+    ativo, objetivo, material, céu (com a tabela SKIES) e os campos
+    genéricos de diálogo (field/textField/parse/setFieldVisible) viraram
+    `editor/EditorForms` (287 linhas), lendo o host pelo pacote e
+    mutando o documento só pelos ganchos beforeChange/afterChange.
+  - Movimentação mecânica; prova por compilação + suíte intacta com 607
+    verificações (o editor Android não tem teste JVM — conferir os
+    quatro diálogos no aparelho). Iteração 7 do loop noturno; próxima
+    leva: paleta de pintura, cor livre, contorno, vão, peça e medidas.
 - **v0.22.6 (versionCode 51) — modularização do construtor concluída.**
   - Passos finais: `ai/AiPlaceRecipes` (198 linhas — pátio, campus,
     praça, labirinto, linear, prédio isolado, chanfros) e

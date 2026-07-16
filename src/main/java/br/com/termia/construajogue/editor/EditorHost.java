@@ -55,13 +55,14 @@ public final class EditorHost extends FrameLayout
         void onClose();
     }
 
-    private final Activity activity;
+    final Activity activity;
     private final MapStore store;
     private final PrefabCatalog catalog;
     private final Listener listener;
     private final UndoHistory history = new UndoHistory();
-    private final PlanEditorView plan;
-    private final TextView status;
+    private final EditorForms forms = new EditorForms(this);
+    final PlanEditorView plan;
+    final TextView status;
     private final TextView counts;
     private final List<Button> toolButtons = new ArrayList<>();
     private Button undoButton;
@@ -79,7 +80,7 @@ public final class EditorHost extends FrameLayout
     private FrameLayout previewOverlay;
     private EditorPreviewView previewView;
     private final EditorTutorial tutorial;
-    private MapDocument doc;
+    MapDocument doc;
     private boolean dirty;
     private final Runnable autoSaveTask = new Runnable() {
         @Override
@@ -228,7 +229,7 @@ public final class EditorHost extends FrameLayout
         panel.setPadding(8, 8, 8, 8);
         storyButton = panelItem("Andar ativo: térreo…", () -> {
             hidePanel();
-            chooseStory();
+            forms.chooseStory();
         }, null);
         storyButton.setTextColor(0xFFE0C060);
         panel.addView(storyButton);
@@ -259,11 +260,11 @@ public final class EditorHost extends FrameLayout
         panel.addView(routeButton);
         panel.addView(panelItem("Objetivo…", () -> {
             hidePanel();
-            chooseObjective();
+            forms.chooseObjective();
         }, null));
         materialButton = panelItem("Material / água / lava…", () -> {
             hidePanel();
-            chooseMaterial();
+            forms.chooseMaterial();
         }, null);
         panel.addView(materialButton);
         logicButton = panelItem("Lógica da peça…", () -> {
@@ -273,7 +274,7 @@ public final class EditorHost extends FrameLayout
         panel.addView(logicButton);
         panel.addView(panelItem("Céu…", () -> {
             hidePanel();
-            chooseSky();
+            forms.chooseSky();
         }, null));
         duplicateButton = panelItem("Duplicar seleção", () -> {
             hidePanel();
@@ -541,36 +542,8 @@ public final class EditorHost extends FrameLayout
                 ? "térreo" : "Y " + meters(plan.activeBaseY())) + "…");
     }
 
-    /** Escolhe um pavimento existente ou abre um novo sobre a laje. */
-    private void chooseStory() {
-        final List<Float> levels = plan.storyBases();
-        String[] labels = new String[levels.size() + 2];
-        for (int i = 0; i < levels.size(); i++) {
-            float y = levels.get(i);
-            String name = Math.abs(y) < 0.01f
-                    ? "Térreo · Y 0,00 m" : "Pavimento · Y " + meters(y);
-            labels[i] = Math.abs(y - plan.activeBaseY()) < 0.08f
-                    ? "✓  " + name : name;
-        }
-        labels[levels.size()] = "Novo andar sobre o teto selecionado";
-        labels[levels.size() + 1] = "Elevação personalizada…";
-        new AlertDialog.Builder(activity)
-                .setTitle("Andares · topo do teto = piso")
-                .setItems(labels, (dialog, which) -> {
-                    if (which < levels.size()) {
-                        plan.setActiveBaseY(levels.get(which));
-                        plan.focusAll();
-                    } else if (which == levels.size()) {
-                        openStoryAboveSelectedCeiling();
-                    } else {
-                        showCustomStoryHeight();
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
 
-    private void openStoryAboveSelectedCeiling() {
+    void openStoryAboveSelectedCeiling() {
         Float top = plan.selectedCeilingTop();
         if (top == null) {
             Toast.makeText(activity, "Selecione um teto primeiro; depois "
@@ -589,32 +562,8 @@ public final class EditorHost extends FrameLayout
                 + " — a laje já é o piso; desenhe paredes, peças e teto");
     }
 
-    private void showCustomStoryHeight() {
-        EditText input = new EditText(activity);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL
-                | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        input.setText(String.format(Locale.US, "%.2f", plan.activeBaseY()));
-        new AlertDialog.Builder(activity)
-                .setTitle("Elevação do andar (Y)")
-                .setMessage("Use a altura do topo da laje. Faixa: -20 a 100 m.")
-                .setView(input)
-                .setPositiveButton("Abrir", (dialog, which) -> {
-                    try {
-                        float value = Float.parseFloat(input.getText()
-                                .toString().replace(',', '.'));
-                        plan.setActiveBaseY(clamp(value, -20f, 100f));
-                        plan.focusAll();
-                    } catch (NumberFormatException bad) {
-                        Toast.makeText(activity, "Número inválido",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
 
-    private static String meters(float value) {
+    static String meters(float value) {
         return String.format(Locale.US, "%.2f m", value).replace('.', ',');
     }
 
@@ -711,102 +660,8 @@ public final class EditorHost extends FrameLayout
         }
     }
 
-    private void chooseObjective() {
-        String[] labels = {"Chegar à saída", "Eliminar todos os inimigos",
-                "Coletar N fichas", "Sobreviver por X segundos"};
-        String[] types = {ObjectiveSpec.REACH_EXIT,
-                ObjectiveSpec.ELIMINATE_ALL, ObjectiveSpec.COLLECT,
-                ObjectiveSpec.SURVIVE};
-        new AlertDialog.Builder(activity)
-                .setTitle("Objetivo do mapa")
-                .setItems(labels, (dialog, which) ->
-                        showObjectiveForm(types[which], labels[which]))
-                .show();
-    }
 
-    private void showObjectiveForm(String type, String label) {
-        ObjectiveSpec current = doc.objective == null
-                ? new ObjectiveSpec() : doc.objective;
-        LinearLayout form = new LinearLayout(activity);
-        form.setOrientation(LinearLayout.VERTICAL);
-        form.setPadding(48, 16, 48, 0);
-        EditText target = field(form, "Quantidade de fichas",
-                current.target > 0 ? current.target : 3);
-        setFieldVisible(target, ObjectiveSpec.COLLECT.equals(type));
-        EditText duration = field(form, "Duração para sobreviver (s)",
-                current.durationSeconds > 0f
-                        ? current.durationSeconds : 30f);
-        setFieldVisible(duration, ObjectiveSpec.SURVIVE.equals(type));
-        EditText limit = field(form, "Tempo-limite (s; 0 = sem limite)",
-                current.timeLimitSeconds);
-        boolean survive = ObjectiveSpec.SURVIVE.equals(type);
-        EditText two = field(form, "Meta para 2 estrelas (s; 0 = desligada)",
-                current.twoStarSeconds);
-        setFieldVisible(two, !survive);
-        EditText three = field(form,
-                "Meta para 3 estrelas (s; 0 = desligada)",
-                current.threeStarSeconds);
-        setFieldVisible(three, !survive);
-        if (survive) {
-            TextView note = new TextView(activity);
-            note.setText("Estrelas: terminar com vida "
-                    + GameResult.SURVIVE_TWO_STAR_HEALTH + "+ vale 2, "
-                    + GameResult.SURVIVE_THREE_STAR_HEALTH + "+ vale 3");
-            note.setTextSize(13f);
-            note.setTextColor(0xFF8FA3B0);
-            form.addView(note);
-        }
-        new AlertDialog.Builder(activity)
-                .setTitle(label)
-                .setView(form)
-                .setPositiveButton("Aplicar", (dialog, which) -> {
-                    try {
-                        ObjectiveSpec next = new ObjectiveSpec();
-                        next.type = type;
-                        next.target = ObjectiveSpec.COLLECT.equals(type)
-                                ? Math.max(0, Math.round(parse(target))) : 0;
-                        next.durationSeconds = ObjectiveSpec.SURVIVE.equals(type)
-                                ? Math.max(0f, parse(duration)) : 0f;
-                        next.timeLimitSeconds = Math.max(0f, parse(limit));
-                        next.twoStarSeconds = survive
-                                ? 0f : Math.max(0f, parse(two));
-                        next.threeStarSeconds = survive
-                                ? 0f : Math.max(0f, parse(three));
-                        beforeChange();
-                        doc.objective = next;
-                        afterChange();
-                        status.setText("Objetivo: " + label);
-                    } catch (NumberFormatException bad) {
-                        Toast.makeText(activity, "Número inválido",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
 
-    private void chooseMaterial() {
-        final String[] ids = {"plain", "brick", "wood", "checker",
-                "metal", "asphalt", "water", "lava"};
-        String[] labels = {"Liso", "Tijolo", "Madeira", "Xadrez",
-                "Metal", "Asfalto", "Água (lentidão)", "Lava (dano)"};
-        new AlertDialog.Builder(activity)
-                .setTitle("Material da estrutura")
-                .setItems(labels, (dialog, which) ->
-                        plan.mutateSelected(() -> {
-                            StructureObject s = plan.selectedStructure();
-                            if (s == null) return;
-                            s.material = ids[which];
-                            if ("water".equals(ids[which])) {
-                                s.color = new float[]{0.08f, 0.36f, 0.66f};
-                            } else if ("lava".equals(ids[which])) {
-                                s.color = new float[]{0.95f, 0.22f, 0.04f};
-                            } else if ("asphalt".equals(ids[which])) {
-                                s.color = new float[]{0.16f, 0.17f, 0.19f};
-                            }
-                        }))
-                .show();
-    }
 
     private void configureSelectedLogic() {
         PrefabInstance selected = plan.selectedPrefab();
@@ -815,15 +670,15 @@ public final class EditorHost extends FrameLayout
             LinearLayout form = new LinearLayout(activity);
             form.setOrientation(LinearLayout.VERTICAL);
             form.setPadding(48, 16, 48, 0);
-            EditText name = textField(form, "Nome",
+            EditText name = forms.textField(form, "Nome",
                     textProperty(selected, "name", "Morador"), 48, 1);
-            EditText role = textField(form, "Papel na história",
+            EditText role = forms.textField(form, "Papel na história",
                     textProperty(selected, "role", "Morador local"), 80, 1);
-            EditText greeting = textField(form, "Primeira fala",
+            EditText greeting = forms.textField(form, "Primeira fala",
                     textProperty(selected, "greeting",
                             "Olá. Posso explicar o que aconteceu aqui."),
                     240, 3);
-            EditText background = textField(form,
+            EditText background = forms.textField(form,
                     "Contexto que a IA usará na conversa",
                     textProperty(selected, "background",
                             "Conhece este lugar e ajuda o jogador."), 600, 5);
@@ -854,7 +709,7 @@ public final class EditorHost extends FrameLayout
             LinearLayout form = new LinearLayout(activity);
             form.setOrientation(LinearLayout.VERTICAL);
             form.setPadding(48, 16, 48, 0);
-            EditText order = field(form,
+            EditText order = forms.field(form,
                     "Ordem da sequência (0 = livre)",
                     selected.floatProperty("order", 0f));
             new AlertDialog.Builder(activity)
@@ -862,7 +717,7 @@ public final class EditorHost extends FrameLayout
                     .setView(form)
                     .setPositiveButton("Aplicar", (dialog, which) -> {
                         try {
-                            float value = Math.max(0, Math.round(parse(order)));
+                            float value = Math.max(0, Math.round(EditorForms.parse(order)));
                             plan.mutateSelected(() -> {
                                 if (value == 0f) {
                                     selected.properties.remove("order");
@@ -909,48 +764,9 @@ public final class EditorHost extends FrameLayout
                 .show();
     }
 
-    private static float parse(EditText field) {
-        return Float.parseFloat(field.getText().toString()
-                .replace(',', '.'));
-    }
 
     /** Presets: nome, ambiente, horizonte/neblina, alcance, skybox. */
-    private static final Object[][] SKIES = {
-            {"Dia (sol e céu azul)", 0.60f,
-                    new float[]{0.55f, 0.70f, 0.86f}, 50f, "day"},
-            {"Entardecer (sol baixo)", 0.42f,
-                    new float[]{0.46f, 0.30f, 0.26f}, 38f, "dusk"},
-            {"Noite (lua e estrelas)", 0.20f,
-                    new float[]{0.02f, 0.03f, 0.08f}, 26f, "night"},
-            {"Instalação (padrão do jogo)", 0.35f,
-                    new float[]{0.04f, 0.05f, 0.07f}, 30f, "none"},
-    };
 
-    /**
-     * Céu do mapa: ajusta luz ambiente, cor do céu (o horizonte é a
-     * própria neblina) e alcance da neblina. Vale para o mapa inteiro
-     * e entra no desfazer.
-     */
-    private void chooseSky() {
-        String[] labels = new String[SKIES.length];
-        for (int i = 0; i < SKIES.length; i++) {
-            labels[i] = (String) SKIES[i][0];
-        }
-        new AlertDialog.Builder(activity)
-                .setTitle("Céu e iluminação")
-                .setItems(labels, (dialog, which) -> {
-                    beforeChange();
-                    doc.ambient = (Float) SKIES[which][1];
-                    doc.fogColor = ((float[]) SKIES[which][2]).clone();
-                    doc.fogFar = (Float) SKIES[which][3];
-                    doc.sky = (String) SKIES[which][4];
-                    afterChange();
-                    Toast.makeText(activity, "Céu: " + labels[which]
-                            + " — teste para ver", Toast.LENGTH_SHORT)
-                            .show();
-                })
-                .show();
-    }
 
     /** Cores da paleta (nome + RGB 0..1). */
     private static final Object[][] PALETTE = {
@@ -1159,32 +975,32 @@ public final class EditorHost extends FrameLayout
 
         if (o != null) {
             title = "Medidas do vão";
-            fields.add(field(form, "Largura (m)", o.width));
-            fields.add(field(form, "Altura (m)", o.height));
+            fields.add(forms.field(form, "Largura (m)", o.width));
+            fields.add(forms.field(form, "Altura (m)", o.height));
             if (WallOpening.WINDOW.equals(o.type)) {
-                fields.add(field(form, "Peitoril (m)", o.sill));
+                fields.add(forms.field(form, "Peitoril (m)", o.sill));
             }
         } else if (s != null) {
             boolean wall = StructureObject.ROLE_WALL
                     .equals(StructureRoles.roleOf(s));
             title = "Medidas — " + StructureRoles.name(s);
             if (wall) {
-                fields.add(field(form, "Comprimento (m)",
+                fields.add(forms.field(form, "Comprimento (m)",
                         WallGeometry.halfLength(s) * 2f));
-                fields.add(field(form, "Altura (m)",
+                fields.add(forms.field(form, "Altura (m)",
                         StructureRoles.heightValue(s)));
-                fields.add(field(form, "Espessura (m)",
+                fields.add(forms.field(form, "Espessura (m)",
                         WallGeometry.thickness(s)));
             } else {
-                fields.add(field(form, "Largura (m)", s.half[0] * 2f));
-                fields.add(field(form, "Profundidade (m)",
+                fields.add(forms.field(form, "Largura (m)", s.half[0] * 2f));
+                fields.add(forms.field(form, "Profundidade (m)",
                         s.half[2] * 2f));
-                fields.add(field(form, StructureRoles.heightLabel(s),
+                fields.add(forms.field(form, StructureRoles.heightLabel(s),
                         StructureRoles.heightValue(s)));
             }
         } else {
             title = "Medidas da peça";
-            fields.add(field(form, "Distância do chão (m)",
+            fields.add(forms.field(form, "Distância do chão (m)",
                     plan.selectedPrefab().transform.y
                             - plan.activeBaseY()));
         }
@@ -1238,42 +1054,11 @@ public final class EditorHost extends FrameLayout
         }
     }
 
-    private static float clamp(float v, float lo, float hi) {
+    static float clamp(float v, float lo, float hi) {
         return Math.max(lo, Math.min(hi, v));
     }
 
-    private EditText field(LinearLayout form, String label, float value) {
-        TextView caption = new TextView(activity);
-        caption.setText(label);
-        caption.setTextSize(13f);
-        caption.setTextColor(0xFF8FA3B0);
-        form.addView(caption);
-        EditText input = new EditText(activity);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setText(String.format(Locale.US, "%.2f", value));
-        input.setTag(caption);
-        form.addView(input);
-        return input;
-    }
 
-    private EditText textField(LinearLayout form, String label, String value,
-                               int limit, int lines) {
-        TextView caption = new TextView(activity);
-        caption.setText(label);
-        caption.setTextSize(13f);
-        caption.setTextColor(0xFF8FA3B0);
-        form.addView(caption);
-        EditText input = new EditText(activity);
-        input.setInputType(InputType.TYPE_CLASS_TEXT
-                | (lines > 1 ? InputType.TYPE_TEXT_FLAG_MULTI_LINE : 0));
-        input.setSingleLine(lines == 1);
-        if (lines > 1) input.setMinLines(lines);
-        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limit)});
-        input.setText(value);
-        form.addView(input);
-        return input;
-    }
 
     private static String textProperty(PrefabInstance prefab, String key,
                                        String fallback) {
@@ -1288,14 +1073,6 @@ public final class EditorHost extends FrameLayout
         return value.length() > limit ? value.substring(0, limit) : value;
     }
 
-    private static void setFieldVisible(EditText input, boolean visible) {
-        int value = visible ? VISIBLE : GONE;
-        input.setVisibility(value);
-        Object caption = input.getTag();
-        if (caption instanceof TextView) {
-            ((TextView) caption).setVisibility(value);
-        }
-    }
 
     private void undo() {
         // desenhando contorno, ↶ remove o último ponto marcado
