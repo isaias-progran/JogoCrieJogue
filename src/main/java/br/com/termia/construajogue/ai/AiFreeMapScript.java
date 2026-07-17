@@ -51,6 +51,22 @@ public final class AiFreeMapScript {
         }
     }
 
+    /** Ponteiros de contexto do roteiro (última parede/peça). Cada
+     *  `usar` recebe um Cursor próprio: estado não vaza do macro. */
+    static final class Cursor {
+        StructureObject wall;
+        PrefabInstance prefab;
+        PrefabDefinition def;
+    }
+
+    /** Estouro de estruturas/peças: interrompe o `usar` inteiro
+     *  (macro-bomba) em vez de tentar linha por linha. */
+    static final class LimitReached extends IllegalArgumentException {
+        LimitReached(String message) {
+            super(message);
+        }
+    }
+
     public static Result parse(String script, PrefabCatalog catalog) {
         if (script == null || script.trim().isEmpty()) {
             throw new IllegalArgumentException("a IA devolveu roteiro vazio");
@@ -60,9 +76,8 @@ public final class AiFreeMapScript {
         doc.name = "Mapa livre da IA";
         doc.sky = "day";
         Result result = new Result(doc);
-        StructureObject lastWall = null;
-        PrefabInstance lastPrefab = null;
-        PrefabDefinition lastDef = null;
+        Cursor cursor = new Cursor();
+        AiFreeMacros macros = new AiFreeMacros();
         String[] lines = script.split("\n");
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
@@ -71,49 +86,10 @@ public final class AiFreeMapScript {
             String[] parts = line.split("\\s+");
             String command = parts[0].toLowerCase(Locale.ROOT);
             try {
-                if ("nome".equals(command) || "titulo".equals(command)) {
-                    String value = clip(rest(line), 48);
-                    if (!value.isEmpty()) doc.name = value;
-                } else if ("ceu".equals(command)) {
-                    doc.sky = oneOf(parts[1], "day", "dusk", "night", "none");
-                } else if ("som".equals(command)) {
-                    doc.soundscape = oneOf(parts[1], "auto", "outdoor",
-                            "tunnel", "industrial");
-                } else if ("ambiente".equals(command)) {
-                    doc.ambient = clamp(number(parts[1]), 0.05f, 1f);
-                } else if ("neblina".equals(command)) {
-                    doc.fogColor = color(parts, 1);
-                    doc.fogFar = clamp(number(parts[4]), 10f, 160f);
-                } else if ("objetivo".equals(command)) {
-                    objective(doc, parts);
-                } else if ("piso".equals(command)) {
-                    floor(doc, parts, result);
-                } else if ("teto".equals(command)) {
-                    ceiling(doc, parts, result);
-                } else if ("parede".equals(command)) {
-                    lastWall = wall(doc, parts, result);
-                } else if ("vao".equals(command)) {
-                    opening(lastWall, parts, result);
-                } else if ("bloco".equals(command)) {
-                    box(doc, parts, result);
-                } else if ("peca".equals(command)) {
-                    PrefabInstance placed =
-                            prefab(doc, parts, catalog, result);
-                    if (placed != null) {
-                        lastPrefab = placed;
-                        lastDef = catalog.find(placed.prefabId);
-                    }
-                } else if ("prop".equals(command)) {
-                    numericProp(lastPrefab, lastDef, parts);
-                } else if ("texto".equals(command)) {
-                    textProp(lastPrefab, lastDef, parts, line);
-                } else if ("patrulha".equals(command)) {
-                    patrol(lastPrefab, lastDef, parts);
-                } else if ("inicio".equals(command)) {
-                    marker(doc, LogicMarker.PLAYER_SPAWN, parts);
-                } else if ("saida".equals(command)) {
-                    marker(doc, LogicMarker.EXIT, parts);
-                } else {
+                if (macros.handle(command, parts, i + 1, line, doc,
+                        catalog, result)) continue;
+                if (!execute(command, parts, line, doc, catalog, result,
+                        cursor)) {
                     warn(result, "linha " + (i + 1)
                             + ": comando desconhecido '" + command + "'");
                 }
@@ -122,8 +98,64 @@ public final class AiFreeMapScript {
                         + command + "): " + bad.getMessage());
             }
         }
+        macros.endOfScript(result);
         finish(doc, catalog, result);
         return result;
+    }
+
+    /**
+     * Executa uma linha já separada em partes; devolve false para
+     * comando desconhecido. Chamado pelo roteiro principal e pela
+     * expansão de macros (AiFreeMacros), que passa um Cursor próprio.
+     */
+    static boolean execute(String command, String[] parts, String line,
+                           MapDocument doc, PrefabCatalog catalog,
+                           Result result, Cursor cursor) {
+        if ("nome".equals(command) || "titulo".equals(command)) {
+            String value = clip(rest(line), 48);
+            if (!value.isEmpty()) doc.name = value;
+        } else if ("ceu".equals(command)) {
+            doc.sky = oneOf(parts[1], "day", "dusk", "night", "none");
+        } else if ("som".equals(command)) {
+            doc.soundscape = oneOf(parts[1], "auto", "outdoor",
+                    "tunnel", "industrial");
+        } else if ("ambiente".equals(command)) {
+            doc.ambient = clamp(number(parts[1]), 0.05f, 1f);
+        } else if ("neblina".equals(command)) {
+            doc.fogColor = color(parts, 1);
+            doc.fogFar = clamp(number(parts[4]), 10f, 160f);
+        } else if ("objetivo".equals(command)) {
+            objective(doc, parts);
+        } else if ("piso".equals(command)) {
+            floor(doc, parts, result);
+        } else if ("teto".equals(command)) {
+            ceiling(doc, parts, result);
+        } else if ("parede".equals(command)) {
+            cursor.wall = wall(doc, parts, result);
+        } else if ("vao".equals(command)) {
+            opening(cursor.wall, parts, result);
+        } else if ("bloco".equals(command)) {
+            box(doc, parts, result);
+        } else if ("peca".equals(command)) {
+            PrefabInstance placed = prefab(doc, parts, catalog, result);
+            if (placed != null) {
+                cursor.prefab = placed;
+                cursor.def = catalog.find(placed.prefabId);
+            }
+        } else if ("prop".equals(command)) {
+            numericProp(cursor.prefab, cursor.def, parts);
+        } else if ("texto".equals(command)) {
+            textProp(cursor.prefab, cursor.def, parts, line);
+        } else if ("patrulha".equals(command)) {
+            patrol(cursor.prefab, cursor.def, parts);
+        } else if ("inicio".equals(command)) {
+            marker(doc, LogicMarker.PLAYER_SPAWN, parts);
+        } else if ("saida".equals(command)) {
+            marker(doc, LogicMarker.EXIT, parts);
+        } else {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -752,7 +784,7 @@ public final class AiFreeMapScript {
                                          PrefabCatalog catalog,
                                          Result result) {
         if (doc.prefabs.size() >= MAX_PREFABS) {
-            throw new IllegalArgumentException("limite de peças atingido");
+            throw new LimitReached("limite de peças atingido");
         }
         String id = parts[1];
         if (catalog.find(id) == null) {
@@ -881,8 +913,7 @@ public final class AiFreeMapScript {
 
     private static void requireRoom(MapDocument doc, Result result) {
         if (doc.structures.size() >= MAX_STRUCTURES) {
-            throw new IllegalArgumentException(
-                    "limite de estruturas atingido");
+            throw new LimitReached("limite de estruturas atingido");
         }
     }
 
@@ -909,7 +940,7 @@ public final class AiFreeMapScript {
         throw new IllegalArgumentException("valor desconhecido: " + value);
     }
 
-    private static float number(String token) {
+    static float number(String token) {
         try {
             return Float.parseFloat(token.replace(',', '.'));
         } catch (NumberFormatException bad) {
@@ -946,7 +977,7 @@ public final class AiFreeMapScript {
         warn(result.warnings, message);
     }
 
-    private static void warn(List<String> warnings, String message) {
+    static void warn(List<String> warnings, String message) {
         if (warnings.size() < 40) warnings.add(message);
     }
 }

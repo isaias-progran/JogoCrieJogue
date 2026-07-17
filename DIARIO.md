@@ -9,6 +9,31 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-17
+- **v0.27.0 (versionCode 67) — F1 do plano de macros: `definir`/`usar` no parser.**
+  - `definir <nome>` grava linhas até `fim`; `usar <nome> x z [rot] [tom]`
+    reexecuta com deslocamento pela âncora, rotação 0/90/180/270 e tom
+    (`claro|escuro|r g b`). Novo `ai/AiFreeMacros` (arquivo próprio) faz a
+    gravação e a expansão; `AiFreeMapScript` ganhou `execute(...)+Cursor`
+    (dispatch extraído, comportamento sem macros intacto) e `LimitReached`.
+  - Regras cumpridas do plano: estado de última parede/peça CONFINADO por
+    `usar` (Cursor próprio — vao/texto de dentro não vazam, os de fora
+    continuam valendo depois); limites 500/400 valem APÓS a expansão e o
+    `usar` que estoura é interrompido com aviso "macro-bomba"; aninhado,
+    nome desconhecido, macro vazio, `fim` solto e redefinição viram aviso;
+    comandos de documento (nome/ceu/objetivo/inicio/saida/usar) não entram
+    em macro.
+  - Rotação segue a convenção do motor (`rotateBox`: 90° ⇒ (x,z)→(−z,x),
+    troca hx↔hz): endpoints de parede giram como pontos, o SINAL do offset
+    do `vao` acompanha o eixo da parede original (+90 em parede-x preserva,
+    parede-z inverte etc.), yaw de peça soma a rotação, `patrulha` gira, e
+    porta girada 90/270 nasce com `halfX↔halfZ` trocados (collider é AABB
+    de mundo) — `prop halfX` dentro do macro também é renomeado.
+  - `normalizeDoors` 1:1 por instância comprovado: 2 `usar` de casa com
+    terminal+portão ligam cada portão ao terminal da própria casa.
+  - Suíte: 771 verificações (AiFreeMapTest 83→108). Build OK: `aapt2`
+    confirmou 67/0.27.0, APK 366.018 bytes em
+    `/sdcard/TermIa/apks/construa-jogue.apk`. Instrução da IA ainda NÃO
+    ensina os macros — é a F2; gerar mapa no aparelho continua igual.
 - **PLANO substituído por decisão do usuário: macros de construção.**
   - O usuário mandou apagar o plano antigo (endurecimento da IA Livre, já
     cumprido no essencial) e criar um plano completo para MACROS: a IA define

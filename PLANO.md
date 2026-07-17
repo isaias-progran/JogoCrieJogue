@@ -34,7 +34,7 @@ várias vezes mais barata, sem tocar no modelo de segurança.
 
 ## 2. Fases (uma por execução da Automação; marcar `[x]` ao concluir)
 
-### [ ] F1 — comandos `definir` e `usar` no parser
+### [x] F1 — comandos `definir` e `usar` no parser (v0.27.0)
 
 - `definir <nome>` abre um bloco; linhas seguintes são GRAVADAS (não
   executadas) até `fim`. `<nome>`: [a-zA-Z0-9_]{1,24}. Sem `definir` aninhado

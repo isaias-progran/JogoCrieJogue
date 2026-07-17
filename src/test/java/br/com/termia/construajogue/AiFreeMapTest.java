@@ -36,6 +36,7 @@ public final class AiFreeMapTest {
         streamEvents();
         fullScript(catalog);
         safetyNets(catalog);
+        macros(catalog);
 
         Check.done("AiFreeMapTest");
     }
@@ -461,5 +462,146 @@ public final class AiFreeMapTest {
                 "cores presas a 0..1");
         LogicMarker far = clamped.document.firstMarker(LogicMarker.EXIT);
         Check.that(far.x <= 48f, "coordenadas presas à grade");
+    }
+
+    /** F1 do plano de macros: definir/usar com rotação, tom e limites. */
+    private static void macros(PrefabCatalog catalog) {
+        AiFreeMapScript.Result stamped = AiFreeMapScript.parse(String.join(
+                "\n",
+                "piso 0 0 40 40 plain 0.4 0.4 0.4",
+                "definir casa",
+                "parede -3 0 3 0 3 brick 0.5 0.4 0.3",
+                "vao porta 1",
+                "peca terminal.wall 2 1.4 2",
+                "peca door.gate 0 1.4 3",
+                "prop halfX 3",
+                "peca furniture.table 1 0 0",
+                "fim",
+                "usar casa -10 -10",
+                "usar casa 10 10 90 escuro",
+                "inicio 0 -20",
+                "saida 0 20"), catalog);
+        MapDocument doc = stamped.document;
+        Check.equal(stamped.warnings.size(), 0,
+                "duas casas carimbadas sem nenhum aviso: "
+                        + stamped.warnings);
+        Check.equal(doc.structures.size(), 3,
+                "piso mais uma parede por instância do macro");
+        StructureObject w1 = doc.structures.get(1);
+        Check.that(Math.abs(w1.transform.x + 10f) < 1e-3
+                        && Math.abs(w1.transform.z + 10f) < 1e-3
+                        && Math.abs(w1.half[0] - 3f) < 1e-3,
+                "instância 1 deslocada para a âncora, sem rotação");
+        Check.equal(w1.openings.size(), 1, "vão gravado expande na casa 1");
+        StructureObject w2 = doc.structures.get(2);
+        Check.that(Math.abs(w2.transform.x - 10f) < 1e-3
+                        && Math.abs(w2.transform.z - 10f) < 1e-3,
+                "instância 2 ancorada em 10 10");
+        Check.that(Math.abs(w2.half[2] - 3f) < 1e-3
+                        && Math.abs(w2.half[0] - 0.15f) < 1e-3,
+                "rotação 90 troca o eixo da parede (hx<->hz)");
+        Check.that(Math.abs(w2.openings.get(0).offset - 1f) < 1e-3,
+                "offset do vão acompanha a rotação da parede");
+        Check.that(Math.abs(w2.color[0] - 0.35f) < 1e-3,
+                "tom escuro multiplica as cores da instância");
+        Check.equal(doc.prefabs.size(), 6,
+                "três peças do macro por instância");
+        Check.equal(doc.prefabs.get(1).stringProperty("controllerId"),
+                doc.prefabs.get(0).id,
+                "portão da casa 1 liga ao terminal da casa 1");
+        Check.equal(doc.prefabs.get(4).stringProperty("controllerId"),
+                doc.prefabs.get(3).id,
+                "portão da casa 2 liga ao terminal da casa 2");
+        Check.that(Math.abs(doc.prefabs.get(1)
+                        .floatProperty("halfX", 0f) - 3f) < 1e-3,
+                "prop halfX vale como escrito sem rotação");
+        Check.that(Math.abs(doc.prefabs.get(4)
+                        .floatProperty("halfZ", 0f) - 3f) < 1e-3
+                        && Math.abs(doc.prefabs.get(4)
+                        .floatProperty("halfX", 0f) - 0.18f) < 1e-3,
+                "porta girada 90 troca halfX por halfZ no collider");
+        PrefabInstance table = doc.prefabs.get(5);
+        Check.that(Math.abs(table.transform.x - 10f) < 1e-3
+                        && Math.abs(table.transform.z - 11f) < 1e-3,
+                "peça do macro gira em volta da âncora");
+        Check.that(!MapValidator.hasError(
+                        MapValidator.validate(doc, catalog)),
+                "mapa com macros passa no validador");
+
+        // Estado de última parede/peça fica confinado a cada `usar`.
+        AiFreeMapScript.Result confined = AiFreeMapScript.parse(String.join(
+                "\n",
+                "piso 0 0 20 20 plain 0.4 0.4 0.4",
+                "parede -5 0 5 0 3 wood 0.6 0.5 0.4",
+                "peca npc.human 0 0 -5",
+                "definir mob",
+                "peca furniture.table 0 0 0",
+                "fim",
+                "definir ruim",
+                "vao porta 0",
+                "texto name Zé",
+                "fim",
+                "usar ruim 5 5",
+                "usar mob 3 3",
+                "vao porta 0",
+                "texto name Ana",
+                "inicio 0 -8",
+                "saida 0 8"), catalog);
+        String confinedWarnings = confined.warnings.toString();
+        Check.that(confinedWarnings.contains("nenhuma parede antes do vão"),
+                "vão no começo do macro não enxerga parede de fora");
+        Check.that(confinedWarnings.contains("nenhuma peça antes de texto"),
+                "texto no macro não enxerga peça de fora");
+        Check.equal(confined.document.structures.get(1).openings.size(), 1,
+                "só o vão de fora do macro corta a parede de fora");
+        Check.equal(confined.document.prefabs.get(0)
+                        .stringProperty("name"), "Ana",
+                "texto depois do usar volta a valer para a peça de fora");
+
+        // Aninhado, macro vazio e nome desconhecido viram avisos.
+        AiFreeMapScript.Result odd = AiFreeMapScript.parse(String.join("\n",
+                "piso 0 0 20 20 plain 0.4 0.4 0.4",
+                "definir vazio",
+                "fim",
+                "definir a",
+                "definir b",
+                "bloco 0 1 0 1 1 1 metal 0.5 0.5 0.5",
+                "fim",
+                "usar vazio 0 0",
+                "usar b 5 5",
+                "usar a 5 5",
+                "inicio 0 -8",
+                "saida 0 8"), catalog);
+        String oddWarnings = odd.warnings.toString();
+        Check.that(oddWarnings.contains("macro 'vazio' vazio"),
+                "macro vazio vira aviso");
+        Check.that(oddWarnings.contains("'definir' dentro de macro"),
+                "definir aninhado vira aviso e o bloco continua");
+        Check.that(oddWarnings.contains("macro desconhecido 'b'"),
+                "usar de nome não definido vira aviso");
+        Check.that(odd.document.structures.size() == 2 && Math.abs(
+                        odd.document.structures.get(1).transform.x - 5f)
+                        < 1e-3,
+                "bloco gravado após o aninhado expande deslocado");
+
+        // Macro-bomba: os limites valem após a expansão e interrompem.
+        StringBuilder bomb = new StringBuilder(
+                "piso 0 0 40 40 plain 0.4 0.4 0.4\n");
+        bomb.append("definir grade\n");
+        for (int i = 0; i < 60; i++) {
+            bomb.append("bloco ").append(i - 30)
+                    .append(" 1 0 0.4 1 0.4 metal 0.5 0.5 0.5\n");
+        }
+        bomb.append("fim\n");
+        for (int i = 0; i < 12; i++) {
+            bomb.append("usar grade 0 ").append(i * 2 - 12).append("\n");
+        }
+        bomb.append("inicio 0 -20\nsaida 0 20\n");
+        AiFreeMapScript.Result blasted = AiFreeMapScript.parse(
+                bomb.toString(), catalog);
+        Check.equal(blasted.document.structures.size(), 500,
+                "expansão para no limite de estruturas");
+        Check.that(blasted.warnings.toString().contains("macro-bomba"),
+                "usar interrompido avisa macro-bomba");
     }
 }
