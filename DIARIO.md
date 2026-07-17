@@ -9,6 +9,23 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-17
+- **PLANO substituído por decisão do usuário: macros de construção.**
+  - O usuário mandou apagar o plano antigo (endurecimento da IA Livre, já
+    cumprido no essencial) e criar um plano completo para MACROS: a IA define
+    uma construção uma vez (`definir casaPadrao … fim`) e carimba N vezes
+    (`usar casaPadrao x z rot tom`); depois o app ganha serializador
+    doc→roteiro com prova de ida-e-volta e a revisão passa a enviar roteiro
+    compacto em vez do JSON inteiro (corta o custo de tokens da melhoria).
+  - `PLANO.md` novo tem 7 fases com caixas, gates por fase, a receita pronta
+    da tarefa 🤖 da Automação do TermIa (uma fase por execução, verificação
+    via test-core.sh) e seção de armadilhas (macro-bomba, estado de última
+    parede vazando do `usar`, rotação só 90°, perda silenciosa no
+    serializador = pior bug possível). Inegociáveis de segurança foram
+    preservados fora do plano: funil parser→resgate→validador→compilador,
+    saída da revisão sempre roteiro completo, mapa salvo intocado.
+  - `INICIAR.md` aponta para o plano novo; pendências de aparelho herdadas
+    (revisão, cancelamento, aliado) viraram parte da fase manual F7.
+    Nenhum código mudou nesta entrada — só documentação.
 - **v0.26.2 (versionCode 66) — correções da revisão geral (8 ângulos de análise).**
   - Uma revisão multiagente do diff v0.26.x achou 10 defeitos confirmados;
     todos os de comportamento foram corrigidos nesta versão:

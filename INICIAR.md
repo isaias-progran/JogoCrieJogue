@@ -1,6 +1,6 @@
 # Próxima sessão
 
-O código está em **v0.26.1**. Antes de alterar:
+O código está em **v0.26.2**. Antes de alterar:
 
 1. Leia `DIARIO.md`, `PLANO.md`, `docs/IA-LIVRE.md`,
    `docs/IA-SEGURA.md` e `docs/FORMATO-MAPA.md`.
@@ -41,12 +41,12 @@ Mudanças no prompt/parser exigem `AiFreeMapTest` e comparação em aparelho com
 
 ## Próxima ordem técnica
 
-1. validar no aparelho a revisão da v0.26.1 e confirmar original/cópia;
-2. validar o cancelamento real e o aliado combatente;
-3. ampliar alcançabilidade horizontal para escadas, terminais, fichas e
-   interiores obrigatórios;
-4. medir balanceamento do aliado com vários inimigos/NPCs;
-5. evoluir análise local, prévia 3D e desempenho sem reduzir a IA Livre.
+O plano vigente é o de **macros de construção e revisão barata** em
+`PLANO.md` (substituiu o plano anterior por decisão do usuário em
+2026-07-17). Executar as fases na ordem, uma por iteração, marcando as
+caixas; a seção de armadilhas do próprio PLANO.md é leitura obrigatória.
+Pendências herdadas (validar revisão/cancelamento/aliado no aparelho)
+continuam valendo como teste manual junto da fase F7.
 
 A integração de rede tem testes de contrato, mas uma chamada real exige chave
 pessoal e deve ser conferida no aparelho sem registrar o segredo.
