@@ -26,6 +26,11 @@ Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
   - `INICIAR.md` aponta para o plano novo; pendências de aparelho herdadas
     (revisão, cancelamento, aliado) viraram parte da fase manual F7.
     Nenhum código mudou nesta entrada — só documentação.
+  - A seção 3 do PLANO.md ganhou os fatos do código da Automação do TermIa
+    (formato do `/host/automation.tsv`, flag de permissões do `claude -p`,
+    alarme que só arma ao abrir o app, teto de 10 min por execução) e o
+    pedido da tarefa agora manda terminar trabalho não commitado antes de
+    abrir fase nova.
 - **v0.26.2 (versionCode 66) — correções da revisão geral (8 ângulos de análise).**
   - Uma revisão multiagente do diff v0.26.x achou 10 defeitos confirmados;
     todos os de comportamento foram corrigidos nesta versão:

@@ -135,15 +135,38 @@ várias vezes mais barata, sem tocar no modelo de segurança.
 Tarefa 🤖 de IA (uma execução = uma fase), repetição a gosto do usuário:
 
 - **Pedido**: `No projeto /host/home/apps/construa-jogue: leia DIARIO.md e
-  PLANO.md. Execute a PRIMEIRA fase não marcada [ ] do PLANO.md, completa:
-  implementação, testes, build do APK, DIARIO atualizado, caixa marcada [x]
-  e commit+push. UMA fase por execução. F7 é manual: se for a próxima, pare
-  e avise na resposta. Se todas estiverem marcadas, responda "plano
-  concluído" sem alterar nada.`
+  PLANO.md. Se houver trabalho NÃO COMMITADO de execução anterior, termine e
+  commite ANTES de abrir fase nova. Depois execute a PRIMEIRA fase não
+  marcada [ ] do PLANO.md, completa: implementação, testes, build do APK,
+  DIARIO atualizado, caixa marcada [x] e commit+push. UMA fase por execução.
+  F7 é manual: se for a próxima, pare e avise na resposta. Se todas
+  estiverem marcadas, responda "plano concluído" sem alterar nada.`
 - **🔎 Verificação**: `cd /host/home/apps/construa-jogue && sh
   scripts/test-core.sh >/dev/null 2>&1`
 - Com o terminal aberto, `/loop` numa sessão claude faz o mesmo papel com
   cadência de minutos.
+
+Fatos do código da Automação (analisados em 2026-07-17 no
+`Programas/termIa/app/src/main/java/br/com/termia/auto/`):
+
+- As tarefas são o arquivo **`/host/automation.tsv`** (uma linha por tarefa,
+  10 colunas separadas por TAB): `id  hora  min  diaria(1|0)  ligada(1|0)
+  nome  cmd  ai  data  verificacao`. Em tarefa de IA, `ai` é o comando (ex.:
+  `claude -p --dangerously-skip-permissions` — sem essa flag o modo `-p` não
+  responde prompts de permissão e não edita nada) e `cmd` é o PROMPT. `\t`,
+  `\n` e `\` dentro dos textos viram `\\t`, `\\n`, `\\\\`. Linha inválida
+  vai para quarentena sem derrubar as demais.
+- Editar o TSV pelo terminal FUNCIONA, mas o alarme só arma quando o app
+  roda `rescheduleAll` — **abrir o TermIa uma vez** depois de editar (ou
+  usar o ⚡ agora no cartão da tarefa).
+- **Teto de 10 minutos por execução** (`AiRunner`/`TASK_TIMEOUT_S`).
+  Execução cortada deixa trabalho não commitado — por isso o pedido acima
+  manda terminar o pendente primeiro. Histórico em
+  `/host/automation-log.txt`; respostas em `/sdcard/TermIa/ia/`.
+- Ideia aparte (projeto termIa, NÃO bloqueia este plano): painel 🤖 de
+  automação DENTRO do terminal, com execução visível em aba nova; desenho
+  discutido em 2026-07-17, a implementar numa sessão em
+  `/host/home/Programas/termIa`.
 
 ## 4. Armadilhas já conhecidas (ler antes de implementar)
 
