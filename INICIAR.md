@@ -1,6 +1,6 @@
 # Próxima sessão
 
-O código está em **v0.26.2**. Antes de alterar:
+O código está em **v0.27.1**. Antes de alterar:
 
 1. Leia `DIARIO.md`, `PLANO.md`, `docs/IA-LIVRE.md`,
    `docs/IA-SEGURA.md` e `docs/FORMATO-MAPA.md`.

@@ -69,6 +69,34 @@ public final class AiFreeMapTest {
                 "instrução cobra variedade de textura nas paredes");
         Check.that(request.contains("texto combate sim|nao"),
                 "modo livre pode escolher aliado combatente ou pacífico");
+        Check.that(request.contains("definir <nome>")
+                        && request.contains("usar <nome> <x> <z> [rot] [tom]"),
+                "instrução ensina a gramática de macros");
+        Check.that(request.contains("3 ou mais")
+                        && request.contains("varie rot e/ou tom"),
+                "instrução exige macro e variedade quando há repetição");
+
+        String macroExample = String.join("\n",
+                "definir casa",
+                "piso 0 0 3 3 wood 0.55 0.42 0.28",
+                "parede -3 -3 3 -3 3 brick 0.75 0.65 0.5",
+                "vao porta 0",
+                "parede -3 3 3 3 3 brick 0.75 0.65 0.5",
+                "parede -3 -3 -3 3 3 brick 0.75 0.65 0.5",
+                "parede 3 -3 3 3 3 brick 0.75 0.65 0.5",
+                "fim",
+                "usar casa -10 0 0 claro",
+                "usar casa 10 0 180 escuro",
+                "inicio -10 0",
+                "saida 10 0");
+        AiFreeMapScript.Result example = AiFreeMapScript.parse(macroExample,
+                catalog);
+        Check.equal(example.document.structures.size(), 10,
+                "exemplo de macro da instrução expande duas casas");
+        Check.that(!MapValidator.hasError(MapValidator.validate(
+                        example.document, catalog)),
+                "contrato do exemplo de macro compila sem erro");
+        LevelCompiler.compile(example.document, catalog);
         boolean rejected = false;
         try {
             AiOpenAiClient.buildFreeMapRequest("ab", "gpt-5.6-terra", ids);

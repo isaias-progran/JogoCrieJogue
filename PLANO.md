@@ -61,7 +61,7 @@ várias vezes mais barata, sem tocar no modelo de segurança.
 - Gate: suíte verde; roteiro sem macros continua byte-idêntico ao resultado
   atual (nenhuma mudança de comportamento sem `definir`).
 
-### [ ] F2 — instrução do Livre ensina os macros
+### [x] F2 — instrução do Livre ensina os macros (v0.27.1)
 
 - `buildFreeMapRequest`: acrescentar a gramática `definir/usar` com exemplo
   curto (casa mínima) e a orientação: repetiu a mesma construção 3+ vezes →

@@ -9,6 +9,23 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-17
+- **v0.27.1 (versionCode 68) — F2: o Livre aprende a usar macros.**
+  - `buildFreeMapRequest` agora documenta `definir <nome> … fim` e
+    `usar <nome> <x> <z> [rot] [tom]`, explica as opções válidas de rotação
+    e tom e inclui uma casa mínima completa carimbada duas vezes.
+  - A orientação de variedade ficou objetiva: construção repetida 3 ou mais
+    vezes deve virar macro, variando `rot` e/ou `tom` entre vizinhos. Isso só
+    afeta novas gerações; nenhum mapa salvo é refeito ou alterado.
+  - `AiFreeMapTest` verifica a presença da gramática e da regra no request e
+    executa o mesmo contrato do exemplo pelo parser, validador e compilador
+    (duas casas, 10 estruturas, sem erro).
+  - Suíte verde: 775 verificações (`AiFreeMapTest` 108→112). Build Android
+    concluído, APK de 366.018 bytes copiado para
+    `/sdcard/TermIa/apks/construa-jogue.apk` e `/sdcard/apks/`.
+  - Geração real não executada nesta sessão: não havia chamada autenticada ou
+    aparelho conectado disponível. Validar no aparelho com mapa NOVO na F7,
+    registrando modelo, pedido e resultado; mapas antigos não servem para
+    avaliar mudança de instrução.
 - **v0.27.0 (versionCode 67) — F1 do plano de macros: `definir`/`usar` no parser.**
   - `definir <nome>` grava linhas até `fim`; `usar <nome> x z [rot] [tom]`
     reexecuta com deslocamento pela âncora, rotação 0/90/180/270 e tom
