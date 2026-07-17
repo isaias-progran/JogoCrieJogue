@@ -52,6 +52,9 @@ public final class EditorHost extends FrameLayout
     public interface Listener {
         void onTest(MapDocument snapshot);
 
+        /** Envia uma fotografia já salva para revisão opcional pela IA. */
+        void onImproveWithAi(MapDocument snapshot);
+
         void onClose();
     }
 
@@ -299,6 +302,12 @@ public final class EditorHost extends FrameLayout
             hidePanel();
             showPreview3d();
         }, null));
+        Button improveAi = panelItem("✦ Melhorar com IA…", () -> {
+            hidePanel();
+            improveWithAi();
+        }, null);
+        improveAi.setTextColor(0xFF8FE0C9);
+        panel.addView(improveAi);
         panel.addView(panelItem("Objetos…", () -> {
             hidePanel();
             pickers.showObjectList();
@@ -663,6 +672,23 @@ public final class EditorHost extends FrameLayout
                     "Contexto que a IA usará na conversa",
                     textProperty(selected, "background",
                             "Conhece este lugar e ajuda o jogador."), 600, 5);
+            CheckBox combatant = new CheckBox(activity);
+            combatant.setText("Aliado combatente");
+            combatant.setChecked(selected.booleanProperty(
+                    "combatant", false));
+            form.addView(combatant);
+            EditText combatLine1 = forms.textField(form,
+                    "Fala de combate 1",
+                    textProperty(selected, "combatLine1",
+                            "Cobre a esquerda!"), 120, 1);
+            EditText combatLine2 = forms.textField(form,
+                    "Fala de combate 2",
+                    textProperty(selected, "combatLine2",
+                            "Alvo à frente!"), 120, 1);
+            EditText combatLine3 = forms.textField(form,
+                    "Fala de combate 3",
+                    textProperty(selected, "combatLine3",
+                            "Tô contigo!"), 120, 1);
             ScrollView scroller = new ScrollView(activity);
             scroller.addView(form);
             new AlertDialog.Builder(activity)
@@ -681,6 +707,27 @@ public final class EditorHost extends FrameLayout
                                 selected.properties.put("background",
                                         requiredText(background,
                                                 "Conhece este lugar.", 600));
+                                if (combatant.isChecked()) {
+                                    selected.properties.put("combatant",
+                                            Boolean.TRUE);
+                                    selected.properties.put("combatLine1",
+                                            requiredText(combatLine1,
+                                                    "Cobre a esquerda!",
+                                                    120));
+                                    selected.properties.put("combatLine2",
+                                            requiredText(combatLine2,
+                                                    "Alvo à frente!", 120));
+                                    selected.properties.put("combatLine3",
+                                            requiredText(combatLine3,
+                                                    "Tô contigo!", 120));
+                                } else {
+                                    // NPC pacífico não ganha propriedade
+                                    // nova só por abrir o diálogo e dar OK.
+                                    selected.properties.remove("combatant");
+                                    selected.properties.remove("combatLine1");
+                                    selected.properties.remove("combatLine2");
+                                    selected.properties.remove("combatLine3");
+                                }
                             }))
                     .setNegativeButton("Cancelar", null)
                     .show();
@@ -876,6 +923,12 @@ public final class EditorHost extends FrameLayout
         }
         // snapshot profundo: a partida nunca toca o documento em edição
         listener.onTest(MapJson.read(MapJson.write(doc)));
+    }
+
+    /** Salva as edições locais antes de congelar o mapa enviado à revisão. */
+    private void improveWithAi() {
+        if (!saveNow()) return;
+        listener.onImproveWithAi(MapJson.read(MapJson.write(doc)));
     }
 
     private static String join(List<String> lines) {

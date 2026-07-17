@@ -123,6 +123,10 @@ public final class LevelCompiler {
                             p.stringProperty("role"),
                             p.stringProperty("greeting"),
                             p.stringProperty("background"),
+                            p.booleanProperty("combatant", false),
+                            new String[]{p.stringProperty("combatLine1"),
+                                    p.stringProperty("combatLine2"),
+                                    p.stringProperty("combatLine3")},
                             x, y, z, p.transform.yaw));
                     // O companheiro se move; sua posição não pode virar um
                     // collider estático e deixar um obstáculo invisível.

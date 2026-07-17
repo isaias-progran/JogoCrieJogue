@@ -15,9 +15,10 @@ Principais recursos atuais:
   inimigo/item, água/lava e munição especial;
 - iluminação pontual, materiais procedurais, sombras blob, céus, passos e
   ambientes sonoros procedurais externos, industriais e subterrâneos;
-- IA pessoal opcional para gerar cenários completos e conversar por voz com
-  NPCs companheiros humanos, com memória curta apenas em RAM, sempre por um
-  plano fechado que o jogo valida e constrói localmente;
+- IA pessoal opcional para gerar cenários completos no modo Guiado ou Livre,
+  melhorar um mapa existente sem sobrescrever o original, conversar por voz
+  com NPCs e criar aliados combatentes; a memória de conversa fica apenas em
+  RAM e todo mapa é validado/compilado localmente antes de salvar;
 - importação/exportação JSON, código `CJ2:`, QR e campanhas do usuário.
 
 Entre os exemplos embarcados está **Complexo Ômega — nove núcleos**, uma
@@ -49,23 +50,43 @@ respeitar os avisos de desempenho do rodapé.
 ## IA pessoal, sem Alpine
 
 Na biblioteca, `CONFIGURAR IA` recebe uma chave pessoal e `GERAR CENÁRIO COM
-IA` cria tema, objetivo, NPC e composição. O plano agora escolhe também entre
-edifício único, rua, pátio, campus, labirinto, praça com alas, sequência
-linear, volumes espalhados, exploração vertical e subterrâneo; define rota,
-divisões internas, cobertura, quantidade de prédios/cômodos/andares e zonas.
-Assim, “casa de dois andares” produz uma casa percorrível com laje vazada,
-escada, cômodos e missão no piso superior, em vez da mesma avenida com outra
-cor. Perto de uma `Pessoa amigável`, ela
+IA` oferece duas formas de criação:
+
+- **Guiado:** a IA escolhe tema, objetivo, NPC, layout, rota, divisões,
+  cobertura, prédios, cômodos, andares e zonas num JSON Schema estrito; o jogo
+  decide as coordenadas com receitas locais.
+- **Livre:** a IA desenha arquitetura, materiais, peças, inimigos, itens e
+  marcadores com coordenadas próprias numa linguagem fechada de comandos. O
+  resultado chega por streaming, linhas inválidas viram avisos e problemas
+  conhecidos passam por resgate antes da validação final.
+
+`MELHORAR COM IA` está disponível na prévia de um mapa gerado, no menu `⋮` de
+cada mapa da biblioteca e em `☰` dentro do editor. O jogador descreve somente
+o que deseja mudar e escolhe o modelo. A nova chamada recebe o JSON completo do
+mapa como dado não confiável e deve devolver o roteiro completo revisado,
+preservando tudo que não foi pedido. O resultado passa pelo mesmo parser,
+resgate, validador e compilador do Livre e volta a uma prévia. Nada é
+sobrescrito: somente `SALVAR CÓPIA E EDITAR` cria outro mapa; cancelar conserva
+o original. Como há uma nova chamada e todo o mapa, inclusive textos de NPC, é
+enviado à API, a tela avisa sobre créditos e privacidade antes de gerar.
+
+No Guiado, “casa de dois andares” produz uma casa percorrível com laje vazada,
+escada, cômodos e missão no piso superior. No Livre, o pedido não é reduzido a
+uma lista de plantas: a IA preenche o mapa e o aplicativo conserva somente os
+comandos que consegue interpretar com segurança. Perto de uma `Pessoa
+amigável`, ela
 cumprimenta por TTS, passa a seguir o jogador e o botão `FALAR` oferece teclado
 ou microfone. A resposta chega por voz sem tela modal de espera; sem chave, a
-fala estática do mapa continua funcionando.
+fala estática do mapa continua funcionando. No modo Livre, a IA também pode
+marcar a pessoa como combatente e gravar três falas curtas. Mira, dano,
+cadência, desmaio e recuperação são regras locais, sem rede durante a partida.
 
 Cada geração permite escolher **GPT-5.6 Terra** (recomendado), **GPT-5.6 Sol**
 (maior qualidade, latência/custo potencialmente maiores), **GPT-5.6 Luna**
 (econômico) ou o **GPT-5.4 mini** antigo para compatibilidade. A escolha afeta
 somente o arquiteto do mapa; conversas curtas dos NPCs permanecem no mini.
 
-O gerador oferece perfis Automático, Econômico, Equilibrado, Grande e
+O modo Guiado oferece perfis Automático, Econômico, Equilibrado, Grande e
 S23/forte. O último produz quatro setores de 88×88 m ligados por portas; ao
 atravessar, o setor seguinte é lido e compilado e o anterior deixa de ficar
 ativo. Isso cria uma cidade extensa sem somar toda a geometria na RAM/GPU.
@@ -82,11 +103,19 @@ apenas três pares de pergunta/resposta durante a sessão para continuar o
 assunto sem o NPC se apresentar de novo.
 
 O app não instala Alpine nem qualquer shell. Cada pedido faz uma conexão HTTPS
-com a Responses API, sem ferramentas, downloads ou execução dinâmica. A IA
-preenche um JSON Schema estrito; somente o construtor local pode transformar
-esse plano em peças conhecidas, e o mapa ainda passa pelo validador e pelo
-compilador antes de ser oferecido ao editor. A chave fica só na memória por
-padrão; persistência é opcional e usa Android Keystore.
+com a Responses API, sem ferramentas, downloads ou execução dinâmica. No
+Guiado, a saída usa JSON Schema estrito; no Livre, um parser fechado aceita
+somente comandos, peças e propriedades conhecidas. Nos dois casos o mapa passa
+pelo validador e pelo compilador antes de ser oferecido ao editor. A chave fica
+só na memória por padrão; persistência é opcional e usa Android Keystore.
+
+A IA Livre foi validada no aparelho e é uma capacidade protegida do produto:
+melhorias não podem convertê-la silenciosamente em Guiado nem reduzir mapas já
+salvos. A v0.26.1 acrescenta a revisão opcional com IA, sempre como nova cópia;
+a base v0.26.0 mantém cancelamento real da conexão, colisão compilada no spawn,
+aviso de rota horizontal, prévia agrupada e NPCs pacíficos ou combatentes.
+O combate do aliado é local e determinístico; a IA define somente a escolha
+narrativa, personalidade e falas gravadas no mapa.
 
 Uma chave dentro de qualquer app móvel não tem a mesma proteção de um backend.
 Como este é um app pessoal sem servidor, use uma chave exclusiva e restrita,
@@ -108,6 +137,6 @@ ADB=/caminho/adb sh scripts/test-device.sh
 
 O smoke test instala o APK, abre GLES, injeta gestos e falha em crash/erro GL.
 
-Formato e catálogo: `docs/FORMATO-MAPA.md` e `docs/PREFABS.md`. Segurança da
-IA: `docs/IA-SEGURA.md`. Histórico e decisões: `DIARIO.md`, `ARQUITETURA.md`
-e `PLANO.md`.
+Formato e catálogo: `docs/FORMATO-MAPA.md` e `docs/PREFABS.md`. Contrato da IA
+Livre: `docs/IA-LIVRE.md`. Segurança da IA: `docs/IA-SEGURA.md`. Histórico e
+decisões: `DIARIO.md`, `ARQUITETURA.md` e `PLANO.md`.

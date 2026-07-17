@@ -47,18 +47,20 @@ public final class LazyLevelProvider implements LevelProvider {
             throw new IndexOutOfBoundsException("mapa " + index);
         }
         MapDocument document = source.load(ids.get(index));
+        RuntimeLevel level;
+        try {
+            level = LevelCompiler.compile(document, catalog);
+        } catch (RuntimeException invalid) {
+            throw new IOException(document.name + ": "
+                    + invalid.getMessage(), invalid);
+        }
         List<ValidationIssue> issues = MapValidator.validate(document,
-                catalog);
+                catalog, level);
         for (ValidationIssue issue : issues) {
             if (issue.isError()) {
                 throw new IOException(document.name + ": " + issue.message);
             }
         }
-        try {
-            return LevelCompiler.compile(document, catalog);
-        } catch (RuntimeException invalid) {
-            throw new IOException(document.name + ": "
-                    + invalid.getMessage(), invalid);
-        }
+        return level;
     }
 }

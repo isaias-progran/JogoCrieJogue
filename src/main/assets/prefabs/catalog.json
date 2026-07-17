@@ -67,7 +67,11 @@
         "name",
         "role",
         "greeting",
-        "background"
+        "background",
+        "combatant",
+        "combatLine1",
+        "combatLine2",
+        "combatLine3"
       ]
     },
     {

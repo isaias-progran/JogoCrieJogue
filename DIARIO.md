@@ -6,8 +6,101 @@ App Android (builder TermIa, Java puro, sem Gradle/androidx) que une:
 - ferramentas de planta/construção do `editor3d` (desenhar o mapa).
 Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → voltar.
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
+Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
-## Estado atual — 2026-07-16
+## Estado atual — 2026-07-17
+- **v0.26.2 (versionCode 66) — correções da revisão geral (8 ângulos de análise).**
+  - Uma revisão multiagente do diff v0.26.x achou 10 defeitos confirmados;
+    todos os de comportamento foram corrigidos nesta versão:
+    (1) `normalizeDoors` voltou à distribuição 1:1 — cada portão sem
+    `controllerId` liga a um terminal DISTINTO na ordem do roteiro (antes
+    todos iam para o primeiro terminal e um único terminal abria o mapa
+    inteiro); sem terminal livre, vira porta automática com aviso.
+    (2) `sseDelta` trata `response.incomplete`: roteiro cortado no teto de
+    tokens vira erro claro em vez de sucesso parcial silencioso — a revisão
+    de mapa grande não perde mais a cauda sem avisar.
+    (3) Início dentro de peça/porta/polígono virou AVISO no validador (bloco
+    desenhado continua erro, como sempre); mapa salvo antes da v0.26 não
+    pode mais ficar injogável retroativamente. A checagem compilada roda
+    mesmo com outros erros na lista (sem mascarar), e falha de compilação
+    não duplica ruído quando já há erros específicos.
+    (4) Diálogo de NPC no editor só grava `combatLine1..3` com o checkbox
+    marcado; desmarcado remove tudo — NPC pacífico não é mais mutado por
+    abrir propriedades e dar OK.
+    (5) `gate.acquire()` da melhoria só roda APÓS a validação local; mapa
+    >180 KiB recusado não queima mais vaga das 40 da sessão.
+    (6) `Cancellation.cancel()` desconecta numa thread própria — nada de
+    I/O de rede na thread principal ao tocar Cancelar.
+    (7) Compilação única: `MapValidator.validate` ganhou sobrecarga que
+    aceita `RuntimeLevel` já compilado; `LazyLevelProvider`,
+    `AssetLevelProvider` e `MainActivity.compile` compilam UMA vez (fim do
+    engasgo dobrado na troca de setor); o funil Livre não recompila no fim.
+    (8) `MapReachability` sem falso alarme: obstáculo não é mais inflado
+    pelo raio (vão de ~1 m não fecha na grade de 0,6 m) e célula inicial
+    ruim é inconclusiva (sem aviso), nunca acusação.
+    (9)+(10) Consertos automáticos do parse (`faltou inicio/saida`,
+    marcador movido, portão religado) agora levam prefixo `resgate:` e caem
+    em "Corrigidos pelo jogo" na prévia, não em "Pontos de atenção".
+  - NOVO (relato do aparelho: "inimigo voando"): `settleEnemies` no funil
+    Livre — drone/kamikaze/chefe pairam no Y que a IA mandou e torreta é
+    fixa; agora voador fora da faixa [apoio+0,9, apoio+3,4] desce para
+    apoio+1,8 e torreta flutuando desce para apoio+0,55 (tabela do
+    `PrefabPlacementTool.defaultY`; apoio = topo de collider sob a coluna).
+    Mutante tem gravidade e se corrige sozinho. Aviso "altura irreal".
+  - Pendências conscientes (limpeza, sem bug): AiFeatureController (~1100
+    linhas) e AiFreeMapScript (~950) acima da regra de tamanho — usuário
+    dispensou por ora; espiral `nudgeFree` e tabela de limites de texto
+    duplicadas; raycast inimigo↔aliado 2x/quadro por par; EditorHost.test
+    ainda valida+compila em separado no botão Testar.
+  - Suíte: 746 verificações (83 no `AiFreeMapTest`, 6 novas: incomplete,
+    portões 1:1, altura de inimigos). Build OK: `aapt2` confirmou 66/0.26.2,
+    APK 361.921 bytes copiado para `/sdcard/TermIa/apks/construa-jogue.apk`.
+    Validar no aparelho: mapa com 2 terminais deve exigir os dois; gerar
+    livre e conferir que não há mais drone perdido no céu.
+- **v0.26.1 (versionCode 65) — editar e melhorar mapas com IA sem sobrescrever.**
+  - `MELHORAR COM IA` aparece na prévia de geração, no menu `⋮` de cada mapa
+    da biblioteca e no painel `☰` do editor. A prévia inicial também troca o
+    texto ambíguo por `SALVAR E EDITAR`.
+  - A revisão envia pedido + JSON congelado do mapa como dados não confiáveis,
+    exige um roteiro completo e preserva explicitamente tudo que não foi
+    pedido. O transporte continua Responses/SSE, sem tools e com cancelamento.
+  - Geração e revisão convergem no mesmo `AiFreeMapScript` → resgate →
+    `MapValidator` → `LevelCompiler`. Falha, cancelamento ou descarte não
+    grava nada; `SALVAR CÓPIA E EDITAR` cria um ID novo e mantém o original.
+  - A tela informa que a chamada adicional pode consumir créditos e que o mapa
+    completo inclui nomes/textos de NPC. Entrada acima de 180 KiB é recusada
+    sem truncamento silencioso.
+  - Verificação do núcleo: 740 verificações numeradas, incluindo 77 no
+    `AiFreeMapTest`, além dos exemplos e da equivalência da arena.
+  - Build Android concluído; `aapt2` confirmou versionCode 65/versionName
+    0.26.1, e `apksigner` confirmou assinaturas v2/v3. APK copiado para
+    `/sdcard/TermIa/apks/construa-jogue.apk`. Sem `adb` neste ambiente, ainda
+    falta testar uma chamada real e o fluxo visual no aparelho.
+- **v0.26.0 (versionCode 64) — IA Livre protegida e aliado combatente local.**
+  - O Livre vira contrato permanente do produto: pedido direto, coordenadas da
+    IA, streaming, resgate, validação e confirmação continuam intactos. O novo
+    `PLANO.md` registra fases e portões antirregressão; `docs/IA-LIVRE.md`
+    documenta a linguagem e o estado real.
+  - `MapValidator` agora confere o spawn contra todos os colliders compilados,
+    incluindo móveis, portas e polígonos. Uma busca local conservadora avisa
+    quando não confirma rota horizontal até a saída. O resgate também move
+    marcadores presos em prefabs e converte portão órfão em porta automática.
+  - Cancelar fecha a `HttpsURLConnection` ativa; `AtomicReference` protege a
+    fase de progresso entre rede/UI. A prévia separa “Corrigidos pelo jogo” de
+    “Pontos de atenção” e mostra a quantidade de aliados combatentes.
+  - O Livre aceita `texto combate sim|nao` e `combatLine1..3`. Ausência do dado
+    mantém NPC antigo pacífico. Combatente segue as regras locais: alcance 14 m,
+    dano 1, intervalo 1,20 s, inimigo visível mais próximo e retorno após 1,5 s.
+  - Inimigos podem mirar no aliado, favorecendo proximidade e tiro recente. O
+    aliado tem 60 de vida, desmaia em vez de morrer e recupera metade depois de
+    8 s sem perigo. Som, traçador, cor/pose e fala curta dão feedback; nenhuma
+    chamada de IA acontece durante o combate.
+  - Verificação: `sh scripts/test-core.sh` passou com 728 verificações
+    numeradas (65 em `AiFreeMapTest` e 59 em `GameplayRulesTest`), além dos
+    exemplos e da equivalência bit a bit da arena. Build Android concluído;
+    `aapt2` confirmou versionCode 64/versionName 0.26.0 e o APK foi copiado para
+    `/sdcard/TermIa/apks/construa-jogue.apk`. Teste em aparelho continua
+    necessário para cancelamento real, GLES/áudio e balanceamento.
 - **v0.25.4 (versionCode 63) — resgate: erro do validador não perde geração.**
   - Print real (v0.25.3): "Torreta fixa: propriedade 'patrolX' não
     permitida" derrubou o mapa inteiro. Duas camadas novas:
@@ -20,7 +113,8 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
     reach_exit; alvo > fichas → alvo = fichas; survive sem duração) com
     saída automática, re-empurra o spawn, e valida DE NOVO — só desiste
     se nem assim passar ("recusado mesmo após o resgate"). Cada conserto
-    vira aviso "resgate: …" na prévia. Suíte com 695 verificações.
+    vira aviso "resgate: …" na prévia. Estado atual confirmado com 689
+    verificações numeradas, além dos contratos de exemplos e conversão.
 - **v0.25.3 (versionCode 62) — instrução do livre afinada pelo aparelho.**
   - VALIDADO NO APARELHO (v0.25.2): o modo livre construiu bem e o
     usuário achou "até melhor que os mapas pré-programados". Falhas

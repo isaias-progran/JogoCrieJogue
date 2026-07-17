@@ -79,6 +79,8 @@ public final class GameState {
     private boolean alternateStep;
     private RuntimeNpc npcInteractionPending;
     private RuntimeNpc npcGreetingPending;
+    private RuntimeNpc npcCombatSpeakerPending;
+    private String npcCombatLinePending;
 
     public GameState(RuntimeLevel level, FpsCamera camera, TouchControls controls,
                      Sounds sounds, Hud hud, int stageNumber,
@@ -192,6 +194,8 @@ public final class GameState {
         hud.setHint("esquerda: andar   •   arraste TIRO: mirar   •   PULO: saltar");
         npcInteractionPending = null;
         npcGreetingPending = null;
+        npcCombatSpeakerPending = null;
+        npcCombatLinePending = null;
     }
 
     public void update(float dt, float time) {
@@ -506,8 +510,30 @@ public final class GameState {
 
     private void updateCompanions(float dt) {
         for (NpcCompanion companion : companions) {
-            companion.update(dt, player.x(), player.y(), player.z(),
-                    level.colliders());
+            int event = companion.update(dt, player.x(), player.y(),
+                    player.z(), level.colliders(), enemies, companions);
+            if ((event & NpcCompanion.EV_SHOT) != 0) {
+                sounds.allyShot();
+            }
+            if ((event & NpcCompanion.EV_KILL) != 0) {
+                objective.enemyEliminated();
+                hud.setObjective(objective.hudText());
+            }
+            if ((event & NpcCompanion.EV_SPEECH) != 0
+                    && npcCombatLinePending == null) {
+                String line = companion.takeCombatSpeech();
+                if (line != null) {
+                    npcCombatSpeakerPending = companion.npc();
+                    npcCombatLinePending = line;
+                    hintLeft = 4f;
+                    hud.setHint(companion.npc().name + ": " + line);
+                }
+            }
+            if ((event & NpcCompanion.EV_RECOVERED) != 0) {
+                hintLeft = 4f;
+                hud.setHint(companion.npc().name
+                        + " se recuperou e voltou à luta");
+            }
         }
     }
 
@@ -522,8 +548,17 @@ public final class GameState {
 
     private void updateEnemies(float dt, float time) {
         for (Enemy enemy : enemies) {
+            NpcCompanion allyTarget = chooseAllyTarget(enemy);
+            float targetX = allyTarget == null
+                    ? playerEye[0] : allyTarget.npc().x;
+            float targetY = allyTarget == null
+                    ? playerEye[1] : allyTarget.npc().y + 1.38f;
+            float targetZ = allyTarget == null
+                    ? playerEye[2] : allyTarget.npc().z;
             int event = enemy.update(dt, time, level.colliders(),
-                    playerEye[0], playerEye[1], playerEye[2], player.alive());
+                    targetX, targetY, targetZ,
+                    allyTarget == null ? player.alive()
+                            : allyTarget.canBeTargeted());
             if (event == Enemy.EV_NONE) {
                 continue;
             }
@@ -538,15 +573,30 @@ public final class GameState {
                 registerKill();
                 sounds.boom();
             }
-            if (event == Enemy.EV_ATTACK_HIT && player.alive()) {
-                player.damage(enemy.damage());
-                hud.setHealth(player.health());
-                hud.showDamage();
-                if (!player.alive()) {
-                    die("VOCÊ CAIU");
+            if (event == Enemy.EV_ATTACK_HIT) {
+                if (allyTarget != null && allyTarget.canBeTargeted()) {
+                    if (allyTarget.damage(enemy.damage())) {
+                        hintLeft = 5f;
+                        hud.setHint(allyTarget.npc().name
+                                + " desmaiou — proteja a área");
+                    }
+                } else if (player.alive()) {
+                    player.damage(enemy.damage());
+                    hud.setHealth(player.health());
+                    hud.showDamage();
+                    if (!player.alive()) {
+                        die("VOCÊ CAIU");
+                    }
                 }
             }
         }
+    }
+
+    /** Inimigos preferem o alvo mais próximo; tiro recente provoca atenção. */
+    private NpcCompanion chooseAllyTarget(Enemy enemy) {
+        if (!player.alive() || !enemy.targetable()) return null;
+        return NpcCompanion.targetForEnemy(enemy, playerEye[0], playerEye[1],
+                playerEye[2], companions, level.colliders());
     }
 
     private void updateItems() {
@@ -698,6 +748,19 @@ public final class GameState {
     public RuntimeNpc takeNpcGreeting() {
         RuntimeNpc value = npcGreetingPending;
         npcGreetingPending = null;
+        return value;
+    }
+
+    /** Lido antes de takeNpcCombatLine(), na mesma thread GL. */
+    public RuntimeNpc npcCombatSpeaker() {
+        return npcCombatSpeakerPending;
+    }
+
+    /** Fala local ocasional; consumida uma vez pelo renderer. */
+    public String takeNpcCombatLine() {
+        String value = npcCombatLinePending;
+        npcCombatLinePending = null;
+        npcCombatSpeakerPending = null;
         return value;
     }
 

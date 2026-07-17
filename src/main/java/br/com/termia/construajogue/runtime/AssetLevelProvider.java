@@ -48,13 +48,21 @@ public final class AssetLevelProvider implements LevelProvider {
                     assets.open("prefabs/catalog.json"));
         }
         MapDocument doc = MapJson.read(readAsset(path));
-        List<ValidationIssue> issues = MapValidator.validate(doc, catalog);
+        RuntimeLevel level;
+        try {
+            level = LevelCompiler.compile(doc, catalog);
+        } catch (RuntimeException invalid) {
+            throw new IOException(path + ": " + invalid.getMessage(),
+                    invalid);
+        }
+        List<ValidationIssue> issues = MapValidator.validate(doc, catalog,
+                level);
         for (ValidationIssue issue : issues) {
             if (issue.isError()) {
                 throw new IOException(path + ": " + issue);
             }
         }
-        return LevelCompiler.compile(doc, catalog);
+        return level;
     }
 
     private String readAsset(String path) throws IOException {

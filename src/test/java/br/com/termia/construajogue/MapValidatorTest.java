@@ -51,6 +51,44 @@ public final class MapValidatorTest {
         doc.structures.add(pillar);
         expectError(doc, "inicio.bloqueado", "início dentro do bloco");
 
+        // Início dentro de peça/porta/polígono era aceito antes da v0.26:
+        // vira AVISO para não invalidar retroativamente mapa salvo.
+        doc = valid();
+        PrefabInstance table = new PrefabInstance("mesa",
+                "furniture.table");
+        table.transform.z = 6f;
+        doc.prefabs.add(table);
+        expectWarning(doc, "inicio.bloqueado", "início dentro de móvel");
+
+        doc = valid();
+        PrefabInstance terminalForSpawn = new PrefabInstance("term-spawn",
+                "terminal.wall");
+        terminalForSpawn.transform.x = 4f;
+        terminalForSpawn.transform.y = 1.2f;
+        PrefabInstance doorAtSpawn = new PrefabInstance("porta-spawn",
+                "door.gate");
+        doorAtSpawn.transform.y = 1.4f;
+        doorAtSpawn.transform.z = 6f;
+        doorAtSpawn.properties.put("halfX", 1f);
+        doorAtSpawn.properties.put("halfY", 1.4f);
+        doorAtSpawn.properties.put("halfZ", 0.2f);
+        doorAtSpawn.properties.put("controllerId", "term-spawn");
+        doc.prefabs.add(terminalForSpawn);
+        doc.prefabs.add(doorAtSpawn);
+        expectWarning(doc, "inicio.bloqueado", "início dentro de porta");
+
+        doc = valid();
+        StructureObject poly = new StructureObject("poly-spawn",
+                StructureObject.KIND_POLY);
+        poly.polygon = new float[]{-1f, 5f, 1f, 5f, 1f, 7f, -1f, 7f};
+        poly.color = new float[]{0.4f, 0.4f, 0.4f};
+        poly.syncPolyBounds();
+        poly.transform.y = 1f;
+        poly.half[1] = 1f;
+        doc.structures.add(poly);
+        expectWarning(doc, "inicio.bloqueado",
+                "início dentro de geometria poligonal");
+
         doc = valid();
         doc.prefabs.add(new PrefabInstance("x", "nao.existe"));
         expectError(doc, "peca.desconhecida", "prefab inexistente");
@@ -124,8 +162,18 @@ public final class MapValidatorTest {
         npc.properties.put("role", "guia");
         npc.properties.put("greeting", "Olá!");
         npc.properties.put("background", "Conhece a cidade.");
+        npc.properties.put("combatant", Boolean.TRUE);
+        npc.properties.put("combatLine1", "Cobre a porta!");
         doc.prefabs.add(npc);
-        Check.that(!hasError(doc), "textos válidos do NPC são aceitos");
+        Check.that(!hasError(doc),
+                "textos e booleano de combate do NPC são aceitos");
+
+        doc = valid();
+        npc = new PrefabInstance("pessoa", "npc.human");
+        npc.properties.put("combatant", "sim");
+        doc.prefabs.add(npc);
+        expectError(doc, "peca.propriedade",
+                "combate do NPC precisa ser booleano");
 
         doc = valid();
         npc = new PrefabInstance("pessoa", "npc.human");
@@ -136,6 +184,16 @@ public final class MapValidatorTest {
         doc = valid();
         doc.markers.add(new LogicMarker("estranho", "teleporte"));
         expectError(doc, "marcador.tipo", "marcador desconhecido");
+
+        doc = valid();
+        StructureObject barrier = new StructureObject("barreira",
+                StructureObject.KIND_BLOCK);
+        barrier.transform.y = 1.5f;
+        barrier.half = new float[]{8f, 1.5f, 0.15f};
+        barrier.color = new float[]{0.4f, 0.4f, 0.4f};
+        doc.structures.add(barrier);
+        expectWarning(doc, "rota.saida",
+                "rota horizontal fechada aparece como aviso");
 
         Check.done("MapValidatorTest");
     }
@@ -177,6 +235,19 @@ public final class MapValidatorTest {
         List<ValidationIssue> issues = MapValidator.validate(doc, catalog);
         for (ValidationIssue issue : issues) {
             if (issue.isError() && issue.code.equals(code)) {
+                Check.that(true, what);
+                return;
+            }
+        }
+        throw new AssertionError("FALHOU: " + what + " deveria gerar "
+                + code + "; veio " + issues);
+    }
+
+    private static void expectWarning(MapDocument doc, String code,
+                                      String what) {
+        List<ValidationIssue> issues = MapValidator.validate(doc, catalog);
+        for (ValidationIssue issue : issues) {
+            if (!issue.isError() && issue.code.equals(code)) {
                 Check.that(true, what);
                 return;
             }

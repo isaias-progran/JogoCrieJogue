@@ -35,4 +35,9 @@ public final class PrefabInstance {
         Object value = properties.get(name);
         return value instanceof String ? (String) value : null;
     }
+
+    public boolean booleanProperty(String name, boolean fallback) {
+        Object value = properties.get(name);
+        return value instanceof Boolean ? (Boolean) value : fallback;
+    }
 }

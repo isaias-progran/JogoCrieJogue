@@ -44,6 +44,9 @@ public final class MapLibraryView extends ScrollView {
 
         void onDuplicate(String id);
 
+        /** Propõe uma nova cópia revisada pela IA; nunca sobrescreve. */
+        void onImproveAi(String id);
+
         void onRename(String id, String name);
 
         void onDelete(String id);
@@ -321,14 +324,17 @@ public final class MapLibraryView extends ScrollView {
     private void showRowMenu(MapStore.Entry entry) {
         new AlertDialog.Builder(activity)
                 .setTitle(entry.name)
-                .setItems(new String[]{"Renomear", "Duplicar",
-                                "Exportar / compartilhar", "Excluir"},
+                .setItems(new String[]{"✦ Melhorar com IA…", "Renomear",
+                                "Duplicar", "Exportar / compartilhar",
+                                "Excluir"},
                         (dialog, which) -> {
                             if (which == 0) {
-                                promptRename(entry);
+                                listener.onImproveAi(entry.id);
                             } else if (which == 1) {
-                                listener.onDuplicate(entry.id);
+                                promptRename(entry);
                             } else if (which == 2) {
+                                listener.onDuplicate(entry.id);
+                            } else if (which == 3) {
                                 showShareMenu(entry);
                             } else {
                                 confirmDelete(entry);

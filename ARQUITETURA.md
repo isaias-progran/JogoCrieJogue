@@ -4,7 +4,7 @@
 
 1. `MapDocument`: fonte editável e persistente.
 2. `EditorScene`: seleção, ferramentas e histórico temporário.
-3. `RuntimeLevel`: resultado imutável e otimizado para jogar.
+3. `RuntimeLevel`: resultado compilado e otimizado para jogar.
 
 Fluxo:
 
@@ -100,3 +100,50 @@ Arena/labirinto `.txt` continuam funcionando até a arena JSON reproduzir o
 mesmo resultado. `Player`, `Weapon`, `Enemy`, `Drone`, `Mutant`, `Sounds`, HUD e
 controles devem sofrer o mínimo. Assim todo marco mantém um APK jogável.
 
+## 11. Geração de mapas por IA
+
+Os dois modos compartilham transporte, allowlist de modelos, validação,
+compilação e confirmação antes de salvar, mas têm arquiteturas diferentes:
+
+```text
+Guiado:
+ideia → Responses/JSON Schema → AiScenarioPlan → AiScenarioBuilder
+      → MapValidator → LevelCompiler → prévia → salvar
+
+Livre:
+ideia → Responses/SSE → roteiro de comandos → AiFreeMapScript
+      → MapValidator → salvage → MapValidator → LevelCompiler
+      → prévia com avisos → salvar
+
+Melhorar com IA:
+MapDocument atual → JSON como dado + mudança pedida → Responses/SSE
+      → roteiro completo → mesmo funil Livre → prévia
+      → salvar cópia com ID novo
+```
+
+O Guiado devolve intenções enumeradas e o builder local escolhe coordenadas. O
+Livre deixa a IA escolher coordenadas e composição, mas o roteiro não é código:
+o parser possui uma allowlist de comandos, catálogo e propriedades. Uma linha
+inválida vira aviso; um mapa que continue inválido após o resgate é recusado.
+
+A revisão é uma segunda chamada iniciada pelo jogador, não um reparo remoto
+automático. Ela envia o documento atual como dado não confiável, exige uma
+substituição completa para reutilizar o funil de confiança e nunca escreve no
+ID original. Biblioteca, editor e prévia convergem para o mesmo controlador.
+
+O fluxo Livre é uma decisão permanente de produto. Seus contratos atuais,
+limites e redes de segurança estão em `docs/IA-LIVRE.md`; o roteiro de evolução
+sem regressão está em `PLANO.md`.
+
+## 12. Aliado combatente local
+
+`npc.human` permanece pacífico quando a propriedade booleana `combatant` está
+ausente. No Livre, `texto combate sim|nao` define esse dado e as propriedades
+`combatLine1..3` guardam falas opcionais criadas junto com o mapa.
+
+Durante a partida, `NpcCompanion` escolhe o inimigo visível mais próximo,
+controla alcance, cadência, dano, desmaio, recuperação e retorno ao seguimento.
+`GameState` integra objetivo, som e seleção de alvo pelos inimigos; o renderer
+mostra estado, disparo e traçador. Não há chamada de IA no loop de combate.
+Essa separação mantém o runtime determinístico e o balanceamento testável sem
+depender da rede.

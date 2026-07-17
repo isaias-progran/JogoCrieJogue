@@ -1,5 +1,7 @@
 package br.com.termia.construajogue.ai;
 
+import br.com.termia.construajogue.compiler.LevelCompiler;
+import br.com.termia.construajogue.editor.tools.PrefabPlacementTool;
 import br.com.termia.construajogue.engine.Collision;
 import br.com.termia.construajogue.map.LogicMarker;
 import br.com.termia.construajogue.map.MapDocument;
@@ -10,6 +12,7 @@ import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
+import br.com.termia.construajogue.runtime.RuntimeLevel;
 import br.com.termia.construajogue.util.Ids;
 
 import java.util.ArrayList;
@@ -33,7 +36,8 @@ public final class AiFreeMapScript {
             "order", "halfX", "halfY", "halfZ", "lightR", "lightG",
             "lightB", "lightRadius", "lightOffsetY");
     private static final List<String> TEXT_PROPS = Arrays.asList(
-            "name", "role", "greeting", "background");
+            "name", "role", "greeting", "background", "combatLine1",
+            "combatLine2", "combatLine3");
 
     private AiFreeMapScript() {
     }
@@ -118,7 +122,7 @@ public final class AiFreeMapScript {
                         + command + "): " + bad.getMessage());
             }
         }
-        finish(doc, result);
+        finish(doc, catalog, result);
         return result;
     }
 
@@ -152,10 +156,22 @@ public final class AiFreeMapScript {
                 boolean text = "controllerId".equals(key)
                         || (PrefabDefinition.BEHAVIOR_NPC_HUMAN
                         .equals(def.behavior) && TEXT_PROPS.contains(key));
+                boolean bool = PrefabDefinition.BEHAVIOR_NPC_HUMAN
+                        .equals(def.behavior) && "combatant".equals(key);
+                if (text && value instanceof String
+                        && !"controllerId".equals(key)
+                        && ((String) value).length() > textLimit(key)) {
+                    value = ((String) value).substring(0, textLimit(key));
+                    entry.setValue(value);
+                    warn(warnings, "resgate: texto '" + key
+                            + "' do NPC foi encurtado");
+                    fixes++;
+                }
                 boolean bad = !def.allowsProperty(key)
                         || (text && (!(value instanceof String)
                         || ((String) value).trim().isEmpty()))
-                        || (!text && !(value instanceof Number))
+                        || (bool && !(value instanceof Boolean))
+                        || (!text && !bool && !(value instanceof Number))
                         || (value instanceof Number && !isFinite(
                         ((Number) value).floatValue()));
                 if (bad) drop.add(key);
@@ -192,6 +208,7 @@ public final class AiFreeMapScript {
             doc.structures.addAll(solid);
         }
         fixes += salvageObjective(doc, enemies, tokens, warnings);
+        fixes += normalizeDoors(doc, warnings, "resgate: ");
         LogicMarker spawn = doc.firstMarker(LogicMarker.PLAYER_SPAWN);
         if (spawn != null
                 && !standsFree(doc, spawn.x, spawn.y, spawn.z)) {
@@ -199,6 +216,15 @@ public final class AiFreeMapScript {
             nudgeFree(doc, spawn, "início", carrier);
             warnings.addAll(carrier.warnings);
             fixes++;
+        }
+        try {
+            RuntimeLevel level = LevelCompiler.compile(doc, catalog);
+            fixes += nudgeCompiled(doc, level.colliders(), warnings,
+                    "resgate: ");
+            fixes += settleEnemies(doc, catalog, level.colliders(), warnings,
+                    "resgate: ");
+        } catch (RuntimeException ignored) {
+            // O validador ainda descreverá qualquer outro erro restante.
         }
         return fixes;
     }
@@ -291,12 +317,13 @@ public final class AiFreeMapScript {
     }
 
     /** Redes de segurança: spawn, saída e ligação porta↔terminal. */
-    private static void finish(MapDocument doc, Result result) {
+    private static void finish(MapDocument doc, PrefabCatalog catalog,
+                               Result result) {
         if (doc.firstMarker(LogicMarker.PLAYER_SPAWN) == null) {
             LogicMarker spawn = new LogicMarker(Ids.create(),
                     LogicMarker.PLAYER_SPAWN);
             doc.markers.add(spawn);
-            warn(result, "faltou 'inicio'; jogador colocado em 0 0");
+            warn(result, "resgate: faltou 'inicio'; jogador colocado em 0 0");
         }
         if (ObjectiveSpec.REACH_EXIT.equals(doc.objective.type)
                 && doc.firstMarker(LogicMarker.EXIT) == null) {
@@ -315,20 +342,66 @@ public final class AiFreeMapScript {
             fillProperty(door, "halfY", gate ? 1.4f : 1.05f);
             fillProperty(door, "halfZ", gate ? 0.18f : 0.08f);
         }
-        // Convenção do editor: portão sem controlador liga ao terminal livre.
-        List<String> linked = new ArrayList<>();
+        // Consertos automáticos entram como "resgate:" para a prévia
+        // agrupá-los em "Corrigidos pelo jogo", não em pontos de atenção.
+        normalizeDoors(doc, result.warnings, "resgate: ");
+        try {
+            RuntimeLevel level = LevelCompiler.compile(doc, catalog);
+            nudgeCompiled(doc, level.colliders(), result.warnings,
+                    "resgate: ");
+            settleEnemies(doc, catalog, level.colliders(), result.warnings,
+                    "resgate: ");
+        } catch (RuntimeException failure) {
+            warn(result, "não foi possível conferir todas as colisões: "
+                    + (failure.getMessage() == null
+                    ? "mapa incompleto" : failure.getMessage()));
+        }
+    }
+
+    /** Cada portão liga a um terminal DISTINTO, na ordem do roteiro. */
+    private static int normalizeDoors(MapDocument doc, List<String> warnings,
+                                      String prefix) {
+        // Terminais ainda não reivindicados por um portão com ligação válida.
+        List<PrefabInstance> unused = new ArrayList<>();
+        for (PrefabInstance prefab : doc.prefabs) {
+            if ("terminal.wall".equals(prefab.prefabId)) unused.add(prefab);
+        }
         for (PrefabInstance door : doc.prefabs) {
-            if (!"door.gate".equals(door.prefabId)
-                    || door.properties.get("controllerId") != null) continue;
-            for (PrefabInstance terminal : doc.prefabs) {
-                if ("terminal.wall".equals(terminal.prefabId)
-                        && !linked.contains(terminal.id)) {
-                    door.properties.put("controllerId", terminal.id);
-                    linked.add(terminal.id);
-                    break;
-                }
+            if (!"door.gate".equals(door.prefabId)) continue;
+            PrefabInstance target = doc.findInstance(
+                    door.stringProperty("controllerId"));
+            if (target != null && "terminal.wall".equals(target.prefabId)) {
+                unused.remove(target);
             }
         }
+        int fixes = 0;
+        for (PrefabInstance door : doc.prefabs) {
+            boolean gate = "door.gate".equals(door.prefabId);
+            if (!gate && !"door.auto".equals(door.prefabId)) continue;
+            fillProperty(door, "halfX", gate ? 2.0f : 1.10f);
+            fillProperty(door, "halfY", gate ? 1.4f : 1.05f);
+            fillProperty(door, "halfZ", gate ? 0.18f : 0.08f);
+            if (!gate) continue;
+            String controller = door.stringProperty("controllerId");
+            PrefabInstance target = doc.findInstance(controller);
+            if (target != null && "terminal.wall".equals(target.prefabId)) {
+                continue;
+            }
+            if (!unused.isEmpty()) {
+                door.properties.put("controllerId", unused.remove(0).id);
+                if (controller != null) {
+                    warn(warnings, prefix
+                            + "portão religado a um terminal existente");
+                }
+            } else {
+                door.prefabId = "door.auto";
+                door.properties.remove("controllerId");
+                warn(warnings, prefix + "portão sem terminal livre virou "
+                        + "porta automática");
+            }
+            fixes++;
+        }
+        return fixes;
     }
 
     /** Sem 'saida': nasce no ponto mais distante do spawn e é empurrada. */
@@ -350,7 +423,7 @@ public final class AiFreeMapScript {
         }
         exit.radius = 1.35f;
         doc.markers.add(exit);
-        warn(result, "faltou 'saida'; criada no ponto mais distante");
+        warn(result, "resgate: faltou 'saida'; criada no ponto mais distante");
         nudgeFree(doc, exit, "saída", result);
     }
 
@@ -369,6 +442,117 @@ public final class AiFreeMapScript {
         return true;
     }
 
+    private static boolean standsFree(float[][] colliders, float x, float y,
+                                      float z) {
+        float[] pos = {x, y, z};
+        for (float[] bounds : colliders) {
+            if (Collision.overlaps(pos, 0.35f, 1.75f, bounds)) return false;
+        }
+        return true;
+    }
+
+    private static int nudgeCompiled(MapDocument doc, float[][] colliders,
+                                     List<String> warnings, String prefix) {
+        int fixes = 0;
+        for (LogicMarker marker : doc.markers) {
+            if (!LogicMarker.PLAYER_SPAWN.equals(marker.type)
+                    && !LogicMarker.EXIT.equals(marker.type)) continue;
+            if (standsFree(colliders, marker.x, marker.y, marker.z)) continue;
+            String label = LogicMarker.PLAYER_SPAWN.equals(marker.type)
+                    ? "início" : "saída";
+            if (nudgeFree(colliders, marker)) {
+                warn(warnings, prefix + label + " estava dentro de uma peça; "
+                        + "movido para lugar livre próximo");
+                fixes++;
+            } else {
+                warn(warnings, prefix + label + " está sem espaço livre "
+                        + "por perto; o validador pode recusar");
+            }
+        }
+        return fixes;
+    }
+
+    /**
+     * A IA escolhe o Y livremente; voador solto no céu ou torreta flutuando
+     * são presos à altura do apoio local (chão, laje ou telhado). Mutante
+     * tem gravidade e se corrige sozinho.
+     */
+    private static int settleEnemies(MapDocument doc, PrefabCatalog catalog,
+                                     float[][] colliders,
+                                     List<String> warnings, String prefix) {
+        int fixes = 0;
+        for (PrefabInstance p : doc.prefabs) {
+            PrefabDefinition def = catalog.find(p.prefabId);
+            if (def == null) continue;
+            boolean flyer = PrefabDefinition.BEHAVIOR_DRONE
+                    .equals(def.behavior)
+                    || PrefabDefinition.BEHAVIOR_DRONE_DORMANT
+                    .equals(def.behavior)
+                    || PrefabDefinition.BEHAVIOR_KAMIKAZE
+                    .equals(def.behavior)
+                    || PrefabDefinition.BEHAVIOR_BOSS.equals(def.behavior);
+            boolean turret = PrefabDefinition.BEHAVIOR_TURRET
+                    .equals(def.behavior);
+            if (!flyer && !turret) continue;
+            float support = supportBelow(colliders, p.transform.x,
+                    p.transform.y, p.transform.z);
+            float base = PrefabPlacementTool.defaultY(def);
+            float y = p.transform.y;
+            float fixed = y;
+            if (flyer && (y < support + 0.9f || y > support + 3.4f)) {
+                fixed = support + base;
+            } else if (turret && Math.abs(y - (support + base)) > 0.9f) {
+                fixed = support + base;
+            }
+            if (fixed != y) {
+                p.transform.y = fixed;
+                fixes++;
+            }
+        }
+        if (fixes > 0) {
+            warn(warnings, prefix + (fixes == 1
+                    ? "1 inimigo estava em altura irreal; preso"
+                    : fixes + " inimigos estavam em altura irreal; presos")
+                    + " ao apoio mais próximo");
+        }
+        return fixes;
+    }
+
+    /** Topo do collider mais alto sob o ponto; sem apoio, chão em 0. */
+    private static float supportBelow(float[][] colliders, float x, float y,
+                                      float z) {
+        float support = 0f;
+        for (float[] box : colliders) {
+            if (x < box[0] - 0.45f || x > box[3] + 0.45f
+                    || z < box[2] - 0.45f || z > box[5] + 0.45f) continue;
+            if (box[4] <= y + 0.3f && box[4] > support) {
+                support = box[4];
+            }
+        }
+        return support;
+    }
+
+    private static boolean nudgeFree(float[][] colliders,
+                                     LogicMarker marker) {
+        float originX = marker.x;
+        float originZ = marker.z;
+        for (float radius = 0.6f; radius <= 16f; radius += 0.6f) {
+            for (int step = 0; step < 16; step++) {
+                double angle = Math.PI * 2.0 * step / 16.0;
+                float x = clamp(originX
+                        + (float) (Math.cos(angle) * radius), -GRID, GRID);
+                float z = clamp(originZ
+                        + (float) (Math.sin(angle) * radius), -GRID, GRID);
+                if (standsFree(colliders, x, marker.y, z)) {
+                    marker.x = x;
+                    marker.z = z;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static void nudgeFree(MapDocument doc, LogicMarker marker,
                                   String label, Result result) {
         if (marker == null
@@ -383,8 +567,9 @@ public final class AiFreeMapScript {
                 if (standsFree(doc, x, marker.y, z)) {
                     marker.x = x;
                     marker.z = z;
-                    warn(result, label + " estava dentro de uma estrutura; "
-                            + "movido para lugar livre próximo");
+                    warn(result, "resgate: " + label + " estava dentro de "
+                            + "uma estrutura; movido para lugar livre "
+                            + "próximo");
                     return;
                 }
             }
@@ -604,18 +789,50 @@ public final class AiFreeMapScript {
         if (prefab == null || def == null) {
             throw new IllegalArgumentException("nenhuma peça antes de texto");
         }
+        if ("combate".equalsIgnoreCase(parts[1])) {
+            if (!PrefabDefinition.BEHAVIOR_NPC_HUMAN.equals(def.behavior)
+                    || !def.allowsProperty("combatant")) {
+                throw new IllegalArgumentException(def.name
+                        + " não aceita configuração de combate");
+            }
+            String value = restAfter(line, parts[1])
+                    .toLowerCase(Locale.ROOT);
+            if ("sim".equals(value) || "true".equals(value)
+                    || "yes".equals(value)) {
+                prefab.properties.put("combatant", Boolean.TRUE);
+            } else if ("nao".equals(value) || "não".equals(value)
+                    || "false".equals(value) || "no".equals(value)) {
+                prefab.properties.put("combatant", Boolean.FALSE);
+            } else {
+                throw new IllegalArgumentException(
+                        "combate deve ser sim ou nao");
+            }
+            return;
+        }
         if (!TEXT_PROPS.contains(parts[1])
                 || !def.allowsProperty(parts[1])) {
             throw new IllegalArgumentException(def.name
                     + " não aceita texto '" + parts[1] + "'");
         }
-        int start = line.indexOf(parts[1]) + parts[1].length();
-        String value = clip(line.substring(start).trim(),
-                "background".equals(parts[1]) ? 600 : 240);
+        String value = clip(restAfter(line, parts[1]),
+                textLimit(parts[1]));
         if (value.isEmpty()) {
             throw new IllegalArgumentException("texto vazio");
         }
         prefab.properties.put(parts[1], value);
+    }
+
+    private static int textLimit(String name) {
+        if ("name".equals(name)) return 48;
+        if ("role".equals(name)) return 80;
+        if ("background".equals(name)) return 600;
+        if (name != null && name.startsWith("combatLine")) return 120;
+        return 240; // greeting
+    }
+
+    private static String restAfter(String line, String token) {
+        int start = line.indexOf(token);
+        return start < 0 ? "" : line.substring(start + token.length()).trim();
     }
 
     private static void patrol(PrefabInstance prefab, PrefabDefinition def,

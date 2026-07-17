@@ -13,6 +13,7 @@ import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
 import br.com.termia.construajogue.prefab.PrefabMeshFactory;
 import br.com.termia.construajogue.runtime.LegacyLevelLoader;
+import br.com.termia.construajogue.runtime.RuntimeLevel;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,6 +37,13 @@ public final class MapValidator {
 
     public static List<ValidationIssue> validate(MapDocument doc,
                                                  PrefabCatalog catalog) {
+        return validate(doc, catalog, null);
+    }
+
+    /** Quem já tem o nível compilado passa-o e evita compilar duas vezes. */
+    public static List<ValidationIssue> validate(MapDocument doc,
+                                                 PrefabCatalog catalog,
+                                                 RuntimeLevel compiled) {
         List<ValidationIssue> issues = new ArrayList<>();
         Set<String> ids = new HashSet<>();
 
@@ -175,6 +183,9 @@ public final class MapValidator {
                         || (PrefabDefinition.BEHAVIOR_NPC_HUMAN
                         .equals(def.behavior)
                         && isNpcTextProperty(entry.getKey()));
+                boolean booleanProperty = PrefabDefinition.BEHAVIOR_NPC_HUMAN
+                        .equals(def.behavior)
+                        && "combatant".equals(entry.getKey());
                 if (textProperty && (!(entry.getValue() instanceof String)
                         || blank((String) entry.getValue()))) {
                     error(issues, "peca.propriedade", label
@@ -184,7 +195,11 @@ public final class MapValidator {
                         > npcTextLimit(entry.getKey())) {
                     error(issues, "peca.propriedade", label
                             + ": texto '" + entry.getKey() + "' é longo demais");
-                } else if (!textProperty
+                } else if (booleanProperty
+                        && !(entry.getValue() instanceof Boolean)) {
+                    error(issues, "peca.propriedade", label
+                            + ": propriedade 'combatant' deve ser sim/não");
+                } else if (!textProperty && !booleanProperty
                         && !(entry.getValue() instanceof Number)) {
                     error(issues, "peca.propriedade", label
                             + ": propriedade '" + entry.getKey()
@@ -330,7 +345,8 @@ public final class MapValidator {
         validateObjective(issues, doc, enemies, objectiveTokens);
 
         if (spawn != null) {
-            checkSpawnFree(issues, doc, spawn);
+            checkCompiledSpace(issues, doc, catalog, compiled, spawn,
+                    objective, hasError(issues));
         }
 
         if (doc.structures.size() > 80) {
@@ -361,10 +377,16 @@ public final class MapValidator {
         return false;
     }
 
-    private static void checkSpawnFree(List<ValidationIssue> issues,
-                                       MapDocument doc, LogicMarker spawn) {
+    private static void checkCompiledSpace(List<ValidationIssue> issues,
+                                           MapDocument doc,
+                                           PrefabCatalog catalog,
+                                           RuntimeLevel compiled,
+                                           LogicMarker spawn,
+                                           String objective,
+                                           boolean hadErrors) {
         float[] pos = {spawn.x, spawn.y, spawn.z};
         float[] bounds = new float[6];
+        // Bloco desenhado continua erro duro, como sempre foi.
         for (StructureObject s : doc.structures) {
             if (s.half == null
                     || !StructureObject.KIND_BLOCK.equals(s.kind)) {
@@ -378,6 +400,34 @@ public final class MapValidator {
                         "o início está dentro de uma estrutura");
                 return;
             }
+        }
+        try {
+            RuntimeLevel level = compiled != null ? compiled
+                    : LevelCompiler.compile(doc, catalog);
+            for (float[] box : level.colliders()) {
+                if (!Collision.overlaps(pos, PLAYER_RADIUS, PLAYER_HEIGHT,
+                        box)) continue;
+                // Peça/porta/polígono era aceito antes da v0.26; mapa salvo
+                // não pode virar erro de carga retroativo — fica o aviso.
+                warning(issues, "inicio.bloqueado",
+                        "o início está dentro de uma peça, porta ou parede "
+                        + "poligonal; mova-o para um espaço livre");
+                break;
+            }
+            if (ObjectiveSpec.REACH_EXIT.equals(objective)
+                    && !MapReachability.hasSimpleRoute(level)) {
+                warning(issues, "rota.saida", "não foi possível confirmar "
+                        + "uma rota horizontal entre o início e a saída; "
+                        + "revise paredes, vãos e apoio do piso");
+            }
+        } catch (RuntimeException failure) {
+            // Com erros anteriores na lista, eles já explicam o mapa;
+            // repetir a falha de compilação só duplicaria o ruído.
+            if (hadErrors) return;
+            error(issues, "mapa.compilacao", "o mapa não compilou: "
+                    + (failure.getMessage() == null
+                    ? failure.getClass().getSimpleName()
+                    : failure.getMessage()));
         }
     }
 
@@ -469,7 +519,10 @@ public final class MapValidator {
 
     private static boolean isNpcTextProperty(String name) {
         return "name".equals(name) || "role".equals(name)
-                || "greeting".equals(name) || "background".equals(name);
+                || "greeting".equals(name) || "background".equals(name)
+                || "combatLine1".equals(name)
+                || "combatLine2".equals(name)
+                || "combatLine3".equals(name);
     }
 
     private static int npcTextLimit(String name) {
@@ -477,6 +530,7 @@ public final class MapValidator {
         if ("role".equals(name)) return 80;
         if ("greeting".equals(name)) return 240;
         if ("background".equals(name)) return 600;
+        if (name != null && name.startsWith("combatLine")) return 120;
         // controllerId e qualquer futuro texto restrito continuam pequenos.
         return 128;
     }

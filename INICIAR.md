@@ -1,9 +1,9 @@
 # Próxima sessão
 
-O código está em v0.21.1. Antes de alterar:
+O código está em **v0.26.1**. Antes de alterar:
 
-1. Leia `DIARIO.md` (entrada v0.21.0), `docs/FORMATO-MAPA.md` e
-   `docs/IA-SEGURA.md`.
+1. Leia `DIARIO.md`, `PLANO.md`, `docs/IA-LIVRE.md`,
+   `docs/IA-SEGURA.md` e `docs/FORMATO-MAPA.md`.
 2. Rode `sh scripts/test-core.sh`.
 3. Compile com
    `sh /root/toolchain/build.sh /host/home/apps/construa-jogue`.
@@ -11,17 +11,42 @@ O código está em v0.21.1. Antes de alterar:
    `ADB=/caminho/adb sh scripts/test-device.sh` para validar GLES, áudio e
    gestos no aparelho.
 
-Preserve a igualdade bit a bit entre `arena.json` e o conversor legado. Toda
-mudança incompatível de JSON precisa de um novo passo em `MapMigration`.
-Regras do editor devem continuar saindo de `PlanEditorView` para
-`editor/tools/`; pavimentos são derivados por `StoryLevels` das coordenadas Y,
-sem campo novo no JSON. Render do editor é `WHEN_DIRTY` e o jogo é contínuo.
+## Contratos que não podem regredir
 
-Os exemplos `Complexo Ômega — nove núcleos` e `Cidade Aurora — apagão` são
-mapas-vitrine; alterações neles devem continuar passando em
-`ElaborateMapTest` e `CityMapTest`. A cidade também é o contrato do material
-`asphalt`, de `prop.lamp.street` e da missão que sobe à prefeitura.
-O principal trabalho restante é validação visual/tátil no aparelho e ajustes
-finos que ela revelar. A suíte pura-Java tem 587 verificações. A integração
-de rede foi validada por contrato, mas uma chamada real exige uma chave
+- Preserve a igualdade bit a bit entre `arena.json` e o conversor legado.
+- Toda mudança incompatível de JSON exige um novo passo em `MapMigration`.
+- Pavimentos continuam derivados por `StoryLevels` das coordenadas Y, sem campo
+  novo no JSON.
+- Render do editor é `WHEN_DIRTY`; render do jogo é contínuo.
+- `Complexo Ômega — nove núcleos` e `Cidade Aurora — apagão` continuam passando
+  em `ElaborateMapTest` e `CityMapTest`.
+- Mapas salvos nunca são regenerados automaticamente nem sobrescritos por
+  mudanças na IA; a revisão explícita sempre salva outro ID.
+
+## Regra da IA Livre
+
+A IA Livre foi aprovada no aparelho e é uma função permanente. Não a converta
+em Guiado, não substitua suas coordenadas por receitas e não remova o modo por
+causa de uma geração ruim. Toda melhoria deve preservar pedido direto,
+streaming, comandos atuais, avisos, resgate, validação, compilação e confirmação
+antes de salvar.
+
+`MELHORAR COM IA` precisa continuar sendo uma nova chamada explícita. O mapa
+atual entra como dado, a saída é um roteiro completo que passa pelo mesmo funil
+Livre e a confirmação salva uma cópia com ID novo. Não transforme a função em
+patch executável, autosave, sobrescrita ou reparo remoto silencioso.
+
+Mudanças no prompt/parser exigem `AiFreeMapTest` e comparação em aparelho com
+**mapas novos**. Melhorias no prompt não alteram mapas já salvos.
+
+## Próxima ordem técnica
+
+1. validar no aparelho a revisão da v0.26.1 e confirmar original/cópia;
+2. validar o cancelamento real e o aliado combatente;
+3. ampliar alcançabilidade horizontal para escadas, terminais, fichas e
+   interiores obrigatórios;
+4. medir balanceamento do aliado com vários inimigos/NPCs;
+5. evoluir análise local, prévia 3D e desempenho sem reduzir a IA Livre.
+
+A integração de rede tem testes de contrato, mas uma chamada real exige chave
 pessoal e deve ser conferida no aparelho sem registrar o segredo.

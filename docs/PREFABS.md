@@ -9,13 +9,15 @@ nome, categoria e comportamento vêm de `assets/prefabs/catalog.json`.
   `enemy.turret`, `enemy.kamikaze`, `enemy.boss`.
 - Itens: `pickup.health`, `pickup.ammo`, `pickup.token`, `pickup.special`.
 - Lógica: `terminal.wall`, `door.gate`, `door.auto`.
-- Pessoa amigável: `npc.human`, com `name`, `role`, `greeting` e `background`.
+- Pessoa amigável: `npc.human`, com `name`, `role`, `greeting`, `background`,
+  `combatant` e `combatLine1..3`.
 
 Inimigos móveis aceitam `patrolX`/`patrolZ`. O terminal aceita `order`.
 `door.gate` aceita meias dimensões e `controllerId`; `door.auto` aceita as
-dimensões e abre por proximidade. `npc.human` tem collider parado, aparece
-como uma pessoa low-poly e oferece `FALAR`; a IA opcional só produz o texto da
-resposta e nunca controla o objeto.
+dimensões e abre por proximidade. `npc.human` aparece como uma pessoa low-poly,
+segue sem virar obstáculo estático e oferece `FALAR`. Sem `combatant`, permanece
+pacífico; com o booleano ativo, combate por regras determinísticas locais. A IA
+opcional só define texto e dados na criação, nunca controla o objeto na partida.
 
 ## Cenário
 

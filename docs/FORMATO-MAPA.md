@@ -92,12 +92,13 @@ nunca são salvos.
   permitidas pelo catálogo. Patrulha usa `patrolX`/`patrolZ`; luminárias
   podem deslocar a posição da luz em Y com `lightOffsetY`.
 - `npc.human` é uma pessoa amigável. Suas propriedades textuais são `name`
-  (48 caracteres), `role` (80), `greeting` (240) e `background` (600). Elas
-  são dados narrativos; nunca viram código, comando ou nome de classe. O NPC
-  funciona com fala local mesmo quando a integração de IA está desligada. O
-  papel e o contexto também permitem derivar localmente uma personalidade
-  estável para o estilo da conversa e pequenas variações de ritmo/tom no TTS;
-  isso não acrescenta campo ao JSON.
+  (48 caracteres), `role` (80), `greeting` (240), `background` (600) e
+  `combatLine1..3` (120 cada). O booleano opcional `combatant` ativa as regras
+  locais de aliado; ausente significa pacífico. Esses valores são dados
+  narrativos/configuração e nunca viram código, comando ou nome de classe. O NPC
+  funciona com fala local mesmo quando a integração de IA está desligada. Papel
+  e contexto também derivam localmente uma personalidade estável para conversa
+  e pequenas variações de ritmo/tom no TTS.
 - Há exatamente um `player_spawn`. Uma `exit` é obrigatória somente para
   `reach_exit`. Portas e terminais podem ser múltiplos; `controllerId` liga
   um portão a um terminal e `order` cria sequência de terminais.

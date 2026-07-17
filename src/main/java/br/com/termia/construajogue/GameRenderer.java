@@ -50,6 +50,9 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
 
         /** A Activity fala a saudação sem abrir diálogo. */
         void onNpcGreeting(RuntimeNpc npc);
+
+        /** Fala curta criada no mapa; não chama a IA durante o combate. */
+        void onNpcCombatLine(RuntimeNpc npc, String line);
     }
 
     private static final String SCENE_VERTEX = ""
@@ -315,6 +318,11 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         if (greetingNpc != null && listener != null) {
             listener.onNpcGreeting(greetingNpc);
         }
+        RuntimeNpc combatNpc = game.npcCombatSpeaker();
+        String combatLine = game.takeNpcCombatLine();
+        if (combatNpc != null && combatLine != null && listener != null) {
+            listener.onNpcCombatLine(combatNpc, combatLine);
+        }
         RuntimeNpc requestedNpc = game.takeNpcInteraction();
         if (requestedNpc != null && listener != null) {
             listener.onNpcInteraction(requestedNpc, level.mapName());
@@ -472,15 +480,39 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             }
         }
 
-        // Pessoas amigáveis respiram paradas e saltitam ao acompanhar.
-        GLES30.glUniform3f(tintLoc, 1f, 1f, 1f);
+        // Pessoas respiram/andam; combatente e desmaio têm leitura visual.
         for (RuntimeNpc npc : level.npcs()) {
             float speed = npc.moving ? 8.5f : 1.8f;
             float amplitude = npc.moving ? 0.045f : 0.008f;
             float breathe = amplitude * (float) Math.sin(
                     gameTime * speed + npc.x * 0.3f);
-            GLES30.glUniform3f(offsetLoc, npc.x, npc.y + breathe, npc.z);
+            if (npc.downed) {
+                GLES30.glUniform3f(tintLoc, 0.35f, 0.38f, 0.42f);
+            } else if (npc.firing) {
+                GLES30.glUniform3f(tintLoc, 2.1f, 1.7f, 0.75f);
+            } else if (npc.combatant) {
+                GLES30.glUniform3f(tintLoc, 0.78f, 1.08f, 1.20f);
+            } else {
+                GLES30.glUniform3f(tintLoc, 1f, 1f, 1f);
+            }
+            GLES30.glUniform3f(offsetLoc, npc.x,
+                    npc.y + (npc.downed ? -0.58f : breathe), npc.z);
             meshes.human.draw();
+        }
+
+        // Traçador pontilhado do aliado: pontos ao longo do hitscan local.
+        GLES30.glUniform3f(tintLoc, 2.4f, 1.9f, 0.65f);
+        for (RuntimeNpc npc : level.npcs()) {
+            if (npc.tracerTtl <= 0f) continue;
+            float fromY = npc.y + 1.38f;
+            for (int dash = 1; dash <= 7; dash += 2) {
+                float t = dash / 8f;
+                GLES30.glUniform3f(offsetLoc,
+                        npc.x + (npc.tracerX - npc.x) * t,
+                        fromY + (npc.tracerY - fromY) * t,
+                        npc.z + (npc.tracerZ - npc.z) * t);
+                meshes.impact.draw();
+            }
         }
 
         // inimigos: mesma linguagem de flash/aviso, malhas distintas

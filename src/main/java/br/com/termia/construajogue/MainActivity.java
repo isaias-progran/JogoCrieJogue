@@ -185,6 +185,11 @@ public final class MainActivity extends Activity
             public void onNpcGreeting(RuntimeNpc npc) {
                 root.post(() -> ai.greet(npc));
             }
+
+            @Override
+            public void onNpcCombatLine(RuntimeNpc npc, String line) {
+                root.post(() -> ai.speakCombat(npc, line));
+            }
         }, controls, levels, sounds, hud);
         root.addView(gameView);
         root.addView(hud);
@@ -253,6 +258,16 @@ public final class MainActivity extends Activity
             toast("Não consegui duplicar: " + failure.getMessage());
         }
         showLibrary();
+    }
+
+    @Override
+    public void onImproveAi(String id) {
+        try {
+            ai.promptImproveMap(store.load(id));
+        } catch (IOException | RuntimeException failure) {
+            toast("Não consegui preparar a melhoria: "
+                    + failure.getMessage());
+        }
     }
 
     @Override
@@ -419,6 +434,11 @@ public final class MainActivity extends Activity
     }
 
     @Override
+    public void onImproveWithAi(MapDocument snapshot) {
+        ai.promptImproveMap(snapshot);
+    }
+
+    @Override
     public void onClose() {
         showLibrary();
     }
@@ -426,8 +446,14 @@ public final class MainActivity extends Activity
     /** Valida e compila; erros aparecem em diálogo e devolvem null. */
     private RuntimeLevel compile(MapDocument doc) {
         try {
+            RuntimeLevel level = null;
+            try {
+                level = LevelCompiler.compile(doc, catalog());
+            } catch (RuntimeException broken) {
+                // O validador abaixo explica o problema com mensagens claras.
+            }
             List<ValidationIssue> issues =
-                    MapValidator.validate(doc, catalog());
+                    MapValidator.validate(doc, catalog(), level);
             if (MapValidator.hasError(issues)) {
                 StringBuilder text = new StringBuilder();
                 for (ValidationIssue issue : issues) {
@@ -442,7 +468,8 @@ public final class MainActivity extends Activity
                         .show();
                 return null;
             }
-            return LevelCompiler.compile(doc, catalog());
+            return level != null ? level
+                    : LevelCompiler.compile(doc, catalog());
         } catch (IOException | RuntimeException failure) {
             toast("Falha ao compilar: " + failure.getMessage());
             return null;

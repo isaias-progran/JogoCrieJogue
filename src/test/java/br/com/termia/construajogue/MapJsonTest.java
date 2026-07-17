@@ -50,6 +50,12 @@ public final class MapJsonTest {
         door.properties.put("halfX", 1.2f);
         doc.prefabs.add(door);
 
+        PrefabInstance npc = new PrefabInstance("aliado", "npc.human");
+        npc.properties.put("name", "Rui");
+        npc.properties.put("combatant", Boolean.TRUE);
+        npc.properties.put("combatLine1", "Cobre a rua!");
+        doc.prefabs.add(npc);
+
         LogicMarker spawn = new LogicMarker("spawn",
                 LogicMarker.PLAYER_SPAWN);
         spawn.z = 6f;
@@ -87,7 +93,7 @@ public final class MapJsonTest {
         Check.equal(b.material, "brick", "material");
         Check.that(b.locked, "trava da estrutura");
 
-        Check.equal(back.prefabs.size(), 2, "peças");
+        Check.equal(back.prefabs.size(), 3, "peças");
         PrefabInstance d = back.prefabs.get(0);
         Check.equal(d.prefabId, "enemy.drone", "prefabId");
         Check.that(d.floatProperty("patrolX", 9f) == -2f, "patrolX");
@@ -97,6 +103,11 @@ public final class MapJsonTest {
         Check.equal(p.stringProperty("controllerId"), "term",
                 "controllerId");
         Check.that(p.floatProperty("halfX", 0f) == 1.2f, "halfX");
+        PrefabInstance ally = back.prefabs.get(2);
+        Check.that(ally.booleanProperty("combatant", false),
+                "booleano do aliado sobrevive ao JSON");
+        Check.equal(ally.stringProperty("combatLine1"), "Cobre a rua!",
+                "fala de combate sobrevive ao JSON");
 
         Check.equal(back.markers.size(), 2, "marcadores");
         Check.that(back.markers.get(0).yaw == 180f, "yaw do início");

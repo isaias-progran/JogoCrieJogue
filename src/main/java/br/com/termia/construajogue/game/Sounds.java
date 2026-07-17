@@ -82,6 +82,11 @@ public final class Sounds {
         pool.play(shot, 0.8f, 0.8f, 1, 0, 1f);
     }
 
+    /** Mesmo timbre do arsenal, mais baixo/agudo para distinguir o aliado. */
+    public void allyShot() {
+        pool.play(shot, 0.48f, 0.48f, 1, 0, 1.16f);
+    }
+
     public void reload() {
         pool.play(reload, 0.9f, 0.9f, 1, 0, 1f);
     }

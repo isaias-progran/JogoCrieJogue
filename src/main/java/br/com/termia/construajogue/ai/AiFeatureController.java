@@ -28,6 +28,8 @@ import br.com.termia.construajogue.compiler.LevelCompiler;
 import br.com.termia.construajogue.compiler.MapValidator;
 import br.com.termia.construajogue.compiler.ValidationIssue;
 import br.com.termia.construajogue.map.MapDocument;
+import br.com.termia.construajogue.map.PrefabInstance;
+import br.com.termia.construajogue.persistence.MapJson;
 import br.com.termia.construajogue.persistence.MapStore;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.runtime.RuntimeNpc;
@@ -39,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /** UI e trabalho assíncrono da IA, isolados da Activity e da thread GL. */
 public final class AiFeatureController {
@@ -68,6 +71,7 @@ public final class AiFeatureController {
     private final NpcVoice voice;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private Future<?> activeRequest;
+    private volatile AiOpenAiClient.Cancellation activeCancellation;
     private boolean npcDialogOpen;
     private RuntimeNpc voiceQuestionNpc;
     private String voiceQuestionMap;
@@ -85,8 +89,9 @@ public final class AiFeatureController {
         activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         LinearLayout form = column();
         TextView explanation = text("Integração pessoal, sem servidor e sem "
-                + "Alpine. A IA só devolve um plano limitado; nunca recebe "
-                + "terminal, arquivos ou permissão para executar código.\n\n"
+                + "Alpine. A IA só devolve um plano Guiado ou comandos "
+                + "fechados do modo Livre; nunca recebe terminal, arquivos "
+                + "ou permissão para executar código.\n\n"
                 + "Mapas: modelo escolhido a cada geração (padrão "
                 + AiOpenAiClient.MODEL + ").\n"
                 + "NPCs: " + AiOpenAiClient.NPC_MODEL + "\n"
@@ -119,7 +124,7 @@ public final class AiFeatureController {
         form.addView(warning);
 
         AlertDialog dialog = new AlertDialog.Builder(activity)
-                .setTitle("IA experimental")
+                .setTitle("IA pessoal")
                 .setView(scrollable(form))
                 .setPositiveButton("SALVAR", null)
                 .setNeutralButton(keys.hasKey() ? "APAGAR CHAVE" : "",
@@ -174,7 +179,7 @@ public final class AiFeatureController {
         ArrayAdapter<String> modes = new ArrayAdapter<>(activity,
                 android.R.layout.simple_spinner_item, new String[]{
                 "Guiado — plano seguro (recomendado)",
-                "Livre — a IA desenha tudo (experimental)"});
+                "Livre — a IA desenha tudo (criativo)"});
         modes.setDropDownViewResource(
                 android.R.layout.simple_spinner_dropdown_item);
         mode.setAdapter(modes);
@@ -184,8 +189,8 @@ public final class AiFeatureController {
                 + "objetivo e NPC; o jogo monta com receitas prontas. "
                 + "Livre: a IA desenha cada parede, peça e inimigo com "
                 + "coordenadas próprias — mais criativo, gasta mais tokens "
-                + "e pode falhar; o validador recusa mapa quebrado antes "
-                + "de salvar."));
+                + "e pode precisar de reparos; o validador recusa mapa "
+                + "quebrado antes de salvar."));
         EditText idea = new EditText(activity);
         idea.setHint("Ex.: cidade noturna abandonada, grande, com portão, "
                 + "água, moradores e drones protegendo energia");
@@ -285,8 +290,12 @@ public final class AiFeatureController {
             return;
         }
         AtomicBoolean cancelled = new AtomicBoolean();
+        AiOpenAiClient.Cancellation cancellation =
+                new AiOpenAiClient.Cancellation();
+        activeCancellation = cancellation;
         AlertDialog progress = busy("IA criando o plano…", () -> {
             cancelled.set(true);
+            cancellation.cancel();
             Future<?> request = activeRequest;
             if (request != null) request.cancel(true);
         });
@@ -309,7 +318,7 @@ public final class AiFeatureController {
         activeRequest = executor.submit(() -> {
             try {
                 AiScenarioPlan plan = client.generateScenario(key, idea,
-                        scenarioModel);
+                        scenarioModel, cancellation);
                 AiScenarioProfile resolved = AiScenarioProfile.resolve(
                         profileMode, plan.size, totalRam, heapMb, processors);
                 List<MapDocument> documents =
@@ -329,7 +338,7 @@ public final class AiFeatureController {
                             || activity.isDestroyed()) return;
                     progress.dismiss();
                     previewScenario(plan, documents, resolved,
-                            scenarioModelLabel);
+                            scenarioModelLabel, modelIndex);
                 });
             } catch (Exception failure) {
                 activity.runOnUiThread(() -> {
@@ -338,6 +347,10 @@ public final class AiFeatureController {
                     progress.dismiss();
                     showError("Não consegui gerar o cenário", failure);
                 });
+            } finally {
+                if (activeCancellation == cancellation) {
+                    activeCancellation = null;
+                }
             }
         });
     }
@@ -367,14 +380,19 @@ public final class AiFeatureController {
             return;
         }
         AtomicBoolean cancelled = new AtomicBoolean();
+        AiOpenAiClient.Cancellation cancellation =
+                new AiOpenAiClient.Cancellation();
+        activeCancellation = cancellation;
         AlertDialog progress = busy("IA desenhando o mapa (modo livre)",
                 () -> {
                     cancelled.set(true);
+                    cancellation.cancel();
                     Future<?> request = activeRequest;
                     if (request != null) request.cancel(true);
                 });
         // Mostra a IA trabalhando: fase + cronômetro + comandos recebidos.
-        final String[] phase = {"Conectando e raciocinando sobre o pedido…"};
+        AtomicReference<String> phase = new AtomicReference<>(
+                "Conectando e raciocinando sobre o pedido…");
         final long started = android.os.SystemClock.elapsedRealtime();
         android.os.Handler ticker = new android.os.Handler(
                 activity.getMainLooper());
@@ -384,7 +402,7 @@ public final class AiFeatureController {
                 if (!progress.isShowing()) return;
                 long seconds = (android.os.SystemClock.elapsedRealtime()
                         - started) / 1000;
-                progress.setMessage(phase[0] + "\n\nTrabalhando há "
+                progress.setMessage(phase.get() + "\n\nTrabalhando há "
                         + seconds / 60 + "m" + String.format("%02d",
                         seconds % 60) + "s. Pode levar vários minutos; "
                         + "deixe o app aberto.");
@@ -396,35 +414,18 @@ public final class AiFeatureController {
             try {
                 String script = client.generateFreeMapScript(key, idea,
                         scenarioModel, prefabIds, (chars, lines) ->
-                                phase[0] = "Desenhando o mapa: " + lines
+                                phase.set("Desenhando o mapa: " + lines
                                         + " comandos (" + chars
-                                        + " caracteres) recebidos…");
-                AiFreeMapScript.Result parsed =
-                        AiFreeMapScript.parse(script, catalog);
-                List<ValidationIssue> issues =
-                        MapValidator.validate(parsed.document, catalog);
-                if (MapValidator.hasError(issues)) {
-                    // Alternativa antes de desistir: conserta o que o
-                    // validador recusou e tenta validar de novo.
-                    int fixes = AiFreeMapScript.salvage(parsed.document,
-                            catalog, parsed.warnings);
-                    if (fixes > 0) {
-                        issues = MapValidator.validate(parsed.document,
-                                catalog);
-                    }
-                }
-                if (MapValidator.hasError(issues)) {
-                    throw new IOException("o desenho da IA foi recusado "
-                            + "pelo validador mesmo após o resgate: "
-                            + firstError(issues)
-                            + "\n\nTente gerar de novo ou mude o pedido.");
-                }
-                LevelCompiler.compile(parsed.document, catalog);
+                                        + " caracteres) recebidos…"),
+                        cancellation);
+                AiFreeMapScript.Result parsed = validateFreeScript(script,
+                        catalog);
                 activity.runOnUiThread(() -> {
                     if (cancelled.get() || activity.isFinishing()
                             || activity.isDestroyed()) return;
                     progress.dismiss();
-                    previewFreeMap(parsed, scenarioModelLabel);
+                    previewFreeMap(parsed, scenarioModelLabel, modelIndex,
+                            false, null, null);
                 });
             } catch (Exception failure) {
                 activity.runOnUiThread(() -> {
@@ -433,53 +434,333 @@ public final class AiFeatureController {
                     progress.dismiss();
                     showError("Não consegui desenhar o mapa livre", failure);
                 });
+            } finally {
+                if (activeCancellation == cancellation) {
+                    activeCancellation = null;
+                }
             }
         });
     }
 
+    /** Abre a revisão de qualquer mapa, inclusive um ainda não salvo. */
+    public void promptImproveMap(MapDocument current) {
+        promptImproveMap(current, AiOpenAiClient.DEFAULT_SCENARIO_MODEL,
+                null);
+    }
+
+    private void promptImproveMap(MapDocument current, int modelIndex,
+                                  Runnable onBack) {
+        if (current == null) {
+            toast("Mapa atual ausente");
+            returnTo(onBack);
+            return;
+        }
+        if (!keys.hasKey()) {
+            toast("Configure sua chave primeiro");
+            showSettings();
+            return;
+        }
+
+        final String currentJson;
+        final MapDocument snapshot;
+        try {
+            // Congela o mapa desta revisão; edições posteriores não entram
+            // escondidas no pedido que será enviado.
+            currentJson = MapJson.write(current);
+            snapshot = MapJson.read(currentJson);
+            AiOpenAiClient.scenarioModelAt(modelIndex);
+        } catch (RuntimeException failure) {
+            toast("Não consegui preparar o mapa: " + message(failure));
+            returnTo(onBack);
+            return;
+        }
+
+        LinearLayout form = column();
+        form.addView(text("Diga somente o que deve mudar. A IA deve manter "
+                + "todo o restante e devolverá um mapa completo para você "
+                + "conferir antes de salvar."));
+        EditText instruction = new EditText(activity);
+        instruction.setHint("Ex.: crie interiores nos prédios, adicione "
+                + "mais cobertura e deixe o aliado protegendo a saída");
+        instruction.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        instruction.setImeOptions(EditorInfo.IME_FLAG_NO_EXTRACT_UI
+                | EditorInfo.IME_FLAG_NO_FULLSCREEN);
+        instruction.setMinLines(4);
+        instruction.setMaxLines(7);
+        instruction.setGravity(Gravity.TOP | Gravity.START);
+        instruction.setHorizontallyScrolling(false);
+        instruction.setVerticalScrollBarEnabled(true);
+        instruction.setFilters(new InputFilter[]{
+                new InputFilter.LengthFilter(1000)});
+        form.addView(instruction);
+        TextView modelLabel = text("Modelo para esta melhoria");
+        modelLabel.setPadding(0, 10, 0, 2);
+        form.addView(modelLabel);
+        Spinner model = new Spinner(activity);
+        ArrayAdapter<String> models = new ArrayAdapter<>(activity,
+                android.R.layout.simple_spinner_item,
+                AiOpenAiClient.SCENARIO_MODEL_LABELS);
+        models.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
+        model.setAdapter(models);
+        model.setSelection(modelIndex);
+        form.addView(model);
+        TextView warning = text("Esta ação faz uma nova chamada e pode "
+                + "consumir créditos. O JSON inteiro do mapa — inclusive "
+                + "nomes e textos de NPC — será enviado à API como dado. "
+                + "O original não será sobrescrito; a aprovação salva uma "
+                + "nova cópia.");
+        warning.setTextColor(0xFFFFC46B);
+        form.addView(warning);
+
+        AlertDialog dialog = new AlertDialog.Builder(activity)
+                .setTitle("✦ Melhorar com IA")
+                .setView(scrollable(form))
+                .setPositiveButton("GERAR MELHORIA", null)
+                .setNegativeButton(onBack == null ? "Cancelar" : "VOLTAR",
+                        (ignored, which) -> returnTo(onBack))
+                .create();
+        dialog.setOnCancelListener(ignored -> returnTo(onBack));
+        dialog.setOnShowListener(ignored -> dialog.getButton(
+                DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String requested = instruction.getText().toString().trim();
+            if (requested.length() < 3) {
+                toast("Descreva o que deseja melhorar");
+                return;
+            }
+            int selectedModel = model.getSelectedItemPosition();
+            dialog.dismiss();
+            generateImprovedMap(currentJson, snapshot.name, requested,
+                    selectedModel, onBack);
+        }));
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setSoftInputMode(
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        }
+    }
+
+    private void generateImprovedMap(String currentJson, String sourceName,
+                                     String instruction, int modelIndex,
+                                     Runnable onBack) {
+        final String key;
+        final PrefabCatalog catalog;
+        final List<String> prefabIds = new ArrayList<>();
+        final String scenarioModel = AiOpenAiClient.scenarioModelAt(modelIndex);
+        final String scenarioModelLabel =
+                AiOpenAiClient.scenarioModelLabelAt(modelIndex);
+        try {
+            catalog = listener.aiCatalog();
+            for (br.com.termia.construajogue.prefab.PrefabDefinition
+                    definition : catalog.all()) {
+                prefabIds.add(definition.id);
+            }
+            // Limites e corpo são conferidos ANTES do gate: recusa local
+            // (mapa enorme, pedido curto) não pode queimar vaga da sessão.
+            AiOpenAiClient.buildImproveMapRequest(instruction, currentJson,
+                    scenarioModel, prefabIds);
+            gate.acquire();
+            key = keys.get();
+            if (key == null) throw new IllegalStateException("chave ausente");
+        } catch (Exception failure) {
+            toast(message(failure));
+            returnTo(onBack);
+            return;
+        }
+
+        AtomicBoolean cancelled = new AtomicBoolean();
+        AiOpenAiClient.Cancellation cancellation =
+                new AiOpenAiClient.Cancellation();
+        activeCancellation = cancellation;
+        AlertDialog progress = busy("IA melhorando o mapa", () -> {
+            cancelled.set(true);
+            cancellation.cancel();
+            Future<?> request = activeRequest;
+            if (request != null) request.cancel(true);
+            returnTo(onBack);
+        });
+        AtomicReference<String> phase = new AtomicReference<>(
+                "Lendo o mapa e planejando somente as mudanças pedidas…");
+        final long started = android.os.SystemClock.elapsedRealtime();
+        android.os.Handler ticker = new android.os.Handler(
+                activity.getMainLooper());
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                if (!progress.isShowing()) return;
+                long seconds = (android.os.SystemClock.elapsedRealtime()
+                        - started) / 1000;
+                progress.setMessage(phase.get() + "\n\nTrabalhando há "
+                        + seconds / 60 + "m" + String.format("%02d",
+                        seconds % 60) + "s. O mapa original permanece "
+                        + "intacto.");
+                ticker.postDelayed(this, 1000);
+            }
+        };
+        ticker.post(tick);
+        activeRequest = executor.submit(() -> {
+            try {
+                String script = client.improveFreeMapScript(key,
+                        instruction, currentJson, scenarioModel, prefabIds,
+                        (chars, lines) -> phase.set("Recebendo a revisão: "
+                                + lines + " comandos (" + chars
+                                + " caracteres)…"), cancellation);
+                AiFreeMapScript.Result parsed = validateFreeScript(script,
+                        catalog);
+                activity.runOnUiThread(() -> {
+                    if (cancelled.get() || activity.isFinishing()
+                            || activity.isDestroyed()) return;
+                    progress.dismiss();
+                    previewFreeMap(parsed, scenarioModelLabel, modelIndex,
+                            true, sourceName, onBack);
+                });
+            } catch (Exception failure) {
+                activity.runOnUiThread(() -> {
+                    if (cancelled.get() || activity.isFinishing()
+                            || activity.isDestroyed()) return;
+                    progress.dismiss();
+                    showError("Não consegui melhorar o mapa", failure,
+                            onBack);
+                });
+            } finally {
+                if (activeCancellation == cancellation) {
+                    activeCancellation = null;
+                }
+            }
+        });
+    }
+
+    /** Único funil de confiança para geração e revisão do modo Livre. */
+    private AiFreeMapScript.Result validateFreeScript(String script,
+                                                      PrefabCatalog catalog)
+            throws IOException {
+        AiFreeMapScript.Result parsed = AiFreeMapScript.parse(script,
+                catalog);
+        List<ValidationIssue> issues = MapValidator.validate(parsed.document,
+                catalog);
+        if (MapValidator.hasError(issues)) {
+            // Alternativa antes de desistir: conserta o que o validador
+            // recusou e tenta validar de novo.
+            int fixes = AiFreeMapScript.salvage(parsed.document, catalog,
+                    parsed.warnings);
+            if (fixes > 0) {
+                issues = MapValidator.validate(parsed.document, catalog);
+            }
+        }
+        if (MapValidator.hasError(issues)) {
+            throw new IOException("o desenho da IA foi recusado pelo "
+                    + "validador mesmo após o resgate: "
+                    + firstError(issues)
+                    + "\n\nTente de novo ou simplifique o pedido.");
+        }
+        for (ValidationIssue issue : issues) {
+            if (!issue.isError()) {
+                parsed.warnings.add("validador: " + issue.message);
+            }
+        }
+        // A compilação já foi provada dentro do validador (checkCompiledSpace
+        // compila e converte falha em erro), então não se compila de novo.
+        return parsed;
+    }
+
     private void previewFreeMap(AiFreeMapScript.Result parsed,
-                                String modelLabel) {
+                                String modelLabel, int modelIndex,
+                                boolean improved, String sourceName,
+                                Runnable onDiscard) {
         MapDocument document = parsed.document;
+        int combatants = 0;
+        for (PrefabInstance prefab : document.prefabs) {
+            if ("npc.human".equals(prefab.prefabId)
+                    && prefab.booleanProperty("combatant", false)) {
+                combatants++;
+            }
+        }
         StringBuilder details = new StringBuilder();
-        details.append("Mapa desenhado livremente pela IA.\n")
+        details.append(improved ? "Revisão proposta pela IA.\n"
+                        : "Mapa desenhado livremente pela IA.\n")
                 .append("Modelo: ").append(modelLabel).append('\n')
                 .append(document.structures.size()).append(" estruturas · ")
                 .append(document.prefabs.size()).append(" peças\n")
                 .append("Objetivo: ").append(document.objective.type);
+        if (combatants > 0) {
+            details.append("\n").append(combatants)
+                    .append(combatants == 1
+                            ? " aliado combatente" : " aliados combatentes");
+        }
         if (!parsed.warnings.isEmpty()) {
-            details.append("\n\nAvisos (").append(parsed.warnings.size())
-                    .append("):");
-            int shown = 0;
+            int fixes = 0;
             for (String warning : parsed.warnings) {
-                if (shown++ >= 8) {
-                    details.append("\n…");
-                    break;
-                }
-                details.append("\n• ").append(warning);
+                if (warning.startsWith("resgate:")) fixes++;
+            }
+            if (fixes > 0) appendWarnings(details, "Corrigidos pelo jogo",
+                    parsed.warnings, true, 8);
+            if (fixes < parsed.warnings.size()) {
+                appendWarnings(details, "Pontos de atenção",
+                        parsed.warnings, false, 8);
             }
         }
-        details.append("\n\nNada foi salvo ainda.");
-        new AlertDialog.Builder(activity)
+        details.append(improved
+                ? "\n\nO mapa original continua intacto. Nada desta "
+                + "revisão foi salvo ainda."
+                : "\n\nNada foi salvo ainda.");
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
                 .setTitle(document.name)
                 .setMessage(details.toString())
-                .setPositiveButton("SALVAR E CONSTRUIR", (dialog, which) -> {
+                .setPositiveButton(improved
+                                ? "SALVAR CÓPIA E EDITAR"
+                                : "SALVAR E EDITAR",
+                        (dialog, which) -> {
                     try {
-                        store.save(document);
+                        MapDocument saved = document;
+                        if (improved) {
+                            saved = AiMapRevision.copyForSave(document,
+                                    sourceName);
+                        }
+                        store.save(saved);
                         List<MapDocument> documents = new ArrayList<>();
-                        documents.add(document);
+                        documents.add(saved);
                         listener.onAiScenarioSaved(documents);
                     } catch (IOException failure) {
                         showError("Não consegui salvar", failure);
                     }
                 })
-                .setNegativeButton("Descartar", null)
-                .show();
+                .setNeutralButton(improved ? "MELHORAR DE NOVO"
+                                : "MELHORAR COM IA",
+                        (dialog, which) -> promptImproveMap(document,
+                                modelIndex, () -> previewFreeMap(parsed,
+                                        modelLabel, modelIndex, improved,
+                                        sourceName, onDiscard)))
+                .setNegativeButton(onDiscard != null ? "VOLTAR"
+                                : improved ? "DESCARTAR REVISÃO" : "Descartar",
+                        (dialog, which) -> returnTo(onDiscard));
+        builder.show();
+    }
+
+    private static void appendWarnings(StringBuilder details, String title,
+                                       List<String> warnings,
+                                       boolean repairs, int limit) {
+        details.append("\n\n").append(title).append(":");
+        int shown = 0;
+        for (String warning : warnings) {
+            if (warning.startsWith("resgate:") != repairs) continue;
+            if (shown++ >= limit) {
+                details.append("\n…");
+                break;
+            }
+            String clean = warning.startsWith("resgate:")
+                    ? warning.substring("resgate:".length()).trim()
+                    : warning.startsWith("validador:")
+                    ? warning.substring("validador:".length()).trim()
+                    : warning;
+            details.append("\n• ").append(clean);
+        }
     }
 
     private void previewScenario(AiScenarioPlan plan,
                                  List<MapDocument> documents,
                                  AiScenarioProfile profile,
-                                 String modelLabel) {
+                                 String modelLabel, int modelIndex) {
         int structures = 0;
         int prefabs = 0;
         for (MapDocument document : documents) {
@@ -499,11 +780,11 @@ public final class AiFeatureController {
                 ? "\nSó um setor será carregado por vez; isto substituirá "
                 + "a lista Minha campanha." : "")
                 + "\n\nNada foi salvo ainda.";
-        new AlertDialog.Builder(activity)
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
                 .setTitle(first.name)
                 .setMessage(details)
                 .setPositiveButton(documents.size() == 1
-                                ? "SALVAR E CONSTRUIR"
+                                ? "SALVAR E EDITAR"
                                 : "SALVAR E JOGAR SETORES",
                         (dialog, which) -> {
                     List<String> saved = new ArrayList<>();
@@ -516,10 +797,16 @@ public final class AiFeatureController {
                     } catch (IOException failure) {
                         for (String id : saved) store.delete(id);
                         showError("Não consegui salvar", failure);
-                    }
+                        }
                 })
-                .setNegativeButton("Descartar", null)
-                .show();
+                .setNegativeButton("Descartar", null);
+        if (documents.size() == 1) {
+            builder.setNeutralButton("MELHORAR COM IA",
+                    (dialog, which) -> promptImproveMap(first, modelIndex,
+                            () -> previewScenario(plan, documents, profile,
+                                    modelLabel, modelIndex)));
+        }
+        builder.show();
     }
 
     /** Chamado na UI após a thread GL detectar o botão FALAR. */
@@ -576,6 +863,13 @@ public final class AiFeatureController {
     public void greet(RuntimeNpc npc) {
         if (npc == null || npcDialogOpen || !listener.aiGameActive()) return;
         voice.speak(npc, npc.greeting);
+    }
+
+    /** Fala já salva no mapa; nunca abre rede nem diálogo durante combate. */
+    public void speakCombat(RuntimeNpc npc, String line) {
+        if (npc == null || line == null || npcDialogOpen
+                || !listener.aiGameActive()) return;
+        voice.speak(npc, compact(line, 120));
     }
 
     private boolean startVoiceQuestion(RuntimeNpc npc, String mapName) {
@@ -637,10 +931,13 @@ public final class AiFeatureController {
         toast(npc.name + " responderá por voz");
         String conversationKey = mapName + "\u0000" + npc.id;
         String history = conversations.recent(conversationKey);
+        AiOpenAiClient.Cancellation cancellation =
+                new AiOpenAiClient.Cancellation();
+        activeCancellation = cancellation;
         activeRequest = executor.submit(() -> {
             try {
                 String answer = client.replyAsNpc(key, npc, mapName, question,
-                        history);
+                        history, cancellation);
                 conversations.remember(conversationKey, question, answer);
                 activity.runOnUiThread(() -> {
                     if (!listener.aiGameActive()) {
@@ -669,6 +966,10 @@ public final class AiFeatureController {
                     }
                     showNpcFailure(npc, failure);
                 });
+            } finally {
+                if (activeCancellation == cancellation) {
+                    activeCancellation = null;
+                }
             }
         });
     }
@@ -705,14 +1006,32 @@ public final class AiFeatureController {
     }
 
     private void showError(String title, Exception failure) {
-        new AlertDialog.Builder(activity)
+        showError(title, failure, null);
+    }
+
+    /** Em revisões de uma prévia, OK devolve ao mapa anterior. */
+    private void showError(String title, Exception failure, Runnable onBack) {
+        AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle(title)
                 .setMessage(message(failure))
                 .setPositiveButton("OK", null)
-                .show();
+                .create();
+        if (onBack != null) {
+            dialog.setOnDismissListener(ignored -> returnTo(onBack));
+        }
+        dialog.show();
+    }
+
+    /** Posta após o fechamento do diálogo atual para não sobrepor janelas. */
+    private void returnTo(Runnable action) {
+        if (action == null || activity.isFinishing()
+                || activity.isDestroyed()) return;
+        activity.getWindow().getDecorView().post(action);
     }
 
     public void shutdown() {
+        AiOpenAiClient.Cancellation cancellation = activeCancellation;
+        if (cancellation != null) cancellation.cancel();
         Future<?> request = activeRequest;
         if (request != null) request.cancel(true);
         executor.shutdownNow();
