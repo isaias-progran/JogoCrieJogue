@@ -9,6 +9,20 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-18
+- **Polimento P4 — AiFeatureController modularizado (refactor puro).**
+  - 1094 → 288 linhas. Quatro extrações mecânicas no padrão
+    EditorForms/EditorPickers (classe do mesmo pacote lendo o host):
+    `ai/AiScenarioFlow` (320 — diálogo GERAR + guiado + livre),
+    `ai/AiImproveFlow` (257 — Melhorar com IA + validateFreeScript),
+    `ai/AiPreviewDialogs` (170 — prévias livre/guiada) e `ai/AiNpcTalk`
+    (219 — FALAR, voz, saudação, fala de combate). Todos ≤ 400 linhas.
+  - O controller mantém API pública intacta (delegações), chave, gate,
+    executor, cancelamento e os ajudantes de diálogo (busy/showError/
+    returnTo/column/scrollable/text/toast), agora com visibilidade de
+    pacote. Nenhum texto de UI ou fluxo mudou.
+  - Suíte idêntica e verde (778); prova principal é a compilação Android
+    (o controller não tem teste JVM). APK copiado. Conferência visual dos
+    diálogos de IA no aparelho continua na pendência manual.
 - **Polimento P3 — visada inimigo↔aliado 1x por par/quadro.**
   - Novo `game/AllySight`: cache por quadro da linha de visada (reta
     inimigo↔olho do aliado, mesma margem de 0,1 m das duas rotas

@@ -47,7 +47,7 @@ está protegida por pré-condição na P5.
 - Gate: `GameplayRulesTest` inalterado ou estendido (mesmas decisões de
   alvo em cenário fixo); suíte verde.
 
-### [ ] P4 — modularizar AiFeatureController (refactor puro)
+### [x] P4 — modularizar AiFeatureController (refactor puro)
 
 - 1094 linhas hoje. Extrair blocos coesos (ex.: fluxo de geração, fluxo de
   revisão/melhoria, diálogo de progresso/prévia) para arquivos próprios em
