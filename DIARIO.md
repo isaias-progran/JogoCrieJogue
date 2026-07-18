@@ -8,7 +8,24 @@ Ciclo: desenhar espaço → posicionar prefabs prontos → Testar → jogar → 
 Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
-## Estado atual — 2026-07-17
+## Estado atual — 2026-07-18
+- **Plano novo agendável: Polimento 2026-07 (`PLANO-POLIMENTO-2026-07.md`).**
+  - Teste da Automação de 2026-07-17 23h35 funcionou (tarefa id 100 chegou
+    ao claude, leu o projeto e a suíte passou com 775 verificações).
+  - Análise de melhorias virou plano com nome próprio, 6 fases: P1 dedup
+    (`nudgeFree` em dobro no AiFreeMapScript + tabela de limites de texto
+    parser/validador), P2 Testar do editor compilando uma vez (sobrecarga
+    da v0.26.2), P3 cache por quadro do raycast inimigo↔aliado, P4
+    modularizar AiFeatureController (1094 linhas), P5 modularizar
+    AiFreeMapScript (983; PRÉ-CONDIÇÃO: F3–F5 dos macros concluídas — os
+    dois planos tocam o arquivo), P6 limpeza pedida pelo usuário: mover
+    todo `PLANO*.md` 100% marcado para `docs/historico/` junto do TSV.
+  - Receita da Automação em `scripts/automacao-polimento.tsv` (ids 11–13,
+    10h/16h/22h — sem colisão com 8h/14h/20h dos macros nem com a id 100).
+    Falta o usuário anexar ao `/host/automation.tsv` e abrir o TermIa para
+    armar os alarmes. Nenhum código mudou nesta entrada — só documentação.
+
+## Estado anterior — 2026-07-17
 - **v0.27.1 (versionCode 68) — F2: o Livre aprende a usar macros.**
   - `buildFreeMapRequest` agora documenta `definir <nome> … fim` e
     `usar <nome> <x> <z> [rot] [tom]`, explica as opções válidas de rotação

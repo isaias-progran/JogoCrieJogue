@@ -45,6 +45,10 @@ O plano vigente é o de **macros de construção e revisão barata** em
 `PLANO.md` (substituiu o plano anterior por decisão do usuário em
 2026-07-17). Executar as fases na ordem, uma por iteração, marcando as
 caixas; a seção de armadilhas do próprio PLANO.md é leitura obrigatória.
+Em paralelo (horários diferentes na Automação) corre o
+**Polimento 2026-07** em `PLANO-POLIMENTO-2026-07.md`: dívidas técnicas
+dispensáveis viraram fases P1–P5 e a P6 arquiva planos totalmente
+executados em `docs/historico/`.
 Pendências herdadas (validar revisão/cancelamento/aliado no aparelho)
 continuam valendo como teste manual junto da fase F7.
 
