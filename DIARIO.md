@@ -9,6 +9,17 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-18
+- **Polimento P1 — deduplicações internas (refactor puro, sem versão nova).**
+  - `map/TextLimits.java` é a fonte única dos limites de texto de NPC
+    (name 48, role 80, greeting 240, background 600, combatLine* 120,
+    demais restritos 128); `AiFreeMapScript` e `MapValidator` consultam a
+    mesma classe — nenhum valor mudou.
+  - As duas espirais de `nudgeFree` do `AiFreeMapScript` viraram uma só
+    (`spiralNudge` + interface `FreeCheck`): mesma varredura de 16
+    direções até 16 m, com a checagem (colliders compilados ou blocos do
+    documento) injetada. Avisos idênticos aos anteriores.
+  - Suíte idêntica e verde: 775 verificações. Build Android OK, APK
+    366.018 bytes copiado para `/sdcard/TermIa/apks/construa-jogue.apk`.
 - **Plano novo agendável: Polimento 2026-07 (`PLANO-POLIMENTO-2026-07.md`).**
   - Teste da Automação de 2026-07-17 23h35 funcionou (tarefa id 100 chegou
     ao claude, leu o projeto e a suíte passou com 775 verificações).

@@ -20,7 +20,7 @@ está protegida por pré-condição na P5.
 
 ## 2. Fases (uma por execução; marcar `[x]` ao concluir)
 
-### [ ] P1 — deduplicações internas (refactor puro)
+### [x] P1 — deduplicações internas (refactor puro)
 
 - `AiFreeMapScript.java` tem DUAS implementações de `nudgeFree`
   (linhas ~567 e ~588), cada uma com a própria espiral de busca de espaço

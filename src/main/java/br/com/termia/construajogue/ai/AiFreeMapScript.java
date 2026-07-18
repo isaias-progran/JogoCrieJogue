@@ -8,6 +8,7 @@ import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.ObjectiveSpec;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.TextLimits;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
@@ -35,9 +36,8 @@ public final class AiFreeMapScript {
     private static final List<String> NUMERIC_PROPS = Arrays.asList(
             "order", "halfX", "halfY", "halfZ", "lightR", "lightG",
             "lightB", "lightRadius", "lightOffsetY");
-    private static final List<String> TEXT_PROPS = Arrays.asList(
-            "name", "role", "greeting", "background", "combatLine1",
-            "combatLine2", "combatLine3");
+    private static final List<String> TEXT_PROPS =
+            TextLimits.NPC_TEXT_PROPS;
 
     private AiFreeMapScript() {
     }
@@ -192,8 +192,9 @@ public final class AiFreeMapScript {
                         .equals(def.behavior) && "combatant".equals(key);
                 if (text && value instanceof String
                         && !"controllerId".equals(key)
-                        && ((String) value).length() > textLimit(key)) {
-                    value = ((String) value).substring(0, textLimit(key));
+                        && ((String) value).length() > TextLimits.limit(key)) {
+                    value = ((String) value).substring(0,
+                            TextLimits.limit(key));
                     entry.setValue(value);
                     warn(warnings, "resgate: texto '" + key
                             + "' do NPC foi encurtado");
@@ -564,8 +565,16 @@ public final class AiFreeMapScript {
         return support;
     }
 
-    private static boolean nudgeFree(float[][] colliders,
-                                     LogicMarker marker) {
+    /** Ponto candidato da espiral está livre para o jogador ficar em pé? */
+    private interface FreeCheck {
+        boolean free(float x, float z);
+    }
+
+    /**
+     * Espiral única de busca de espaço livre (16 direções, até 16 m):
+     * move o marcador para o primeiro candidato aprovado pela checagem.
+     */
+    private static boolean spiralNudge(LogicMarker marker, FreeCheck check) {
         float originX = marker.x;
         float originZ = marker.z;
         for (float radius = 0.6f; radius <= 16f; radius += 0.6f) {
@@ -575,7 +584,7 @@ public final class AiFreeMapScript {
                         + (float) (Math.cos(angle) * radius), -GRID, GRID);
                 float z = clamp(originZ
                         + (float) (Math.sin(angle) * radius), -GRID, GRID);
-                if (standsFree(colliders, x, marker.y, z)) {
+                if (check.free(x, z)) {
                     marker.x = x;
                     marker.z = z;
                     return true;
@@ -585,29 +594,23 @@ public final class AiFreeMapScript {
         return false;
     }
 
+    private static boolean nudgeFree(float[][] colliders,
+                                     LogicMarker marker) {
+        return spiralNudge(marker,
+                (x, z) -> standsFree(colliders, x, marker.y, z));
+    }
+
     private static void nudgeFree(MapDocument doc, LogicMarker marker,
                                   String label, Result result) {
         if (marker == null
                 || standsFree(doc, marker.x, marker.y, marker.z)) return;
-        for (float radius = 0.6f; radius <= 16f; radius += 0.6f) {
-            for (int step = 0; step < 16; step++) {
-                double angle = Math.PI * 2.0 * step / 16.0;
-                float x = clamp(marker.x
-                        + (float) (Math.cos(angle) * radius), -GRID, GRID);
-                float z = clamp(marker.z
-                        + (float) (Math.sin(angle) * radius), -GRID, GRID);
-                if (standsFree(doc, x, marker.y, z)) {
-                    marker.x = x;
-                    marker.z = z;
-                    warn(result, "resgate: " + label + " estava dentro de "
-                            + "uma estrutura; movido para lugar livre "
-                            + "próximo");
-                    return;
-                }
-            }
+        if (spiralNudge(marker, (x, z) -> standsFree(doc, x, marker.y, z))) {
+            warn(result, "resgate: " + label + " estava dentro de "
+                    + "uma estrutura; movido para lugar livre próximo");
+        } else {
+            warn(result, label + " está dentro de estrutura sem espaço livre "
+                    + "por perto; o validador pode recusar");
         }
-        warn(result, label + " está dentro de estrutura sem espaço livre "
-                + "por perto; o validador pode recusar");
     }
 
     private static void fillProperty(PrefabInstance prefab, String name,
@@ -847,19 +850,11 @@ public final class AiFreeMapScript {
                     + " não aceita texto '" + parts[1] + "'");
         }
         String value = clip(restAfter(line, parts[1]),
-                textLimit(parts[1]));
+                TextLimits.limit(parts[1]));
         if (value.isEmpty()) {
             throw new IllegalArgumentException("texto vazio");
         }
         prefab.properties.put(parts[1], value);
-    }
-
-    private static int textLimit(String name) {
-        if ("name".equals(name)) return 48;
-        if ("role".equals(name)) return 80;
-        if ("background".equals(name)) return 600;
-        if (name != null && name.startsWith("combatLine")) return 120;
-        return 240; // greeting
     }
 
     private static String restAfter(String line, String token) {

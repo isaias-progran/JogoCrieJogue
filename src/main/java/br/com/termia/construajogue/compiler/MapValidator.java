@@ -7,6 +7,7 @@ import br.com.termia.construajogue.map.MapDocument;
 import br.com.termia.construajogue.map.ObjectiveSpec;
 import br.com.termia.construajogue.map.PrefabInstance;
 import br.com.termia.construajogue.map.StructureObject;
+import br.com.termia.construajogue.map.TextLimits;
 import br.com.termia.construajogue.map.WallOpening;
 import br.com.termia.construajogue.map.WallGeometry;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
@@ -182,7 +183,7 @@ public final class MapValidator {
                 boolean textProperty = "controllerId".equals(entry.getKey())
                         || (PrefabDefinition.BEHAVIOR_NPC_HUMAN
                         .equals(def.behavior)
-                        && isNpcTextProperty(entry.getKey()));
+                        && TextLimits.isNpcTextProperty(entry.getKey()));
                 boolean booleanProperty = PrefabDefinition.BEHAVIOR_NPC_HUMAN
                         .equals(def.behavior)
                         && "combatant".equals(entry.getKey());
@@ -192,7 +193,7 @@ public final class MapValidator {
                             + ": propriedade '" + entry.getKey()
                             + "' deve ser um texto válido");
                 } else if (textProperty && ((String) entry.getValue()).length()
-                        > npcTextLimit(entry.getKey())) {
+                        > TextLimits.limit(entry.getKey())) {
                     error(issues, "peca.propriedade", label
                             + ": texto '" + entry.getKey() + "' é longo demais");
                 } else if (booleanProperty
@@ -515,24 +516,6 @@ public final class MapValidator {
                 || "wood".equals(value) || "checker".equals(value)
                 || "metal".equals(value) || "water".equals(value)
                 || "lava".equals(value) || "asphalt".equals(value);
-    }
-
-    private static boolean isNpcTextProperty(String name) {
-        return "name".equals(name) || "role".equals(name)
-                || "greeting".equals(name) || "background".equals(name)
-                || "combatLine1".equals(name)
-                || "combatLine2".equals(name)
-                || "combatLine3".equals(name);
-    }
-
-    private static int npcTextLimit(String name) {
-        if ("name".equals(name)) return 48;
-        if ("role".equals(name)) return 80;
-        if ("greeting".equals(name)) return 240;
-        if ("background".equals(name)) return 600;
-        if (name != null && name.startsWith("combatLine")) return 120;
-        // controllerId e qualquer futuro texto restrito continuam pequenos.
-        return 128;
     }
 
     private static void validateObjective(List<ValidationIssue> issues,
