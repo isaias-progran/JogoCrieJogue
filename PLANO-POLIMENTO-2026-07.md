@@ -64,7 +64,10 @@ está protegida por pré-condição na P5.
   `settleEnemies`) para `ai/AiFreeRescue.java` (≤ 400 linhas).
 - Gate: suíte idêntica e verde (`AiFreeMapTest` completo).
 
-### [ ] P6 — limpeza: planos executados vão para o histórico
+### [x] P6 — limpeza: planos executados vão para o histórico
+  (2026-07-18: nada a arquivar — PLANO.md com F3–F7 pendentes e este
+  plano com a P5 aguardando os macros; INICIAR.md já aponta só para os
+  planos vivos.)
 
 - Criar `docs/historico/` (se não existir). Para CADA arquivo `PLANO*.md`
   da raiz com TODAS as caixas marcadas `[x]`: mover para

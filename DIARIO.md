@@ -9,6 +9,14 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-18
+- **Polimento P6 — limpeza de planos: nada a arquivar.**
+  - Nenhum `PLANO*.md` da raiz está 100% marcado: `PLANO.md` (macros) tem
+    F3–F7 pendentes e o próprio Polimento tem a P5 esperando F3–F5 dos
+    macros. Regra do plano: com fase pendente NÃO move; caixa marcada com
+    o relato. `INICIAR.md` já aponta só para planos vivos — sem mudança.
+  - P5 NÃO executada (pré-condição): os dois planos editam
+    `AiFreeMapScript`; ela fica para depois de F3–F5 dos macros.
+    Do Polimento restam só ela e as conferências manuais no aparelho.
 - **Polimento P4 — AiFeatureController modularizado (refactor puro).**
   - 1094 → 288 linhas. Quatro extrações mecânicas no padrão
     EditorForms/EditorPickers (classe do mesmo pacote lendo o host):
