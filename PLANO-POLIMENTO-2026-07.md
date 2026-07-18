@@ -30,7 +30,7 @@ está protegida por pré-condição na P5.
   constantes (ex.: `map/TextLimits.java`) usada pelos dois.
 - Gate: suíte idêntica e verde; nenhum limite muda de valor.
 
-### [ ] P2 — botão Testar valida e compila UMA vez
+### [x] P2 — botão Testar valida e compila UMA vez
 
 - `EditorHost.test()` (linha ~902) roda `MapValidator.validate(doc,...)` e
   depois `listener.onTest(...)` compila o mapa de novo. Usar a sobrecarga

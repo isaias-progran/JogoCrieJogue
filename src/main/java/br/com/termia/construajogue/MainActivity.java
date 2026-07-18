@@ -426,8 +426,10 @@ public final class MainActivity extends Activity
     // ---- EditorHost.Listener ----
 
     @Override
-    public void onTest(MapDocument snapshot) {
-        RuntimeLevel level = compile(snapshot);
+    public void onTest(MapDocument snapshot, RuntimeLevel compiled) {
+        // O editor já validou e compilou; sem nível (caso raro), o caminho
+        // antigo valida/compila de novo e explica no diálogo.
+        RuntimeLevel level = compiled != null ? compiled : compile(snapshot);
         if (level != null) {
             play(new SingleLevelProvider(level), true);
         }

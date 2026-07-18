@@ -9,6 +9,20 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-18
+- **Polimento P2 — botão Testar valida e compila UMA vez.**
+  - `EditorHost.test()` agora cria o snapshot profundo primeiro, compila o
+    nível dele UMA vez (`LevelCompiler.compile` com falha silenciada — o
+    validador explica) e valida com a sobrecarga da v0.26.2
+    (`MapValidator.validate(doc, catalog, compiled)`). Erros/avisos
+    exibidos são os mesmos; a regra "falha de compilação não duplica
+    ruído" continua no validador.
+  - `Listener.onTest(snapshot, compiled)` leva o nível pronto;
+    `MainActivity.onTest` só recompila no caso raro de `compiled == null`
+    (mantém o diálogo antigo). Fim da dupla validação+compilação no toque.
+  - PENDÊNCIA DE APARELHO: conferir o botão Testar manualmente (validar →
+    jogar → voltar; mapa com erro deve mostrar o mesmo diálogo).
+  - Suíte verde: 775 verificações (o editor não tem teste JVM; prova é
+    compilação). Build Android OK, APK copiado.
 - **Polimento P1 — deduplicações internas (refactor puro, sem versão nova).**
   - `map/TextLimits.java` é a fonte única dos limites de texto de NPC
     (name 48, role 80, greeting 240, background 600, combatLine* 120,

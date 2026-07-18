@@ -17,6 +17,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import br.com.termia.construajogue.compiler.LevelCompiler;
 import br.com.termia.construajogue.compiler.MapValidator;
 import br.com.termia.construajogue.compiler.ValidationIssue;
 import br.com.termia.construajogue.game.GameResult;
@@ -30,6 +31,7 @@ import br.com.termia.construajogue.persistence.MapJson;
 import br.com.termia.construajogue.persistence.MapStore;
 import br.com.termia.construajogue.prefab.PrefabCatalog;
 import br.com.termia.construajogue.prefab.PrefabDefinition;
+import br.com.termia.construajogue.runtime.RuntimeLevel;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,7 +52,8 @@ public final class EditorHost extends FrameLayout
     private static final long AUTO_SAVE_MAX_MS = 10000L;
 
     public interface Listener {
-        void onTest(MapDocument snapshot);
+        /** Recebe o snapshot e o nível já compilado dele (null se falhou). */
+        void onTest(MapDocument snapshot, RuntimeLevel compiled);
 
         /** Envia uma fotografia já salva para revisão opcional pela IA. */
         void onImproveWithAi(MapDocument snapshot);
@@ -900,7 +903,16 @@ public final class EditorHost extends FrameLayout
     }
 
     private void test() {
-        List<ValidationIssue> issues = MapValidator.validate(doc, catalog);
+        // snapshot profundo: a partida nunca toca o documento em edição
+        MapDocument snapshot = MapJson.read(MapJson.write(doc));
+        RuntimeLevel compiled = null;
+        try {
+            compiled = LevelCompiler.compile(snapshot, catalog);
+        } catch (RuntimeException broken) {
+            // O validador abaixo explica o problema com mensagens claras.
+        }
+        List<ValidationIssue> issues =
+                MapValidator.validate(doc, catalog, compiled);
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         for (ValidationIssue issue : issues) {
@@ -921,8 +933,7 @@ public final class EditorHost extends FrameLayout
         if (!saveNow()) {
             return;
         }
-        // snapshot profundo: a partida nunca toca o documento em edição
-        listener.onTest(MapJson.read(MapJson.write(doc)));
+        listener.onTest(snapshot, compiled);
     }
 
     /** Salva as edições locais antes de congelar o mapa enviado à revisão. */
