@@ -26,7 +26,7 @@ public final class NpcCompanion {
     private static final float RADIUS = 0.28f;
     private static final float HEIGHT = 1.7f;
     private static final float STEP = 0.28f;
-    private static final float EYE_HEIGHT = 1.38f;
+    static final float EYE_HEIGHT = 1.38f;
     private static final float SAME_STORY_DELTA = 2.2f;
     private static final float SPEECH_INTERVAL = 11f;
 
@@ -119,6 +119,15 @@ public final class NpcCompanion {
     public int update(float dt, float playerX, float playerY, float playerZ,
                       float[][] colliders, Enemy[] enemies,
                       NpcCompanion[] allies) {
+        return update(dt, playerX, playerY, playerZ, colliders, enemies,
+                allies, null, -1);
+    }
+
+    /** Com o cache por quadro, a visada de cada par é calculada uma vez. */
+    public int update(float dt, float playerX, float playerY, float playerZ,
+                      float[][] colliders, Enemy[] enemies,
+                      NpcCompanion[] allies, AllySight sight,
+                      int selfIndex) {
         tickTimers(dt);
         if (dt <= 0f || !following) {
             npc.moving = false;
@@ -144,7 +153,7 @@ public final class NpcCompanion {
         }
 
         Enemy target = closestVisible(enemies, colliders, playerX, playerY,
-                playerZ, allies);
+                playerZ, allies, sight, selfIndex);
         if (target == null) {
             clearTimer += dt;
             if (clearTimer >= RETURN_DELAY) {
@@ -205,6 +214,17 @@ public final class NpcCompanion {
                                                float playerZ,
                                                NpcCompanion[] allies,
                                                float[][] colliders) {
+        return targetForEnemy(enemy, -1, playerX, playerY, playerZ,
+                allies, colliders, null);
+    }
+
+    /** Com o cache por quadro, a visada de cada par é calculada uma vez. */
+    public static NpcCompanion targetForEnemy(Enemy enemy, int enemyIndex,
+                                               float playerX, float playerY,
+                                               float playerZ,
+                                               NpcCompanion[] allies,
+                                               float[][] colliders,
+                                               AllySight sight) {
         if (enemy == null || !enemy.targetable()) return null;
         float pdx = playerX - enemy.x();
         float pdy = playerY - enemy.y();
@@ -212,7 +232,8 @@ public final class NpcCompanion {
         float bestScore = pdx * pdx + pdy * pdy + pdz * pdz;
         NpcCompanion best = null;
         if (allies == null) return null;
-        for (NpcCompanion companion : allies) {
+        for (int i = 0; i < allies.length; i++) {
+            NpcCompanion companion = allies[i];
             if (companion == null || !companion.canBeTargeted()) continue;
             RuntimeNpc candidate = companion.npc;
             float dx = candidate.x - enemy.x();
@@ -221,9 +242,15 @@ public final class NpcCompanion {
             if (Math.abs(dy) > SAME_STORY_DELTA) continue;
             float distance = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (distance < 0.01f) return companion;
-            float wall = Raycast.hitBoxes(enemy.x(), enemy.y(), enemy.z(),
-                    dx / distance, dy / distance, dz / distance, colliders);
-            if (wall < distance - 0.1f) continue;
+            if (sight != null) {
+                if (!sight.clear(enemyIndex, i, enemy, candidate,
+                        colliders)) continue;
+            } else {
+                float wall = Raycast.hitBoxes(enemy.x(), enemy.y(),
+                        enemy.z(), dx / distance, dy / distance,
+                        dz / distance, colliders);
+                if (wall < distance - 0.1f) continue;
+            }
             float score = distance * distance
                     * (companion.recentlyFired() ? 0.55f : 1.12f);
             if (score < bestScore) {
@@ -270,11 +297,13 @@ public final class NpcCompanion {
 
     private Enemy closestVisible(Enemy[] enemies, float[][] boxes,
                                  float playerX, float playerY, float playerZ,
-                                 NpcCompanion[] allies) {
+                                 NpcCompanion[] allies, AllySight sight,
+                                 int selfIndex) {
         Enemy best = null;
         float bestDistance = COMBAT_RANGE * COMBAT_RANGE;
         float eyeY = npc.y + EYE_HEIGHT;
-        for (Enemy enemy : enemies) {
+        for (int e = 0; e < enemies.length; e++) {
+            Enemy enemy = enemies[e];
             if (enemy == null || !enemy.targetable()
                     || Math.abs(enemy.y() - eyeY) > SAME_STORY_DELTA) {
                 continue;
@@ -288,9 +317,13 @@ public final class NpcCompanion {
             float rx = dx / distance;
             float ry = dy / distance;
             float rz = dz / distance;
-            float wall = Raycast.hitBoxes(npc.x, eyeY, npc.z,
-                    rx, ry, rz, boxes);
-            if (wall < distance - 0.10f) continue;
+            if (sight != null) {
+                if (!sight.clear(e, selfIndex, enemy, npc, boxes)) continue;
+            } else {
+                float wall = Raycast.hitBoxes(npc.x, eyeY, npc.z,
+                        rx, ry, rz, boxes);
+                if (wall < distance - 0.10f) continue;
+            }
             if (blockedByPerson(distance, rx, ry, rz,
                     playerX, playerY, playerZ, allies)) continue;
             best = enemy;

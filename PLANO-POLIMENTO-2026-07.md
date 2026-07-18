@@ -39,7 +39,7 @@ está protegida por pré-condição na P5.
 - Gate: suíte verde; erros/avisos exibidos continuam os mesmos; anotar no
   DIARIO que o toque no botão precisa de conferência manual no aparelho.
 
-### [ ] P3 — linha de visada inimigo↔aliado 1x por par/quadro
+### [x] P3 — linha de visada inimigo↔aliado 1x por par/quadro
 
 - Pendência do DIARIO (v0.26.2): o raycast inimigo↔aliado roda 2x por
   quadro por par. Cachear o resultado por par dentro do mesmo quadro em

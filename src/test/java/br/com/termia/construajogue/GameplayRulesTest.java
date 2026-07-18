@@ -1,5 +1,6 @@
 package br.com.termia.construajogue;
 
+import br.com.termia.construajogue.game.AllySight;
 import br.com.termia.construajogue.game.GameResult;
 import br.com.termia.construajogue.game.Enemy;
 import br.com.termia.construajogue.game.NpcCompanion;
@@ -284,6 +285,23 @@ public final class GameplayRulesTest {
                         new NpcCompanion[]{provoker}, new float[0][])
                         == provoker,
                 "tiro recente aumenta temporariamente a atenção do inimigo");
+
+        AllySight sight = new AllySight();
+        float[][] sightWall = {{1f, 0f, -0.4f, 2f, 3f, 0.4f}};
+        sight.beginFrame(1, 1);
+        check(NpcCompanion.targetForEnemy(attacker, 0, 5f, 1.38f, 0f,
+                        new NpcCompanion[]{provoker}, new float[0][], sight)
+                        == provoker,
+                "cache de visada mantém a mesma escolha de alvo");
+        check(NpcCompanion.targetForEnemy(attacker, 0, 5f, 1.38f, 0f,
+                        new NpcCompanion[]{provoker}, sightWall, sight)
+                        == provoker,
+                "dentro do mesmo quadro o par reaproveita a visada calculada");
+        sight.beginFrame(1, 1);
+        check(NpcCompanion.targetForEnemy(attacker, 0, 5f, 1.38f, 0f,
+                        new NpcCompanion[]{provoker}, sightWall, sight)
+                        == null,
+                "quadro novo recalcula a visada e enxerga a parede");
         System.out.println("OK GameplayRulesTest: " + checks
                 + " verificações");
     }

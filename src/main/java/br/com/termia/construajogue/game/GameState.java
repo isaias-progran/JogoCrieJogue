@@ -59,6 +59,7 @@ public final class GameState {
     private final float[] doorProgress;
     private final boolean[] automaticDoorRequested;
     private final NpcCompanion[] companions;
+    private final AllySight allySight = new AllySight();
     private final NpcGreetingTracker npcGreetings;
     private int nextTerminalOrder = 1;
     private float recoil;
@@ -509,9 +510,13 @@ public final class GameState {
     }
 
     private void updateCompanions(float dt) {
-        for (NpcCompanion companion : companions) {
+        // Visada inimigo↔aliado 1x por par/quadro; nunca vale entre quadros.
+        allySight.beginFrame(enemies.length, companions.length);
+        for (int i = 0; i < companions.length; i++) {
+            NpcCompanion companion = companions[i];
             int event = companion.update(dt, player.x(), player.y(),
-                    player.z(), level.colliders(), enemies, companions);
+                    player.z(), level.colliders(), enemies, companions,
+                    allySight, i);
             if ((event & NpcCompanion.EV_SHOT) != 0) {
                 sounds.allyShot();
             }
@@ -547,8 +552,9 @@ public final class GameState {
     }
 
     private void updateEnemies(float dt, float time) {
-        for (Enemy enemy : enemies) {
-            NpcCompanion allyTarget = chooseAllyTarget(enemy);
+        for (int e = 0; e < enemies.length; e++) {
+            Enemy enemy = enemies[e];
+            NpcCompanion allyTarget = chooseAllyTarget(enemy, e);
             float targetX = allyTarget == null
                     ? playerEye[0] : allyTarget.npc().x;
             float targetY = allyTarget == null
@@ -593,10 +599,11 @@ public final class GameState {
     }
 
     /** Inimigos preferem o alvo mais próximo; tiro recente provoca atenção. */
-    private NpcCompanion chooseAllyTarget(Enemy enemy) {
+    private NpcCompanion chooseAllyTarget(Enemy enemy, int enemyIndex) {
         if (!player.alive() || !enemy.targetable()) return null;
-        return NpcCompanion.targetForEnemy(enemy, playerEye[0], playerEye[1],
-                playerEye[2], companions, level.colliders());
+        return NpcCompanion.targetForEnemy(enemy, enemyIndex, playerEye[0],
+                playerEye[1], playerEye[2], companions, level.colliders(),
+                allySight);
     }
 
     private void updateItems() {

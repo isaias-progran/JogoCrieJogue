@@ -9,6 +9,18 @@ Planos em `PLANO.md`, `ARQUITETURA.md`, `ESTRUTURA.md`, `ORIGENS.md`.
 Contrato específico do gerador Livre em `docs/IA-LIVRE.md`.
 
 ## Estado atual — 2026-07-18
+- **Polimento P3 — visada inimigo↔aliado 1x por par/quadro.**
+  - Novo `game/AllySight`: cache por quadro da linha de visada (reta
+    inimigo↔olho do aliado, mesma margem de 0,1 m das duas rotas
+    antigas). `GameState.updateCompanions` chama `beginFrame` a cada
+    quadro — o resultado NUNCA atravessa quadros (armadilha do plano).
+  - A mira do aliado (`closestVisible`) e a escolha de alvo do inimigo
+    (`targetForEnemy`) consultam o mesmo cache: antes cada par pagava 2
+    raycasts por quadro, agora paga 1. As sobrecargas antigas (sem cache)
+    continuam para os testes; `blockedByPerson` segue fora do cache.
+  - Suíte verde: 778 verificações (GameplayRulesTest 59→62: mesma
+    escolha com cache, reaproveitamento no quadro e recálculo no quadro
+    novo). Build Android OK, APK copiado.
 - **Polimento P2 — botão Testar valida e compila UMA vez.**
   - `EditorHost.test()` agora cria o snapshot profundo primeiro, compila o
     nível dele UMA vez (`LevelCompiler.compile` com falha silenciada — o

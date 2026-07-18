@@ -35,6 +35,7 @@ javac -d "$OUT" -encoding UTF-8 \
     "$SRC"/game/GameResult.java \
     "$SRC"/game/NpcGreetingTracker.java \
     "$SRC"/game/NpcCompanion.java \
+    "$SRC"/game/AllySight.java \
     "$SRC"/game/Enemy.java \
     "$SRC"/game/Mutant.java \
     "$SRC"/game/Kamikaze.java \
